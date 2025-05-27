@@ -4,26 +4,61 @@ import { deposits } from "@/db/schema/logs";
 import { eq } from "drizzle-orm";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   const { id } = await params;
   const depositId = parseInt(id, 10);
   const body = await request.json(); // <-- Only once!
-  const { status } = body;
+  const { status, fundId } = await request.json();
 
   const { getUser } = getKindeServerSession();
+
   const user = await getUser();
+ // Fetch deposit and fund
+  const deposit = await db.select().from(deposits).where(eq(deposits.id, depositId)).first();
+  if (!deposit) return NextResponse.json({ error: "Deposit not found" }, { status: 404 });
 
-  const [updatedDeposit] = await db
-    .update(deposits)
-    .set({
-      status,
-      updatedAt: new Date(),
-      updatedBy: user?.email,
-    })
-    .where(eq(deposits.id, depositId))
-    .returning();
+  if (status === "verified") {
+    // Update deposit and fund
+    await db.transaction(async (trx) => {
+      await trx.update(deposits)
+        .set({
+          status: "verified",
+          fundId,
+          approvedBy: user?.email,
+          updatedAt: new Date(),
+        })
+        .where(eq(deposits.id, depositId));
 
-  return NextResponse.json({ data: updatedDeposit });
+      await trx.update(funds)
+        .set({ balance: sql`${funds.balance} + ${deposit.amount}` })
+        .where(eq(funds.id, fundId));
+
+      await trx.insert(logs).values({
+        userEmail: user?.email!,
+        action: "approve_deposit",
+        details: JSON.stringify({ depositId, fundId }),
+      });
+    });
+  } else if (status === "rejected") {
+    await db.update(deposits)
+      .set({
+        status: "rejected",
+        approvedBy: user?.email,
+        updatedAt: new Date(),
+      })
+      .where(eq(deposits.id, depositId));
+
+    await db.insert(logs).values({
+      userEmail: user?.email!,
+      action: "reject_deposit",
+      details: JSON.stringify({ depositId }),
+    });
+  }
+
+  return NextResponse.json({ success: true });
 }
 
 // // In your page component

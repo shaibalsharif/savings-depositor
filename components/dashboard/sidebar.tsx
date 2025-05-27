@@ -24,8 +24,8 @@ export function DashboardSidebar() {
   const pathname = usePathname()// In real use, you might use usePathname from next/navigation
 
   // Permission checks (adjust as per your Kinde permissions)
-  const isAdmin = permissions?.admin === 'true'
-  const isFinanceManager = permissions?.finance_manager === 'true' || isAdmin
+  const isAdmin = true//permissions?.admin === 'true'
+  const isFinanceManager = true//permissions?.finance_manager === 'true' || isAdmin
 
   const routes = [
     {
@@ -85,7 +85,7 @@ export function DashboardSidebar() {
       icon: History,
       href: "/dashboard/logs",
       active: false,
-      disabled: true,
+      // disabled: true,
     },
     {
       label: "Notifications",

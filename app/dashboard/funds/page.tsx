@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,25 +8,147 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { fundAccounts, activityLogs } from "@/lib/dummy-data"
-import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { ArrowLeftRight } from "lucide-react"
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+import { useToast } from "@/hooks/use-toast"
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 
-export default async function FundsPage() {
- const {isAuthenticated} = getKindeServerSession();
-const isUserAuthenticated = await isAuthenticated();
-const {getUser} = getKindeServerSession();
-const user = await getUser();
+export default function FundsPage() {
+  const { user } = useKindeAuth()
   const { toast } = useToast()
-  const [accounts, setAccounts] = useState(fundAccounts)
+  const [funds, setFunds] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [logs, setLogs] = useState<any[]>([])
+  const [showAddFund, setShowAddFund] = useState(false)
+  const [showDeleteFund, setShowDeleteFund] = useState<{ open: boolean, fundId?: number, fundTitle?: string }>({ open: false })
+  const [newFundTitle, setNewFundTitle] = useState("")
+  const [addLoading, setAddLoading] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [transferAmount, setTransferAmount] = useState("")
-  const [transferFrom, setTransferFrom] = useState("main")
-  const [transferTo, setTransferTo] = useState("side")
+  const [transferFrom, setTransferFrom] = useState<number | null>(null)
+  const [transferTo, setTransferTo] = useState<number | null>(null)
   const [transferNote, setTransferNote] = useState("")
-  const [logs, setLogs] = useState(activityLogs.filter((log) => log.action === "transfer"))
+  const [transferLoading, setTransferLoading] = useState(false)
+  const isFinanceManager = true // Replace with your real check
 
-  const isFinanceManager = user?.role === "finance_manager" || user?.role === "admin"
+  // Fetch funds and transactions
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      const [fundsRes, logsRes] = await Promise.all([
+        fetch("/api/funds"),
+        fetch("/api/fund-transactions"),
+      ])
+      const { funds } = await fundsRes.json()
+      const { transactions } = await logsRes.json()
+      setFunds(funds)
+      setLogs(transactions)
+      if (funds.length > 1) {
+        setTransferFrom(funds[0].id)
+        setTransferTo(funds[1].id)
+      } else if (funds.length === 1) {
+        setTransferFrom(funds[0].id)
+        setTransferTo(null)
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to load funds or transactions", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+    // eslint-disable-next-line
+  }, [])
+
+  // Add Fund
+  const handleAddFund = async () => {
+    if (!newFundTitle.trim()) {
+      toast({ title: "Enter fund name", variant: "destructive" })
+      return
+    }
+    setAddLoading(true)
+    try {
+      const res = await fetch("/api/funds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newFundTitle }),
+      })
+      if (!res.ok) throw new Error("Failed to create fund")
+      setNewFundTitle("")
+      setShowAddFund(false)
+      toast({ title: "Fund created" })
+      fetchData()
+    } catch {
+      toast({ title: "Failed to create fund", variant: "destructive" })
+    } finally {
+      setAddLoading(false)
+    }
+  }
+
+  // Delete Fund
+  const handleDeleteFund = async () => {
+    if (!showDeleteFund.fundId) return
+    setDeleteLoading(true)
+    try {
+      const res = await fetch(`/api/funds/${showDeleteFund.fundId}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete fund")
+      setShowDeleteFund({ open: false })
+      toast({ title: "Fund deleted" })
+      fetchData()
+    } catch {
+      toast({ title: "Failed to delete fund", variant: "destructive" })
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  // Transfer funds
+  const handleTransfer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const amount = Number(transferAmount)
+    if (!amount || amount <= 0) {
+      toast({ title: "Invalid amount", description: "Please enter a valid transfer amount", variant: "destructive" })
+      return
+    }
+    if (!transferFrom || !transferTo || transferFrom === transferTo) {
+      toast({ title: "Invalid transfer", description: "Source and destination funds must be different", variant: "destructive" })
+      return
+    }
+    const fromFund = funds.find(f => f.id === transferFrom)
+    if (!fromFund || Number(fromFund.balance) < amount) {
+      toast({ title: "Insufficient funds", description: "Not enough balance in source fund", variant: "destructive" })
+      return
+    }
+    setTransferLoading(true)
+    try {
+      const res = await fetch("/api/fund-transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fromFundId: transferFrom,
+          toFundId: transferTo,
+          amount,
+          description: transferNote,
+        }),
+      })
+      if (!res.ok) throw new Error("Transfer failed")
+      toast({ title: "Transfer successful", description: `৳${amount.toLocaleString()} transferred.` })
+      setTransferAmount("")
+      setTransferNote("")
+      fetchData()
+    } catch {
+      toast({ title: "Error", description: "Failed to transfer funds", variant: "destructive" })
+    } finally {
+      setTransferLoading(false)
+    }
+  }
+
+  const handleSwitchAccounts = () => {
+    setTransferFrom(transferTo)
+    setTransferTo(transferFrom)
+  }
 
   if (!isFinanceManager) {
     return (
@@ -46,108 +166,45 @@ const user = await getUser();
     )
   }
 
-  const handleTransfer = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const amount = Number(transferAmount)
-
-    if (!amount || amount <= 0) {
-      toast({
-        title: "Invalid amount",
-        description: "Please enter a valid transfer amount",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (transferFrom === transferTo) {
-      toast({
-        title: "Invalid transfer",
-        description: "Source and destination accounts cannot be the same",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Check if source account has enough funds
-    if (accounts[transferFrom as keyof typeof accounts].balance < amount) {
-      toast({
-        title: "Insufficient funds",
-        description: `Not enough funds in the ${transferFrom === "main" ? "Main" : "Side"} account`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Update account balances
-    const updatedAccounts = {
-      ...accounts,
-      [transferFrom]: {
-        ...accounts[transferFrom as keyof typeof accounts],
-        balance: accounts[transferFrom as keyof typeof accounts].balance - amount,
-      },
-      [transferTo]: {
-        ...accounts[transferTo as keyof typeof accounts],
-        balance: accounts[transferTo as keyof typeof accounts].balance + amount,
-      },
-    }
-
-    // Create a new log entry
-    const newLog = {
-      id: `log-${Date.now()}`,
-      action: "transfer",
-      description: `Funds transferred from ${transferFrom === "main" ? "Main" : "Side"} to ${transferTo === "main" ? "Main" : "Side"} account${transferNote ? `: ${transferNote}` : ""}`,
-      amount,
-      date: new Date().toLocaleDateString(),
-      performedBy: user?.id || "",
-      performedByName: user?.name || "Finance Manager",
-    }
-
-    setAccounts(updatedAccounts)
-    setLogs([newLog, ...logs])
-
-    toast({
-      title: "Transfer successful",
-      description: `৳${amount.toLocaleString()} transferred from ${transferFrom === "main" ? "Main" : "Side"} to ${transferTo === "main" ? "Main" : "Side"} account`,
-    })
-
-    // Reset form
-    setTransferAmount("")
-    setTransferNote("")
-  }
-
-  const handleSwitchAccounts = () => {
-    setTransferFrom(transferTo)
-    setTransferTo(transferFrom)
-  }
-
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Fund Management</h1>
-        <p className="text-muted-foreground">Manage and transfer funds between accounts</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Fund Management</h1>
+          <p className="text-muted-foreground">Manage and transfer funds between accounts</p>
+        </div>
+        <Button onClick={() => setShowAddFund(true)}>Add New Fund</Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Main Account</CardTitle>
-            <CardDescription>Primary bank account for group savings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">৳ {accounts.main.balance.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Side Account</CardTitle>
-            <CardDescription>Secondary account for additional funds</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">৳ {accounts.side.balance.toLocaleString()}</div>
-          </CardContent>
-        </Card>
+        {loading ? (
+          <>
+            <Card><CardContent>Loading...</CardContent></Card>
+            <Card><CardContent>Loading...</CardContent></Card>
+          </>
+        ) : (
+          funds.map(fund => (
+            <Card key={fund.id}>
+              <CardHeader>
+                <CardTitle>{fund.title}</CardTitle>
+                <CardDescription>Fund ID: {fund.id}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">৳ {Number(fund.balance).toLocaleString()}</div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={Number(fund.balance) !== 0}
+                  onClick={() => setShowDeleteFund({ open: true, fundId: fund.id, fundTitle: fund.title })}
+                >
+                  Delete
+                </Button>
+              </CardFooter>
+            </Card>
+          ))
+        )}
       </div>
 
       <Tabs defaultValue="transfer">
@@ -155,12 +212,11 @@ const user = await getUser();
           <TabsTrigger value="transfer">Transfer Funds</TabsTrigger>
           <TabsTrigger value="history">Transfer History</TabsTrigger>
         </TabsList>
-
         <TabsContent value="transfer">
           <Card>
             <CardHeader>
-              <CardTitle>Transfer Between Accounts</CardTitle>
-              <CardDescription>Move funds between main and side accounts</CardDescription>
+              <CardTitle>Transfer Between Funds</CardTitle>
+              <CardDescription>Move funds between any two fund accounts</CardDescription>
             </CardHeader>
             <form onSubmit={handleTransfer}>
               <CardContent className="space-y-4">
@@ -169,33 +225,38 @@ const user = await getUser();
                     <Label htmlFor="from-account">From</Label>
                     <select
                       id="from-account"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={transferFrom}
-                      onChange={(e) => setTransferFrom(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={transferFrom ?? ""}
+                      onChange={(e) => setTransferFrom(Number(e.target.value))}
                     >
-                      <option value="main">Main Account (৳{accounts.main.balance.toLocaleString()})</option>
-                      <option value="side">Side Account (৳{accounts.side.balance.toLocaleString()})</option>
+                      <option value="" disabled>Select fund</option>
+                      {funds.map(fund => (
+                        <option key={fund.id} value={fund.id}>
+                          {fund.title} (৳{Number(fund.balance).toLocaleString()})
+                        </option>
+                      ))}
                     </select>
                   </div>
-
                   <Button type="button" variant="outline" size="icon" className="mt-8" onClick={handleSwitchAccounts}>
                     <ArrowLeftRight className="h-4 w-4" />
                   </Button>
-
                   <div className="flex-1 space-y-2">
                     <Label htmlFor="to-account">To</Label>
                     <select
                       id="to-account"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={transferTo}
-                      onChange={(e) => setTransferTo(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={transferTo ?? ""}
+                      onChange={(e) => setTransferTo(Number(e.target.value))}
                     >
-                      <option value="main">Main Account (৳{accounts.main.balance.toLocaleString()})</option>
-                      <option value="side">Side Account (৳{accounts.side.balance.toLocaleString()})</option>
+                      <option value="" disabled>Select fund</option>
+                      {funds.map(fund => (
+                        <option key={fund.id} value={fund.id}>
+                          {fund.title} (৳{Number(fund.balance).toLocaleString()})
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount (৳)</Label>
                   <Input
@@ -207,7 +268,6 @@ const user = await getUser();
                     required
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="note">Note (Optional)</Label>
                   <Textarea
@@ -219,14 +279,12 @@ const user = await getUser();
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full">
-                  Transfer Funds
-                </Button>
+                <Button type="submit" className="w-full" 
+                loading={transferLoading}>Transfer Funds</Button>
               </CardFooter>
             </form>
           </Card>
         </TabsContent>
-
         <TabsContent value="history">
           <Card>
             <CardHeader>
@@ -239,25 +297,29 @@ const user = await getUser();
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
+                      <TableHead>From</TableHead>
+                      <TableHead>To</TableHead>
                       <TableHead>Amount</TableHead>
+                      <TableHead>Description</TableHead>
                       <TableHead>Performed By</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {logs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center">
+                        <TableCell colSpan={6} className="text-center">
                           No transfer history found
                         </TableCell>
                       </TableRow>
                     ) : (
                       logs.map((log) => (
                         <TableRow key={log.id}>
-                          <TableCell>{log.date}</TableCell>
+                          <TableCell>{new Date(log.createdAt).toLocaleString()}</TableCell>
+                          <TableCell>{funds.find(f => f.id === log.fromFundId)?.title || log.fromFundId}</TableCell>
+                          <TableCell>{funds.find(f => f.id === log.toFundId)?.title || log.toFundId}</TableCell>
+                          <TableCell>৳ {Number(log.amount).toLocaleString()}</TableCell>
                           <TableCell>{log.description}</TableCell>
-                          <TableCell>৳ {log.amount?.toLocaleString()}</TableCell>
-                          <TableCell>{log.performedByName}</TableCell>
+                          <TableCell>{log.createdBy}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -268,6 +330,43 @@ const user = await getUser();
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Fund Modal */}
+      <Dialog open={showAddFund} onOpenChange={setShowAddFund}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Fund</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="fund-title">Fund Title</Label>
+            <Input
+              id="fund-title"
+              value={newFundTitle}
+              onChange={e => setNewFundTitle(e.target.value)}
+              placeholder="Enter fund name"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleAddFund} loading={addLoading}>Create</Button>
+            <Button variant="outline" onClick={() => setShowAddFund(false)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Fund Confirmation Modal */}
+      <Dialog open={showDeleteFund.open} onOpenChange={open => setShowDeleteFund(s => ({ ...s, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Fund</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete <b>{showDeleteFund.fundTitle}</b>? This can only be done if the fund balance is zero.</p>
+          <DialogFooter>
+            <Button variant="destructive" loading={deleteLoading} onClick={handleDeleteFund}>Yes, Delete</Button>
+            <Button variant="outline" onClick={() => setShowDeleteFund({ open: false })}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

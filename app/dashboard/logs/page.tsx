@@ -1,39 +1,85 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { activityLogs } from "@/lib/dummy-data"
 import { Calendar, CreditCard, User, Wallet } from "lucide-react"
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 
+type Log = {
+  id: string
+  action: string
+  description: string
+  amount?: number
+  createdAt: string
+  performedBy: string
+  affectedUser?: string
+}
+
 export default function LogsPage() {
   const { user } = useKindeAuth()
-  const [logs, setLogs] = useState(activityLogs)
+  const [logs, setLogs] = useState<Log[]>([])
+  const [loading, setLoading] = useState(true)
   const [filterAction, setFilterAction] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [dateRange, setDateRange] = useState<string>("all")
+  const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({})
+  const [selectedUser, setSelectedUser] = useState<string>("")
 
-  const isAdmin = user?.role === "admin"
-  const isFinanceManager = user?.role === "finance_manager" || isAdmin
-  const isMember = user?.role === "member"
+  const isAdmin = true// user?.permissions?.admin === "true"
+  const isFinanceManager = true//user?.permissions?.finance_manager === "true" || isAdmin
+  const isMember = true// !isAdmin && !isFinanceManager
 
-  // For members, only show their own logs
-  const userLogs = isMember ? logs.filter((log) => log.userId === user?.id) : logs
+  // Fetch logs on mount and when filters change
 
-  const filteredLogs = userLogs.filter((log) => {
+  const [users, setUsers] = useState<{ email: string }[]>([])
+
+  useEffect(() => {
+    if (isAdmin || isFinanceManager) {
+      fetch("/api/users")
+        .then(res => res.json())
+        .then(({ users }) => setUsers(users))
+        .catch(console.error)
+    }
+  }, [isAdmin, isFinanceManager])
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams()
+        if (filterAction !== "all") params.set("action", filterAction)
+        if (isAdmin || isFinanceManager) {
+          if (selectedUser) params.set("userId", selectedUser)
+        }
+        if (dateRange.start) params.set("startDate", dateRange.start)
+        if (dateRange.end) params.set("endDate", dateRange.end)
+        if (searchQuery) params.set("query", searchQuery)
+        // For members, backend will filter by user.email
+        const res = await fetch(`/api/logs?${params.toString()}`)
+        const { logs } = await res.json()
+        setLogs(logs)
+      } catch (err) {
+        console.error("Failed to fetch logs:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchLogs()
+  }, [filterAction, selectedUser, dateRange, searchQuery, user?.email])
+
+
+
+
+  // For members, only show their own logs (handled by backend)
+  const filteredLogs = logs.filter((log) => {
     const actionMatch = filterAction === "all" || log.action === filterAction
     const searchMatch =
       log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (log.userName && log.userName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (log.performedByName && log.performedByName.toLowerCase().includes(searchQuery.toLowerCase()))
-
-    // Date filtering logic would go here in a real app
-
+      (log.affectedUser && log.affectedUser.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (log.performedBy.toLowerCase().includes(searchQuery.toLowerCase()))
     return actionMatch && searchMatch
   })
 
@@ -46,7 +92,7 @@ export default function LogsPage() {
         return <CreditCard className="h-4 w-4" />
       case "user_added":
         return <User className="h-4 w-4" />
-      case "transfer":
+      case "fund_transfer":
         return <Calendar className="h-4 w-4" />
       default:
         return <Calendar className="h-4 w-4" />
@@ -67,7 +113,7 @@ export default function LogsPage() {
         return <Badge variant="destructive">Withdrawal</Badge>
       case "user_added":
         return <Badge variant="secondary">User Added</Badge>
-      case "transfer":
+      case "fund_transfer":
         return <Badge variant="default">Fund Transfer</Badge>
       default:
         return <Badge variant="outline">Other</Badge>
@@ -104,9 +150,49 @@ export default function LogsPage() {
                   <SelectItem value="deposit_partial">Partial Deposit</SelectItem>
                   <SelectItem value="withdrawal">Withdrawal</SelectItem>
                   <SelectItem value="user_added">User Added</SelectItem>
-                  <SelectItem value="transfer">Fund Transfer</SelectItem>
+                  <SelectItem value="fund_transfer">Fund Transfer</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {(isAdmin || isFinanceManager) && (
+              <div className="w-full md:w-auto">
+                <Label htmlFor="user-filter">Filter by User</Label>
+                <Select value={selectedUser} onValueChange={setSelectedUser}>
+                  <SelectTrigger id="user-filter" className="w-full md:w-[180px]">
+                    <SelectValue placeholder="All Users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="user-1">User-1</SelectItem>
+                    <SelectItem value="user-2">User-2</SelectItem>
+                    {/* In a real app, fetch users and map here */}
+                    {/* Example: users.map(u => <SelectItem key={u.email} value={u.email}>{u.email}</SelectItem>) */}
+                    {/* For this demo, you would fetch users and populate this */}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="w-full md:w-auto">
+              <Label htmlFor="date-start">From</Label>
+              <Input
+                id="date-start"
+                type="date"
+                value={dateRange.start || ""}
+                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                className="w-full md:w-[150px]"
+              />
+            </div>
+            <div className="w-full md:w-auto">
+              <Label htmlFor="date-end">To</Label>
+              <Input
+                id="date-end"
+                type="date"
+                value={dateRange.end || ""}
+                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                className="w-full md:w-[150px]"
+              />
             </div>
 
             <div className="w-full md:w-auto md:flex-1">
@@ -127,27 +213,37 @@ export default function LogsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Description</TableHead>
-                  {isFinanceManager && <TableHead>User</TableHead>}
+                  {(isAdmin || isFinanceManager) && <TableHead>User</TableHead>}
                   <TableHead>Amount</TableHead>
-                  {isFinanceManager && <TableHead>Performed By</TableHead>}
+                  {(isAdmin || isFinanceManager) && <TableHead>Performed By</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLogs.length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={isFinanceManager ? 6 : 4} className="text-center">
+                    <TableCell colSpan={(isAdmin || isFinanceManager) ? 6 : 4} className="text-center">
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredLogs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={(isAdmin || isFinanceManager) ? 6 : 4} className="text-center">
                       No logs found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredLogs.map((log) => (
                     <TableRow key={log.id}>
-                      <TableCell>{log.date}</TableCell>
+                      <TableCell>{new Date(log.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell>{getActionBadge(log.action)}</TableCell>
                       <TableCell>{log.description}</TableCell>
-                      {isFinanceManager && <TableCell>{log.userName || "System"}</TableCell>}
+                      {(isAdmin || isFinanceManager) && (
+                        <TableCell>{log.affectedUser || "System"}</TableCell>
+                      )}
                       <TableCell>{log.amount ? `৳ ${log.amount.toLocaleString()}` : "-"}</TableCell>
-                      {isFinanceManager && <TableCell>{log.performedByName}</TableCell>}
+                      {(isAdmin || isFinanceManager) && (
+                        <TableCell>{log.performedBy}</TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}

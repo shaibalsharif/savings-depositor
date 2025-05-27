@@ -20,3 +20,7 @@ export interface DepositFilters {
   page?: number;
   limit?: number;
 }
+
+export interface Fund {
+
+}

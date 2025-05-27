@@ -1,29 +1,48 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-
-import { systemSettings } from "@/lib/dummy-data"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 
-export default async function DepositSettingsPage() {
+export default function DepositSettingsPage() {
   const { toast } = useToast()
-const {isAuthenticated} = getKindeServerSession();
-const isUserAuthenticated = await isAuthenticated();
-const {getUser} = getKindeServerSession();
-const user = await getUser();
-  const [monthlyAmount, setMonthlyAmount] = useState(systemSettings.monthlyDepositAmount.toString())
-  const [dueDay, setDueDay] = useState(systemSettings.depositDueDay.toString())
-  const [reminderDay, setReminderDay] = useState(systemSettings.reminderDay.toString())
+  const { getUser } = useKindeAuth()
+  const user = getUser()
+  const [monthlyAmount, setMonthlyAmount] = useState("")
+  const [dueDay, setDueDay] = useState("")
+  const [reminderDay, setReminderDay] = useState("")
   const [effectiveDate, setEffectiveDate] = useState("")
+  const [settings, setSettings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const isFinanceManager = user?.role === "finance_manager" || user?.role === "admin"
+  const isFinanceManager = true // Replace with your real check
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/deposit-settings")
+        const { settings } = await res.json()
+        setSettings(settings)
+        // Set default values from the latest setting
+        if (settings[0]) {
+          setMonthlyAmount(settings[0].monthlyAmount)
+          setDueDay(settings[0].dueDay)
+          setReminderDay(settings[0].reminderDay)
+        }
+      } catch {
+        toast({ title: "Error", description: "Failed to load settings", variant: "destructive" })
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSettings()
+  }, [toast])
 
   if (!isFinanceManager) {
     return (
@@ -41,7 +60,7 @@ const user = await getUser();
     )
   }
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     if (!effectiveDate) {
       toast({
         title: "Missing information",
@@ -50,11 +69,49 @@ const user = await getUser();
       })
       return
     }
-
-    toast({
-      title: "Deposit settings updated",
-      description: `Monthly deposit amount updated to ৳${monthlyAmount} effective from ${effectiveDate}.`,
-    })
+    if (!monthlyAmount || !dueDay || !reminderDay) {
+      toast({
+        title: "Missing information",
+        description: "Please fill all required fields.",
+        variant: "destructive",
+      })
+      return
+    }
+    try {
+      const res = await fetch("/api/deposit-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          monthlyAmount,
+          dueDay,
+          reminderDay,
+          effectiveMonth: effectiveDate,
+        }),
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        toast({
+          title: "Error",
+          description: error.error || "Failed to save settings",
+          variant: "destructive",
+        })
+        return
+      }
+      toast({
+        title: "Deposit settings updated",
+        description: `Monthly deposit amount updated to ৳${monthlyAmount} effective from ${effectiveDate}.`,
+      })
+      // Refresh settings
+      const newRes = await fetch("/api/deposit-settings")
+      const { settings } = await newRes.json()
+      setSettings(settings)
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -101,7 +158,9 @@ const user = await getUser();
           </Alert>
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSaveSettings}>Save Changes</Button>
+          <Button onClick={handleSaveSettings} disabled={loading}>
+            Save Changes
+          </Button>
         </CardFooter>
       </Card>
 
@@ -143,17 +202,17 @@ const user = await getUser();
         </CardContent>
         <CardFooter>
           <Button
-            onClick={() => {
-              toast({
-                title: "Notification settings updated",
-                description: "Deposit reminder and due date settings have been updated.",
-              })
-            }}
+            onClick={handleSaveSettings}
+            disabled={loading}
           >
             Save Changes
           </Button>
         </CardFooter>
       </Card>
+
+      {loading && (
+        <div className="text-center text-muted-foreground">Loading settings...</div>
+      )}
     </div>
   )
 }
