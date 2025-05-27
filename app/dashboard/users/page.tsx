@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -17,13 +17,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
+import { useUploadThing } from "@/lib/uploadthing"
+import { Label } from "@/components/ui/label"
+import { Upload, X } from "lucide-react"
 
 function getUserRole(permissions: string[] = []) {
-  if (permissions.includes("admin")) return "admin"
-  if (permissions.includes("manager")) return "manager"
-  return "member"
+  let role = ["user"]
+
+  if (permissions.includes("admin")) role.push("admin")
+  if (permissions.includes("manager")) role.push("manager")
+  return role
 }
 
 export default function UsersPage() {
@@ -31,88 +36,185 @@ export default function UsersPage() {
   const { toast } = useToast()
   const [members, setMembers] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [showArchived, setShowArchived] = useState(false)
+  const [showSuspended, setShowSuspended] = useState(false)
   const [assigningManager, setAssigningManager] = useState<string | null>(null)
   const [confirmManagerId, setConfirmManagerId] = useState<string | null>(null)
-  const [archivingUser, setArchivingUser] = useState<string | null>(null)
-  const [unarchivingUser, setUnarchivingUser] = useState<string | null>(null)
-  const isAdmin =true// user?.permissions?.includes("admin")
+  const [suspendingUser, setSuspendingUser] = useState<string | null>(null)
+  const [unsuspendingUser, setUnsuspendingUser] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
-  // Fetch users from your backend API (which proxies Kinde Management API)
+  const [activeTab, setActiveTab] = useState("active")
+  const [addUserLoading, setAddUserLoading] = useState(false)
+  const [addUserForm, setAddUserForm] = useState({
+    email: "",
+    given_name: "",
+    family_name: "",
+    username: "",
+    phone: "",
+    picture: "",
+  })
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { startUpload } = useUploadThing("userImage")
+  const isAdmin = true//user?.permissions?.includes("admin")
+
   useEffect(() => {
     const fetchUsers = async () => {
       const res = await fetch("/api/users")
       const { users } = await res.json()
+
       setMembers(users)
     }
     fetchUsers()
   }, [])
 
-  // Assign Manager logic
-  const handleAssignManager = async (userId: string) => {
+  const handleAssignManager = async (userId: string, type = "assign") => {
     setAssigningManager(userId)
+
+    if (type === "assign") {
+      try {
+
+        const currentManager = members.find(m =>
+          getUserRole(m.permissions).includes("manager") && !m.permissions.includes("admin")
+        )
+        const res = await fetch("/api/users/assign-manager", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            newManagerId: userId,
+            oldManagerId: currentManager?.id
+          }),
+        })
+        if (!res.ok) throw new Error()
+        toast({ title: "Manager permissions updated" })
+        const usersRes = await fetch("/api/users")
+        setMembers((await usersRes.json()).users)
+
+
+
+      } catch {
+        toast({ title: "Failed to update manager", variant: "destructive" })
+      } finally {
+        setAssigningManager(null)
+        setConfirmManagerId(null)
+      }
+    } else if (type === "remove") {
+      try {
+
+        const res = await fetch("/api/users/remove-manager", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            removalId: userId
+          }),
+        })
+        if (!res.ok) throw new Error()
+        toast({ title: "Manager permissions removed" })
+        const usersRes = await fetch("/api/users")
+        setMembers((await usersRes.json()).users)
+
+      } catch {
+        toast({ title: "Failed to remove manager", variant: "destructive" })
+      } finally {
+        setAssigningManager(null)
+        setConfirmManagerId(null)
+      }
+    }
+  }
+
+  const handleSuspendUser = async (userId: string) => {
+    setSuspendingUser(userId)
     try {
-      // 1. Find current manager
-      const currentManager = members.find((m) => getUserRole(m.permissions) === "manager")
-      // 2. Call your API to update permissions in Kinde
-      const res = await fetch("/api/users/assign-manager", {
+      const res = await fetch(`/api/users/${userId}/suspend`, { method: "POST" })
+      if (!res.ok) throw new Error()
+      toast({ title: "User suspended" })
+      const usersRes = await fetch("/api/users")
+      setMembers((await usersRes.json()).users)
+    } catch {
+      toast({ title: "Failed to suspend user", variant: "destructive" })
+    } finally {
+      setSuspendingUser(null)
+    }
+  }
+
+  const handleUnsuspendUser = async (userId: string) => {
+    setUnsuspendingUser(userId)
+    try {
+      const res = await fetch(`/api/users/${userId}/unsuspend`, { method: "POST" })
+      if (!res.ok) throw new Error()
+      toast({ title: "User unsuspended" })
+      const usersRes = await fetch("/api/users")
+      setMembers((await usersRes.json()).users)
+    } catch {
+      toast({ title: "Failed to unsuspend user", variant: "destructive" })
+    } finally {
+      setUnsuspendingUser(null)
+    }
+  }
+
+  const filteredMembers = members.filter(member => {
+    const matchesSearch = member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesSearch && (showSuspended ? member.status === "archived" : member.status === "active")
+  })
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const file = e.target.files[0];
+    setSelectedFile(file);
+    setImagePreviewUrl(URL.createObjectURL(file)); // for preview
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleAddUser = async () => {
+    if (!addUserForm.email || !addUserForm.given_name || !addUserForm.family_name || !addUserForm.username) {
+      toast({ title: "Required fields missing", variant: "destructive" })
+      return
+    }
+    setAddUserLoading(true)
+    try {
+      let pictureUrl = addUserForm.picture;
+      if (!pictureUrl && selectedFile) {
+        const res = await startUpload([selectedFile]);
+        if (res?.[0]?.ufsUrl) {
+          pictureUrl = res[0].ufsUrl;
+        }
+      }
+
+
+
+      const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newManagerId: userId, oldManagerId: currentManager?.id }),
+        body: JSON.stringify(pictureUrl && pictureUrl.length ? { ...addUserForm, picture: pictureUrl } : { ...addUserForm }),
       })
-      if (!res.ok) throw new Error()
-      toast({ title: "Manager assigned successfully" })
-      // Refresh users
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Failed to add user")
+      }
+      toast({ title: "User added successfully" })
+      setSelectedFile(null);
+      setImagePreviewUrl(null);
+      setAddUserForm({
+        email: "",
+        given_name: "",
+        family_name: "",
+        username: "",
+        phone: "",
+        picture: "",
+      })
+      setActiveTab("active")
+      // Refresh user list
       const usersRes = await fetch("/api/users")
       setMembers((await usersRes.json()).users)
-    } catch {
-      toast({ title: "Failed to assign manager", variant: "destructive" })
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" })
     } finally {
-      setAssigningManager(null)
-      setConfirmManagerId(null)
+      setAddUserLoading(false)
     }
   }
-
-  // Archive user logic
-  const handleArchiveUser = async (userId: string) => {
-    setArchivingUser(userId)
-    try {
-      const res = await fetch(`/api/users/${userId}/archive`, { method: "POST" })
-      if (!res.ok) throw new Error()
-      toast({ title: "User archived" })
-      // Refresh users
-      const usersRes = await fetch("/api/users")
-      setMembers((await usersRes.json()).users)
-    } catch {
-      toast({ title: "Failed to archive user", variant: "destructive" })
-    } finally {
-      setArchivingUser(null)
-    }
-  }
-
-  // Unarchive user logic
-  const handleUnarchiveUser = async (userId: string) => {
-    setUnarchivingUser(userId)
-    try {
-      const res = await fetch(`/api/users/${userId}/unarchive`, { method: "POST" })
-      if (!res.ok) throw new Error()
-      toast({ title: "User activated" })
-      // Refresh users
-      const usersRes = await fetch("/api/users")
-      setMembers((await usersRes.json()).users)
-    } catch {
-      toast({ title: "Failed to activate user", variant: "destructive" })
-    } finally {
-      setUnarchivingUser(null)
-    }
-  }
-
-  const filteredMembers = members?.filter(
-    (member) =>
-      (member.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email?.toLowerCase().includes(searchQuery.toLowerCase())) &&
-      (showArchived ? member.status === "archived" : member.status === "active"),
-  )
 
   if (!isAdmin) {
     return (
@@ -120,11 +222,8 @@ export default function UsersPage() {
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>Access Restricted</CardTitle>
-            <CardDescription>You do not have permission to access user management.</CardDescription>
+            <CardDescription>You do not have permission to manage users</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p>Only administrators can access and modify user information.</p>
-          </CardContent>
         </Card>
       </div>
     )
@@ -135,199 +234,471 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">Manage system users and their permissions</p>
+          <p className="text-muted-foreground">Manage user access and permissions</p>
         </div>
       </div>
 
-      <Tabs defaultValue="active">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+
         <TabsList>
-          <TabsTrigger value="active" onClick={() => setShowArchived(false)}>
+          <TabsTrigger value="active" onClick={() => setShowSuspended(false)}>
             Active Users
           </TabsTrigger>
-          <TabsTrigger value="archived" onClick={() => setShowArchived(true)}>
-            Archived Users
+          <TabsTrigger value="suspended" onClick={() => setShowSuspended(true)}>
+            Suspended Users
+          </TabsTrigger>
+          <TabsTrigger value="add">
+            Add User
           </TabsTrigger>
         </TabsList>
+
+        {/* Active Users */}
+        <TabsContent value="active">
+          <Card>
+            <CardHeader>
+              <CardTitle>{showSuspended ? "Suspended Users" : "Active Users"}</CardTitle>
+              <CardDescription>
+                {showSuspended
+                  ? "Users with suspended access"
+                  : "Currently active system users"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6">
+                <Input
+                  placeholder="Search users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-md"
+                />
+              </div>
+
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMembers.map((member) => {
+                      const role = getUserRole(member.permissions)
+                      const isCurrentUser = member.id === user?.id
+
+                      return (
+                        <TableRow key={member.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={member.picture} />
+                                <AvatarFallback>{member.name?.[0] || member.email[0]}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                {member.name || "Unnamed User"}
+                                {isCurrentUser && <span className="ml-2 text-muted-foreground">(You)</span>}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{member.email}</TableCell>
+                          <TableCell className="space-x-1">
+                            {role.map((role_name, index) => {
+                              return <Badge key={`${role_name}-${index}`} variant={
+                                role_name === "admin" ? "default" :
+                                  role_name === "manager" ? "success" : "secondary"
+                              }>
+                                {role_name.toUpperCase()}
+                              </Badge>
+                            })}
+
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2 ">
+                              {member.status === "active" && !role.includes("admin") && (
+                                <Dialog open={confirmManagerId === member.id}
+                                  onOpenChange={open => setConfirmManagerId(open ? member.id : null)}>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant={role.includes("manager") ? 'destructive' : "primary"}
+                                      size="sm"
+                                      disabled={assigningManager === member.id}
+                                    >
+                                      {role.includes("manager") ? "Remove Manager" : "Make Manager"}
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Confirm Manager Change</DialogTitle>
+                                      <DialogDescription>
+                                        {role.includes("manager")
+                                          ? `Remove manager permissions from ${member.email}?`
+                                          : `Assign manager permissions to ${member.email}?`}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                      <Button
+                                        variant="secondary"
+                                        onClick={!(role.includes("manager")) ? () => handleAssignManager(member.id) : () => handleAssignManager(member.id, "remove")}
+                                        disabled={assigningManager === member.id}
+                                      >
+                                        {assigningManager === member.id ? "Loading..." : "Confirm"}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => setConfirmManagerId(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+
+                              {(!isCurrentUser && !role.includes('manager')) && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant={member.status === "archived" ? "destructive" : "secondary"}
+                                      size="sm"
+                                      disabled={
+                                        (member.status === "archived" ? unsuspendingUser : suspendingUser) === member.id
+                                      }
+                                    >
+                                      {member.status === "archived" ? "Unsuspend" : "Suspend"}
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        {member.status === "archived" ? "Unsuspend User?" : "Suspend User?"}
+                                      </DialogTitle>
+                                      <DialogDescription>
+                                        {member.status === "archived"
+                                          ? `Restore access for ${member.email}?`
+                                          : `Temporarily disable access for ${member.email}?`}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+
+
+
+                                      <Button
+                                        variant={member.status === "archived" ? "secondary" : "destructive"}
+                                        onClick={() => member.status === "archived"
+                                          ? handleUnsuspendUser(member.id)
+                                          : handleSuspendUser(member.id)
+                                        }
+                                        disabled={(member.status === "archived" ? unsuspendingUser : suspendingUser) === member.id}
+                                      >
+
+                                        {(member.status === "archived" ? unsuspendingUser : suspendingUser) === member.id ? "Loading..." : "Confirm"}
+                                      </Button>
+
+                                      <Button variant="outline">Cancel</Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Suspended Users */}
+        <TabsContent value="suspended">
+          <Card>
+            <CardHeader>
+              <CardTitle>{showSuspended ? "Suspended Users" : "Active Users"}</CardTitle>
+              <CardDescription>
+                {showSuspended
+                  ? "Users with suspended access"
+                  : "Currently active system users"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6">
+                <Input
+                  placeholder="Search users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-md"
+                />
+              </div>
+
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMembers.map((member) => {
+                      const role = getUserRole(member.permissions)
+                      const isCurrentUser = member.id === user?.id
+
+                      return (
+                        <TableRow key={member.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={member.picture} />
+                                <AvatarFallback>{member.name?.[0] || member.email[0]}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                {member.name || "Unnamed User"}
+                                {isCurrentUser && <span className="ml-2 text-muted-foreground">(You)</span>}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{member.email}</TableCell>
+                          <TableCell className="space-x-1">
+                            {role.map((role_name, index) => {
+                              return <Badge key={`${role_name}-${index}`} variant={
+                                role_name === "admin" ? "default" :
+                                  role_name === "manager" ? "success" : "secondary"
+                              }>
+                                {role_name.toUpperCase()}
+                              </Badge>
+                            })}
+
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2 ">
+                              {member.status === "active" && !role.includes("admin") && (
+                                <Dialog open={confirmManagerId === member.id}
+                                  onOpenChange={open => setConfirmManagerId(open ? member.id : null)}>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant={role.includes("manager") ? 'destructive' : "primary"}
+                                      size="sm"
+                                      disabled={assigningManager === member.id}
+                                    >
+                                      {role.includes("manager") ? "Remove Manager" : "Make Manager"}
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Confirm Manager Change</DialogTitle>
+                                      <DialogDescription>
+                                        {role.includes("manager")
+                                          ? `Remove manager permissions from ${member.email}?`
+                                          : `Assign manager permissions to ${member.email}?`}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                      <Button
+                                        variant="secondary"
+                                        onClick={!(role.includes("manager")) ? () => handleAssignManager(member.id) : () => handleAssignManager(member.id, "remove")}
+                                        disabled={assigningManager === member.id}
+                                      >
+                                        {assigningManager === member.id ? "Loading..." : "Confirm"}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => setConfirmManagerId(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+
+                              {(!isCurrentUser && !role.includes('manager')) && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant={member.status === "archived" ? "destructive" : "secondary"}
+                                      size="sm"
+                                      disabled={
+                                        (member.status === "archived" ? unsuspendingUser : suspendingUser) === member.id
+                                      }
+                                    >
+                                      {member.status === "archived" ? "Unsuspend" : "Suspend"}
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        {member.status === "archived" ? "Unsuspend User?" : "Suspend User?"}
+                                      </DialogTitle>
+                                      <DialogDescription>
+                                        {member.status === "archived"
+                                          ? `Restore access for ${member.email}?`
+                                          : `Temporarily disable access for ${member.email}?`}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+
+
+
+                                      <Button
+                                        variant={member.status === "archived" ? "secondary" : "destructive"}
+                                        onClick={() => member.status === "archived"
+                                          ? handleUnsuspendUser(member.id)
+                                          : handleSuspendUser(member.id)
+                                        }
+                                        disabled={(member.status === "archived" ? unsuspendingUser : suspendingUser) === member.id}
+                                      >
+
+                                        {(member.status === "archived" ? unsuspendingUser : suspendingUser) === member.id ? "Loading..." : "Confirm"}
+                                      </Button>
+
+                                      <Button variant="outline">Cancel</Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Add User */}
+        <TabsContent value="add">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New User</CardTitle>
+              <CardDescription>
+                Enter details to invite a new user. They will receive a passwordless sign-in email.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 ">
+              <div className="grid md:grid-cols-2 gap-4  md:w-full">
+                <div>
+                  <Label>Email*</Label>
+                  <Input
+                    type="email"
+                    value={addUserForm.email}
+                    onChange={e => setAddUserForm(f => ({ ...f, email: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>First Name*</Label>
+                  <Input
+                    value={addUserForm.given_name}
+                    onChange={e => setAddUserForm(f => ({ ...f, given_name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Last Name*</Label>
+                  <Input
+                    value={addUserForm.family_name}
+                    onChange={e => setAddUserForm(f => ({ ...f, family_name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Username*</Label>
+                  <Input
+                    value={addUserForm.username}
+                    onChange={e => setAddUserForm(f => ({ ...f, username: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <Input
+                    value={addUserForm.phone}
+                    type="number"
+                    onChange={e => setAddUserForm(f => ({ ...f, phone: e.target.value }))}
+                  />
+                </div>
+                <div className="col-span-full">
+                  <Label>Profile Image</Label>
+
+                  {imagePreviewUrl ? (
+                    <div className="relative rounded-md border border-dashed p-4 w-48 mx-auto">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2"
+                        onClick={() => {
+                          setImagePreviewUrl(null);
+                          setSelectedFile(null);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <Avatar className="h-20 w-20">
+                          <AvatarImage src={imagePreviewUrl} />
+                          <AvatarFallback>IMG</AvatarFallback>
+                        </Avatar>
+                        <p className="text-sm text-muted-foreground">Image ready to upload</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-8">
+                      <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+                      <div className="mb-2 text-center">
+                        <p className="font-medium">Upload your profile image</p>
+                        <p className="text-sm text-muted-foreground">Supports JPEG, PNG (max 1MB)</p>
+                      </div>
+
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/*"
+                        className="hidden"
+                        id="profile-image"
+                      />
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                      >
+                        Select Image
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </CardContent>
+
+            <CardFooter>
+              <Button className="w-full"
+                onClick={handleAddUser}
+                disabled={addUserLoading || !addUserForm.email || !addUserForm.given_name || !addUserForm.family_name || !addUserForm.username}
+              >
+                {addUserLoading ? "Adding..." : "Add User"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
       </Tabs>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{showArchived ? "Archived Users" : "Active Users"}</CardTitle>
-          <CardDescription>
-            {showArchived ? "View and manage archived users" : "Manage and view all active users in the system"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6">
-            <Input
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-md"
-            />
-          </div>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Permission</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMembers&& filteredMembers?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                 filteredMembers && filteredMembers?.map((member) => {
-                    const role = getUserRole(member.permissions)
-                    return (
-                      <TableRow key={member.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src={member.avatar || `/placeholder.svg?height=32&width=32&text=${member.name?.charAt(0)}`} />
-                              <AvatarFallback>{member.name?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div>{member.name}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{member.email}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              role === "admin"
-                                ? "default"
-                                : role === "manager"
-                                  ? "secondary"
-                                  : "outline"
-                            }
-                          >
-                            {role.charAt(0).toUpperCase() + role.slice(1)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={member.status === "active" ? "default" : "outline"}>
-                            {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {role !== "admin" && member.status === "active" && (
-                              <Dialog open={confirmManagerId === member.id} onOpenChange={open => setConfirmManagerId(open ? member.id : null)}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    disabled={assigningManager === member.id}
-                                  >
-                                    Assign Manager
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Assign as Manager?</DialogTitle>
-                                    <DialogDescription>
-                                      Are you sure you want to assign <b>{member.name}</b> as manager? The current manager will become a member.
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <DialogFooter>
-                                    <Button
-                                      variant="secondary"
-                                      loading={assigningManager === member.id}
-                                      onClick={() => handleAssignManager(member.id)}
-                                    >
-                                      Yes, Assign
-                                    </Button>
-                                    <Button variant="outline" onClick={() => setConfirmManagerId(null)}>
-                                      Cancel
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-                            )}
-                            {member.status === "active" ? (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    disabled={archivingUser === member.id}
-                                  >
-                                    Archive
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Archive User?</DialogTitle>
-                                    <DialogDescription>
-                                      Are you sure you want to archive <b>{member.name}</b>?
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <DialogFooter>
-                                    <Button
-                                      variant="destructive"
-                                      loading={archivingUser === member.id}
-                                      onClick={() => handleArchiveUser(member.id)}
-                                    >
-                                      Yes, Archive
-                                    </Button>
-                                    <Button variant="outline" onClick={() => setArchivingUser(null)}>
-                                      Cancel
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-                            ) : (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    disabled={unarchivingUser === member.id}
-                                  >
-                                    Activate
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Activate User?</DialogTitle>
-                                    <DialogDescription>
-                                      Are you sure you want to activate <b>{member.name}</b>?
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <DialogFooter>
-                                    <Button
-                                      variant="secondary"
-                                      loading={unarchivingUser === member.id}
-                                      onClick={() => handleUnarchiveUser(member.id)}
-                                    >
-                                      Yes, Activate
-                                    </Button>
-                                    <Button variant="outline" onClick={() => setUnarchivingUser(null)}>
-                                      Cancel
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

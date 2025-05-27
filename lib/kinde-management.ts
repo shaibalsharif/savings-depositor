@@ -1,5 +1,11 @@
 import fetch from "node-fetch";
 
+type KindeTokenResponse = {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+};
+
 export async function getKindeManagementToken() {
   const res = await fetch(`${process.env.KINDE_ISSUER_URL}/oauth2/token`, {
     method: "POST",
@@ -11,7 +17,11 @@ export async function getKindeManagementToken() {
       audience: `${process.env.KINDE_ISSUER_URL}/api`,
     }),
   });
+
+
   if (!res.ok) throw new Error("Failed to get Kinde token");
-  const data = await res.json();
-  return data.access_token as string;
+
+  const data: KindeTokenResponse = (await res.json()) as KindeTokenResponse;
+
+  return data.access_token;
 }
