@@ -45,7 +45,7 @@ export const logs = pgTable('logs', {
   id: serial('id').primaryKey(),
   action: varchar('action', { length: 50 }),
   description: varchar('description', { length: 255 }),
-  userId: integer('user_id').references(() => users.id),
+  userId: varchar('user_id').references(() => users.id),
   amount: integer('amount'),
   performedBy: varchar('performed_by', { length: 100 }),
   createdAt: timestamp('created_at').defaultNow()

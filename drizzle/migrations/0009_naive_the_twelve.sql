@@ -1,0 +1,1 @@
+ALTER TABLE "logs" RENAME COLUMN "user_email" TO "user_id";

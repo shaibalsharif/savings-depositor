@@ -9,12 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { ArrowLeftRight } from "lucide-react"
+import { ArrowLeftRight, Trash } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 
 export default function FundsPage() {
   const { user } = useKindeAuth()
+  console.log(user);
   const { toast } = useToast()
   const [funds, setFunds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -176,7 +177,7 @@ export default function FundsPage() {
         <Button onClick={() => setShowAddFund(true)}>Add New Fund</Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-4">
         {loading ? (
           <>
             <Card><CardContent>Loading...</CardContent></Card>
@@ -184,7 +185,7 @@ export default function FundsPage() {
           </>
         ) : (
           funds.map(fund => (
-            <Card key={fund.id}>
+            <Card key={fund.id} className="relative group">
               <CardHeader>
                 <CardTitle>{fund.title}</CardTitle>
                 <CardDescription>Fund ID: {fund.id}</CardDescription>
@@ -192,16 +193,11 @@ export default function FundsPage() {
               <CardContent>
                 <div className="text-3xl font-bold">৳ {Number(fund.balance).toLocaleString()}</div>
               </CardContent>
-              <CardFooter>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={Number(fund.balance) !== 0}
-                  onClick={() => setShowDeleteFund({ open: true, fundId: fund.id, fundTitle: fund.title })}
-                >
-                  Delete
-                </Button>
-              </CardFooter>
+              {Number(fund.balance) == 0 ? <Trash
+                onClick={() => setShowDeleteFund({ open: true, fundId: fund.id, fundTitle: fund.title })}
+                className="absolute hidden group-hover:inline top-2 right-2 text-red-400 fill-red-200  opacity-75 cursor-pointer transition-opacity duration-200 hover:fill-[#af0d0d99] hover:opacity-100 hover:scale-110
+                 hover:text-red-400" /> : <></>}
+
             </Card>
           ))
         )}
@@ -279,8 +275,9 @@ export default function FundsPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full" 
-                loading={transferLoading}>Transfer Funds</Button>
+                <Button type="submit" className="w-full" disabled={transferLoading}>
+                  {transferLoading ? "Transferring..." : "Transfer Funds"}
+                </Button>
               </CardFooter>
             </form>
           </Card>
@@ -348,7 +345,7 @@ export default function FundsPage() {
             />
           </div>
           <DialogFooter>
-            <Button onClick={handleAddFund} loading={addLoading}>Create</Button>
+            <Button onClick={handleAddFund} disabled={addLoading}>{addLoading ? "Creating ..." : "Create"}</Button>
             <Button variant="outline" onClick={() => setShowAddFund(false)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
@@ -362,7 +359,7 @@ export default function FundsPage() {
           </DialogHeader>
           <p>Are you sure you want to delete <b>{showDeleteFund.fundTitle}</b>? This can only be done if the fund balance is zero.</p>
           <DialogFooter>
-            <Button variant="destructive" loading={deleteLoading} onClick={handleDeleteFund}>Yes, Delete</Button>
+            <Button variant="destructive" disabled={deleteLoading} onClick={handleDeleteFund}>{deleteLoading ? "Deleting..." : "Yes, Delete"}</Button>
             <Button variant="outline" onClick={() => setShowDeleteFund({ open: false })}>Cancel</Button>
           </DialogFooter>
         </DialogContent>

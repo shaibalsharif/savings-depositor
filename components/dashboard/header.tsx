@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
-import {LogoutLink} from "@kinde-oss/kinde-auth-nextjs/components";
+import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { ModeToggle } from "../theme-toggler"
+import Link from "next/link"
 
 export async function DashboardHeader() {
   const { isAuthenticated } = getKindeServerSession();
@@ -36,7 +37,7 @@ export async function DashboardHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <ModeToggle/>
+        <ModeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
@@ -78,10 +79,10 @@ export async function DashboardHeader() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
+            <Link className="cursor-pointer" href={"/dashboard/profile"}><DropdownMenuItem>Profile</DropdownMenuItem></Link>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-           <LogoutLink> <DropdownMenuItem>Log out</DropdownMenuItem></LogoutLink>
+            <LogoutLink> <DropdownMenuItem>Log out</DropdownMenuItem></LogoutLink>
           </DropdownMenuContent>
         </DropdownMenu>}
       </div>

@@ -1,0 +1,1 @@
+ALTER TABLE "funds" ADD COLUMN "currency" varchar(10) DEFAULT 'BDT' NOT NULL;

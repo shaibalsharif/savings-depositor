@@ -57,6 +57,34 @@
       "when": 1748287582373,
       "tag": "0007_harsh_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1748434762946,
+      "tag": "0008_hard_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1748435427485,
+      "tag": "0009_naive_the_twelve",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1748435583035,
+      "tag": "0010_gigantic_monster_badoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1748673174449,
+      "tag": "0011_young_master_chief",
+      "breakpoints": true
     }
   ]
 }

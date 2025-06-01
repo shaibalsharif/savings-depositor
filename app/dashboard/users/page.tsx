@@ -43,7 +43,7 @@ export default function UsersPage() {
   const [unsuspendingUser, setUnsuspendingUser] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("active")
   const [addUserLoading, setAddUserLoading] = useState(false)
   const [addUserForm, setAddUserForm] = useState({
@@ -65,9 +65,12 @@ export default function UsersPage() {
       const { users } = await res.json()
 
       setMembers(users)
+      setLoading(false)
     }
-    fetchUsers()
-  }, [])
+    if (loading) {
+      fetchUsers()
+    }
+  }, [loading])
 
   const handleAssignManager = async (userId: string, type = "assign") => {
     setAssigningManager(userId)
@@ -88,8 +91,7 @@ export default function UsersPage() {
         })
         if (!res.ok) throw new Error()
         toast({ title: "Manager permissions updated" })
-        const usersRes = await fetch("/api/users")
-        setMembers((await usersRes.json()).users)
+        setLoading(true) // Refresh user list
 
 
 
@@ -111,8 +113,7 @@ export default function UsersPage() {
         })
         if (!res.ok) throw new Error()
         toast({ title: "Manager permissions removed" })
-        const usersRes = await fetch("/api/users")
-        setMembers((await usersRes.json()).users)
+        setLoading(true) // Refresh user list
 
       } catch {
         toast({ title: "Failed to remove manager", variant: "destructive" })
@@ -129,8 +130,7 @@ export default function UsersPage() {
       const res = await fetch(`/api/users/${userId}/suspend`, { method: "POST" })
       if (!res.ok) throw new Error()
       toast({ title: "User suspended" })
-      const usersRes = await fetch("/api/users")
-      setMembers((await usersRes.json()).users)
+      setLoading(true) // Refresh user list
     } catch {
       toast({ title: "Failed to suspend user", variant: "destructive" })
     } finally {
@@ -144,8 +144,7 @@ export default function UsersPage() {
       const res = await fetch(`/api/users/${userId}/unsuspend`, { method: "POST" })
       if (!res.ok) throw new Error()
       toast({ title: "User unsuspended" })
-      const usersRes = await fetch("/api/users")
-      setMembers((await usersRes.json()).users)
+      setLoading(true) // Refresh user list
     } catch {
       toast({ title: "Failed to unsuspend user", variant: "destructive" })
     } finally {
@@ -153,11 +152,20 @@ export default function UsersPage() {
     }
   }
 
-  const filteredMembers = members.filter(member => {
+ const filteredMembers = members
+  .filter(member => {
     const matchesSearch = member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesSearch && (showSuspended ? member.status === "archived" : member.status === "active")
+      member.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch && (showSuspended ? member.status === "archived" : member.status === "active");
   })
+  .sort((a, b) => {
+    const getPriority = (member: any) => {
+      if (member.permissions?.includes('admin')) return 0;
+      if (member.permissions?.includes('manager')) return 1;
+      return 2;
+    };
+    return getPriority(a) - getPriority(b);
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -207,8 +215,7 @@ export default function UsersPage() {
       })
       setActiveTab("active")
       // Refresh user list
-      const usersRes = await fetch("/api/users")
-      setMembers((await usersRes.json()).users)
+      setLoading(true)
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" })
     } finally {
@@ -294,7 +301,9 @@ export default function UsersPage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar>
-                                <AvatarImage src={member.picture} />
+                                <AvatarImage src={member.avatar} />
+
+
                                 <AvatarFallback>{member.name?.[0] || member.email[0]}</AvatarFallback>
                               </Avatar>
                               <div>
@@ -457,7 +466,7 @@ export default function UsersPage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar>
-                                <AvatarImage src={member.picture} />
+                                <AvatarImage src={member.avatar} />
                                 <AvatarFallback>{member.name?.[0] || member.email[0]}</AvatarFallback>
                               </Avatar>
                               <div>

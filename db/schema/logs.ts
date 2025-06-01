@@ -1,10 +1,10 @@
-import { pgTable, serial, varchar, text,numeric, timestamp, jsonb ,boolean,integer} from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text,numeric, timestamp, jsonb ,boolean,integer,date} from "drizzle-orm/pg-core";
 
 
 // import { pgTable, serial, varchar, numeric, timestamp, text } from "drizzle-orm/pg-core";
 export const deposits = pgTable("deposits", {
   id: serial("id").primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
   month: varchar("month", { length: 32 }).notNull(), // E.g. "May 2024"
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   transactionId: varchar("transaction_id", { length: 128 }).notNull(),
@@ -22,6 +22,7 @@ export const funds = pgTable("funds", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
   balance: numeric("balance", { precision: 12, scale: 2 }).default("0").notNull(),
+  currency: varchar("currency", { length: 10 }).default("BDT").notNull(), // Default to BDT
   createdBy: varchar("created_by", { length: 255 }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   deleted: boolean("deleted").default(false).notNull(), // soft delete
@@ -39,22 +40,81 @@ export const fundTransactions = pgTable("fund_transactions", {
 });
 
 
-export const depositSettings = pgTable("deposit_settings", {
+// export const depositSettings = pgTable("deposit_settings", {
+//   id: serial("id").primaryKey(),
+//   monthlyAmount: numeric("monthly_amount", { precision: 12, scale: 2 }).notNull(),
+//   dueDay: integer("due_day").notNull(),
+//   reminderDay: integer("reminder_day").notNull(),
+//   effectiveMonth: varchar("effective_month", { length: 16 }).notNull(), // e.g., "2025-05"
+//   createdBy: varchar("created_by", { length: 255 }).notNull(),
+//   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+// });
+
+export const personalInfo = pgTable("personal_info", {
   id: serial("id").primaryKey(),
-  monthlyAmount: numeric("monthly_amount", { precision: 12, scale: 2 }).notNull(),
-  dueDay: integer("due_day").notNull(),
-  reminderDay: integer("reminder_day").notNull(),
-  effectiveMonth: varchar("effective_month", { length: 16 }).notNull(), // e.g., "2025-05"
-  createdBy: varchar("created_by", { length: 255 }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  nameBn: varchar("name_bn", { length: 255 }).notNull(),
+  father: varchar("father", { length: 255 }).notNull(),
+  dob: date("dob").notNull(),
+  profession: varchar("profession", { length: 255 }).notNull(),
+  religion: varchar("religion", { length: 255 }).notNull(),
+  presentAddress: text("present_address").notNull(),
+  permanentAddress: text("permanent_address").notNull(),
+  mobile: varchar("mobile", { length: 20 }).notNull(),
+  nidNumber: varchar("nid_number", { length: 17 }).notNull(),
+  nidFront: text("nid_front").notNull(),
+  nidBack: text("nid_back").notNull(),
+  signature: text("signature").notNull(),
+  photo: text("photo").notNull(),
+  position: varchar("position", { length: 50 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const nomineeInfo = pgTable("nominee_info", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  relation: varchar("relation", { length: 255 }).notNull(),
+  dob: date("dob").notNull(),
+  mobile: varchar("mobile", { length: 20 }).notNull(),
+  nidNumber: varchar("nid_number", { length: 17 }).notNull(),
+  address: text("address").notNull(),
+  photo: text("photo").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
 
 
+export const depositSettings = pgTable("deposit_settings", {
+  id: serial("id").primaryKey(),
+  monthlyAmount: varchar("monthly_amount", { length: 50 }).notNull(),
+  dueDay: varchar("due_day", { length: 2 }).notNull(),
+  reminderDay: varchar("reminder_day", { length: 2 }).notNull(),
+  effectiveMonth: varchar("effective_month", { length: 7 }).notNull(), // e.g. "2025-06"
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+// export const logs = pgTable("logs", {
+//   id: serial("id").primaryKey(),
+//   userEmail: varchar("user_email", { length: 255 }).notNull(),
+//   action: varchar("action", { length: 255 }).notNull(),
+//   details: text("details"),
+//   createdAt: timestamp("created_at").defaultNow().notNull(),
+// })
+
+export const terms = pgTable("terms", {
+  id: serial("id").primaryKey(),
+  content: text("content").notNull(),
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
 // --- Logs Table (for actions) ---
 export const logs = pgTable("logs", {
   id: serial("id").primaryKey(),
-  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
   action: varchar("action", { length: 255 }).notNull(),
   details: varchar("details", { length: 2048 }), // Can be JSON stringified
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

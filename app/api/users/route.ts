@@ -6,7 +6,7 @@ export async function GET() {
   const token = await getKindeManagementToken();
 
   // Get all users
-  const usersRes = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/users`, {
+  const usersRes = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/users?page_size=100`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 

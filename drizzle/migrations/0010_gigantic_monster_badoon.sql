@@ -1,0 +1,1 @@
+ALTER TABLE "deposits" RENAME COLUMN "user_email" TO "user_id";

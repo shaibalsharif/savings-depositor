@@ -19,8 +19,8 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 import { usePathname } from "next/navigation"
 
 export function DashboardSidebar() {
-  const { user, permissions, logout } = useKindeAuth()
-  
+  const { user, /* permissions, logout */ } = useKindeAuth()
+
   const pathname = usePathname()// In real use, you might use usePathname from next/navigation
 
   // Permission checks (adjust as per your Kinde permissions)
@@ -52,6 +52,7 @@ export function DashboardSidebar() {
       href: "/dashboard/deposit-settings",
       active: false,
       showIf: isFinanceManager,
+      disabled: true,
     },
     {
       label: "Withdrawals",
@@ -85,7 +86,7 @@ export function DashboardSidebar() {
       icon: History,
       href: "/dashboard/logs",
       active: false,
-      // disabled: true,
+
     },
     {
       label: "Notifications",
@@ -144,7 +145,7 @@ export function DashboardSidebar() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => logout({ returnTo: window.location.origin })}
+            // onClick={() => logout({ returnTo: window.location.origin })}
           >
             <LogOut className="h-4 w-4" />
             <span className="sr-only">Log out</span>

@@ -9,29 +9,67 @@ export async function POST(request: Request) {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
 
-  await db.transaction(async (trx) => {
-    await trx
-      .update(funds)
-      .set({ balance: sql`${funds.balance} - ${amount}` })
-      .where(eq(funds.id, fromFundId));
-    await trx
-      .update(funds)
-      .set({ balance: sql`${funds.balance} + ${amount}` })
-      .where(eq(funds.id, toFundId));
-    await trx.insert(fundTransactions).values({
-      fromFundId,
-      toFundId,
-      amount,
-      createdBy: user?.email!,
-      description,
+  try {
+    await db.transaction(async (trx) => {
+      // 1. Lock rows for both funds to prevent concurrent balance updates
+      const [fromFund] = await trx
+        .select()
+        .from(funds)
+        .where(eq(funds.id, fromFundId))
+        .for("update");
+
+      const [toFund] = await trx
+        .select()
+        .from(funds)
+        .where(eq(funds.id, toFundId))
+        .for("update");
+
+      if (!fromFund || !toFund) {
+        throw new Error("One or both fund IDs are invalid.");
+      }
+
+      const fromBalance = Number(fromFund.balance);
+      const transferAmount = Number(amount);
+
+      if (fromBalance < transferAmount) {
+        throw new Error("Insufficient funds in the source fund.");
+      }
+
+      // 2. Update balances safely
+      await trx
+        .update(funds)
+        .set({ balance: sql`${funds.balance} - ${transferAmount}` })
+        .where(eq(funds.id, fromFundId));
+
+      await trx
+        .update(funds)
+        .set({ balance: sql`${funds.balance} + ${transferAmount}` })
+        .where(eq(funds.id, toFundId));
+
+      // 3. Log the transaction
+      await trx.insert(fundTransactions).values({
+        fromFundId,
+        toFundId,
+        amount: transferAmount?.toString(),
+        createdBy: user?.id!,
+        description,
+      });
+
+      await trx.insert(logs).values({
+        userId: user?.id!,
+        action: "fund_transfer",
+        details: JSON.stringify({ fromFundId, toFundId, amount, description }),
+      });
     });
-    await trx.insert(logs).values({
-      userEmail: user?.email!,
-      action: "fund_transfer",
-      details: JSON.stringify({ fromFundId, toFundId, amount, description }),
-    });
-  });
-  return NextResponse.json({ success: true });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Fund transfer error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Fund transfer failed." },
+      { status: 400 }
+    );
+  }
 }
 
 export async function GET() {

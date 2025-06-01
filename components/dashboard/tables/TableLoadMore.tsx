@@ -9,6 +9,7 @@ interface TableLoadMoreProps {
 }
 
 export function TableLoadMore({ loading, hasMore, onClick }: TableLoadMoreProps) {
+  
   return (
     <div className="flex justify-center p-4">
       {hasMore && (
