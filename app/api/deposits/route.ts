@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db"; // Your Drizzle instance
 import { deposits } from "@/db/schema/logs";
-import { and, eq, like, desc, sql, gte, lte } from "drizzle-orm";
+import { and, eq, like, desc, sql, gte, lte, not } from "drizzle-orm";
 import { z } from "zod";
 // Zod validation schema
 const depositSchema = z.object({
-  userEmail: z.string().email(),
+  userId: z.string().min(1),
   month: z.string().min(1),
   amount: z.number().positive(),
-  transactionId: z.string().min(1),
+  transactionId: z.string().optional().nullable(),
   depositType: z.enum(["full", "partial"]),
   imageUrl: z.string().url().optional().nullable(),
   status: z.string(),
 });
 
 const filterSchema = z.object({
+  id: z.string().optional(),
   account: z.string().optional(), // or .nullable().optional()
   status: z.string().optional(),
   month: z.string().optional(),
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
 
   // Validate input
   const parsed = depositSchema.safeParse(body);
+
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.flatten().fieldErrors },
@@ -35,18 +37,20 @@ export async function POST(req: NextRequest) {
   }
 
   // Prevent duplicate for same user/month
-  const existing = [];
-  await db
+  const existing = await db
     .select()
     .from(deposits)
     .where(
       and(
-        eq(deposits.userEmail, body.userEmail),
-        eq(deposits.month, body.month)
+        eq(deposits.userId, body.userId),
+        eq(deposits.month, body.month),
+        not(eq(deposits.status, "rejected"))
       )
     );
 
   if (existing.length > 0) {
+    console.log("yes sss");
+
     return NextResponse.json(
       { error: "Deposit for this month already exists." },
       { status: 409 }
@@ -55,13 +59,14 @@ export async function POST(req: NextRequest) {
 
   // Insert deposit
   await db.insert(deposits).values({
-    userEmail: body.userEmail,
+    userId: body.userId,
     month: body.month,
     amount: body.amount,
     transactionId: body.transactionId,
     depositType: body.depositType,
     imageUrl: body.imageUrl,
     status: body.status,
+    // fundId: null,
     //   createdAt: body.createdAt,
   });
 
@@ -73,6 +78,7 @@ export async function GET(request: Request) {
 
   // Parse and validate query parameters
   const filters = filterSchema.parse({
+    id: searchParams.get("userId") ?? undefined,
     account: searchParams.get("account") ?? undefined,
     status: searchParams.get("status") ?? undefined,
     month: searchParams.get("month") ?? undefined,
@@ -82,8 +88,9 @@ export async function GET(request: Request) {
 
   // Build query conditions
   let conditions = [];
+  if (filters.id) conditions.push(eq(deposits.userId, filters.id));
   if (filters.account)
-    conditions.push(like(deposits.userEmail, `%${filters.account}%`));
+    conditions.push(like(deposits.userId, `%${filters.account}%`));
   if (filters.status && filters.status !== "all")
     conditions.push(eq(deposits.status, filters.status));
   if (filters.month && filters.month !== "all")

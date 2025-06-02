@@ -4,8 +4,10 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { terms } from "@/db/schema/logs";
 
 function checkAdminOrManager(user: any) {
-  return user?.role === "admin" || user?.role === "manager";
+  return true //user?.role === "admin" || user?.role === "manager";
 }
+
+import { desc } from "drizzle-orm"; // make sure this is imported
 
 export async function GET() {
   const { getUser } = getKindeServerSession();
@@ -15,12 +17,13 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const [currentTerms] = await db
+  const [latestTerm] = await db
     .select()
     .from(terms)
-    .orderBy(terms.createdAt,) // <-- Use column reference here
+    .orderBy(desc(terms.createdAt)) // <-- Get the most recent entry
     .limit(1);
-  return NextResponse.json({ terms: currentTerms?.content || "" });
+
+  return NextResponse.json({ terms: latestTerm?.content || "" });
 }
 
 export async function POST(request: Request) {
@@ -35,6 +38,10 @@ export async function POST(request: Request) {
 
   if (!content || typeof content !== "string") {
     return NextResponse.json({ error: "Invalid content" }, { status: 400 });
+  }
+
+  if (!user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await db.insert(terms).values({

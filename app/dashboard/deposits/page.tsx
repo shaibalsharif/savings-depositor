@@ -105,14 +105,14 @@ export default function DepositsPage() {
   // };
 
   // Handler for approving deposit (Review tab)
-const handleAction = async (depositId: number, status: "verified" | "rejected") => {
-  await fetch(`/api/deposits/${depositId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-  });
-  // refetch deposits if needed
-};
+  const handleAction = async (depositId: number, status: "verified" | "rejected", fundId: number) => {
+    await fetch(`/api/deposits/${depositId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, fundId }),
+    });
+    // refetch deposits if needed
+  };
 
 
   // // Data for each tab
@@ -159,9 +159,9 @@ const handleAction = async (depositId: number, status: "verified" | "rejected") 
         {/* Review Deposits Tab (Admin/Manager) */}
         {(isAdmin || isManager) && (
           <TabsContent value="review">
-            <ReviewDepositsTable onAction={(id,action) => {
+            <ReviewDepositsTable onAction={(id, action, fundId) => {
               if (typeof id === "number") {
-                void handleAction(id,action); // ignore the returned Promise
+                void handleAction(id, action, fundId || 0); // ignore the returned Promise
               } else {
                 console.warn("Invalid ID type, expected number:", id);
               }

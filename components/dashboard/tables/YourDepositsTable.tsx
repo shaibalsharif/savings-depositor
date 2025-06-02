@@ -7,6 +7,7 @@ import { Deposit } from "@/types";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 export function YourDepositsTable({ months }: { months: string[] }) {
   const { user } = useKindeAuth();
@@ -14,6 +15,7 @@ export function YourDepositsTable({ months }: { months: string[] }) {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [limit, setLimit] = useState(10);
+
   const [filter, setFilter] = useState({
     status: "all",
     month: "all",
@@ -29,7 +31,7 @@ export function YourDepositsTable({ months }: { months: string[] }) {
     if (filter.month !== "all") params.append("month", filter.month);
     if (filter.startDate) params.append("startDate", filter.startDate);
     if (filter.endDate) params.append("endDate", filter.endDate);
-    params.append("account", user?.email || "");
+    params.append("id", user?.id || "");
     params.append("limit", limit.toString());
     try {
       const res = await fetch(`/api/deposits?${params.toString()}`);
@@ -54,6 +56,9 @@ export function YourDepositsTable({ months }: { months: string[] }) {
     if (user?.email) fetchDeposits();
   }, [limit, filter, user?.email]);
 
+
+
+
   return (
     <div>
       <TableFilter
@@ -62,33 +67,42 @@ export function YourDepositsTable({ months }: { months: string[] }) {
         onFilter={handleFilter}
       />
       <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Month</TableHead>
-          <TableHead>Amount</TableHead>
-          <TableHead>Transaction ID</TableHead>
-          <TableHead>Date</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Type</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {deposits.map((deposit) => (
-          <TableRow key={deposit.id}>
-            <TableCell>{deposit.month}</TableCell>
-            <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
-            <TableCell>{deposit.transactionId}</TableCell>
-            <TableCell>{new Date(deposit.createdAt).toLocaleString()}</TableCell>
-            <TableCell>
-              <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
-                {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
-              </Badge>
-            </TableCell>
-            <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Month</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Transaction ID</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Type</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {deposits.map((deposit) => {
+            const createdAt = new Date(deposit.createdAt);
+            const dateStr = createdAt.toLocaleDateString();
+            const timeStr = createdAt.toLocaleTimeString();
+            return (
+              <TableRow key={deposit.id}>
+                <TableCell>{format(deposit.month, "MMMM yyyy")}</TableCell>
+                <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
+                <TableCell>{deposit.transactionId || "N/A"}</TableCell>
+                <TableCell>
+                  <div>
+                    <div>{dateStr}</div>
+                    <div className="text-xs text-muted-foreground">{timeStr}</div>
+                  </div>
+                </TableCell>                <TableCell>
+                  <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
+                    {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
       {/* <div className="mt-4">
         {deposits.map(deposit => (
           <div key={deposit.id} className="border p-2 mb-2">

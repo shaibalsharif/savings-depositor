@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { deposits } from "@/db/schema/logs";
-import { eq } from "drizzle-orm";
+import { deposits, funds, logs } from "@/db/schema/logs";
+import { eq, sql } from "drizzle-orm";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 export async function PATCH(
@@ -11,48 +11,69 @@ export async function PATCH(
   const { id } = await params;
   const depositId = parseInt(id, 10);
   const body = await request.json(); // <-- Only once!
-  const { status, fundId } = await request.json();
+
+  const { status, fundId } = body;
 
   const { getUser } = getKindeServerSession();
 
   const user = await getUser();
- // Fetch deposit and fund
-  const deposit = await db.select().from(deposits).where(eq(deposits.id, depositId)).first();
-  if (!deposit) return NextResponse.json({ error: "Deposit not found" }, { status: 404 });
+  // Fetch deposit and fund
+  const deposit = await db
+    .select()
+    .from(deposits)
+    .where(eq(deposits.id, depositId))
+    .limit(1);
+  if (!deposit)
+    return NextResponse.json({ error: "Deposit not found" }, { status: 404 });
 
   if (status === "verified") {
-    // Update deposit and fund
+    // 1. Update deposit status and fundId
     await db.transaction(async (trx) => {
-      await trx.update(deposits)
+      await trx
+        .update(deposits)
         .set({
           status: "verified",
           fundId,
-          approvedBy: user?.email,
+          updatedBy: user?.id,
           updatedAt: new Date(),
         })
         .where(eq(deposits.id, depositId));
+      // 2. Fetch deposit amount (since deposits.amount is not available in funds update)
+      const [depositRecord] = await trx
+        .select({ amount: deposits.amount })
+        .from(deposits)
+        .where(eq(deposits.id, depositId));
 
-      await trx.update(funds)
-        .set({ balance: sql`${funds.balance} + ${deposit.amount}` })
+      if (!depositRecord) {
+        throw new Error("Deposit not found");
+      }
+      // 3. Update fund balance by adding deposit amount
+      await trx
+        .update(funds)
+        .set({
+          balance: sql`${funds.balance} + ${depositRecord.amount}`,
+        })
         .where(eq(funds.id, fundId));
 
+      // 4. Insert log
       await trx.insert(logs).values({
-        userEmail: user?.email!,
+        userId: user?.id!,
         action: "approve_deposit",
         details: JSON.stringify({ depositId, fundId }),
       });
     });
   } else if (status === "rejected") {
-    await db.update(deposits)
+    await db
+      .update(deposits)
       .set({
         status: "rejected",
-        approvedBy: user?.email,
+        updatedBy: user?.id,
         updatedAt: new Date(),
       })
       .where(eq(deposits.id, depositId));
 
     await db.insert(logs).values({
-      userEmail: user?.email!,
+      userId: user?.id!,
       action: "reject_deposit",
       details: JSON.stringify({ depositId }),
     });

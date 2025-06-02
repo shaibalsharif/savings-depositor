@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 import { usePathname } from "next/navigation"
+import { motion } from "framer-motion"
 
 export function DashboardSidebar() {
   const { user, /* permissions, logout */ } = useKindeAuth()
@@ -38,19 +39,19 @@ export function DashboardSidebar() {
       label: "Deposits",
       icon: Wallet,
       href: "/dashboard/deposits",
-      active: false,
+      active: pathname === "/dashboard/deposits",
     },
     {
       label: "Deposit Status",
       icon: Calendar,
       href: "/dashboard/deposit-status",
-      active: false,
+      active: pathname === "/dashboard/deposit-status",
     },
     {
       label: "Deposit Settings",
       icon: Settings,
       href: "/dashboard/deposit-settings",
-      active: false,
+      active: pathname === "/dashboard/deposit-settings",
       showIf: isFinanceManager,
       disabled: true,
     },
@@ -58,54 +59,55 @@ export function DashboardSidebar() {
       label: "Withdrawals",
       icon: CreditCard,
       href: "/dashboard/withdrawals",
-      active: false,
+      active: pathname === "/dashboard/withdrawals",
     },
     {
       label: "Fund Management",
       icon: Banknote,
       href: "/dashboard/funds",
-      active: false,
+      active: pathname === "/dashboard/funds",
       showIf: isFinanceManager,
     },
     {
       label: "Users",
       icon: Users,
       href: "/dashboard/users",
-      active: false,
+      active: pathname === "/dashboard/users",
       showIf: isAdmin,
     },
     {
       label: "Members",
       icon: Users,
       href: "/dashboard/members",
-      active: false,
+      active: pathname === "/dashboard/members",
       showIf: !isAdmin,
     },
     {
       label: "Activity Logs",
       icon: History,
       href: "/dashboard/logs",
-      active: false,
+      active: pathname === "/dashboard/logs",
 
     },
     {
       label: "Notifications",
       icon: Bell,
       href: "/dashboard/notifications",
-      active: false,
+      active: pathname === "/dashboard/notifications",
     },
     {
       label: "Analytics",
       icon: BarChart3,
       href: "/dashboard/analytics",
-      active: false,
+      active: pathname === "/dashboard/analytics",
       showIf: isFinanceManager,
+      disabled: true, // Disable for now, implement later
     },
     {
       label: "Settings",
       icon: Settings,
       href: "/dashboard/settings",
-      active: false,
+      active: pathname === "/dashboard/settings",
       showIf: isAdmin,
     },
   ]
@@ -119,18 +121,37 @@ export function DashboardSidebar() {
         <nav className="grid items-start px-2 text-sm font-medium">
           {routes.map((route) => {
             if (route.showIf === false) return null
+            const isActive = route.active
+
+            const linkContent = (
+              <>
+                <route.icon className="h-4 w-4" />
+                {route.label}
+              </>
+            )
+
             return (
               <Link
                 key={route.href}
                 href={route.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
-                  route.active ? "bg-muted text-primary" : "text-muted-foreground",
-                  route.disabled ? "opacity-50 pointer-events-none" : ""
-                )}
+                className="relative"
               >
-                <route.icon className="h-4 w-4" />
-                {route.label}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeSidebarItem"
+                    className="absolute inset-0 z-0 rounded-lg bg-muted"
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
+                <span
+                  className={cn(
+                    "relative z-10 flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
+                    isActive ? "text-primary scale-[1.05] font-semibold" : "text-muted-foreground hover:text-primary scale-100",
+                    route.disabled ? "opacity-50 pointer-events-none" : ""
+                  )}
+                >
+                  {linkContent}
+                </span>
               </Link>
             )
           })}
@@ -145,7 +166,7 @@ export function DashboardSidebar() {
           <Button
             variant="ghost"
             size="icon"
-            // onClick={() => logout({ returnTo: window.location.origin })}
+          // onClick={() => logout({ returnTo: window.location.origin })}
           >
             <LogOut className="h-4 w-4" />
             <span className="sr-only">Log out</span>

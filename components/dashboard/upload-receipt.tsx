@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,8 @@ import { systemSettings } from "@/lib/dummy-data"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 import { useUploadThing } from "@/lib/uploadthing"
+import { parse, format } from "date-fns"
+
 // import { ToastAction } from "@/components/ui/toast"
 
 // Pass this as a prop or fetch with SWR/React Query
@@ -22,20 +24,6 @@ interface UploadReceiptProps {
   depositedMonths: string[] // e.g. ["May 2024", "April 2024"]
 }
 
-// const depositSchema = z.object({
-//   month: z.string().min(1, "Month is required"),
-//   amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-//     message: "Amount must be a positive number",
-//   }),
-//   transactionId: z.string().min(1, "Transaction ID is required"),
-//   depositType: z.enum(["full", "partial"]),
-//   file: typeof window !== "undefined" ? z.instanceof(File).optional() : z.any().optional(),
-// file: z.any().optional().refine(
-//   (val) => val instanceof File || val === undefined,
-//   { message: "Expected a File" }
-// )
-
-// })
 
 
 
@@ -47,23 +35,64 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
   const { startUpload } = useUploadThing("depositImage")
   const [month, setMonth] = useState("")
   const [amount, setAmount] = useState(systemSettings.monthlyDepositAmount.toString())
+  const [depositSettings, setDepositSettings] = useState<{ monthlyAmount?: string } | null>(null)
+  const [loadingSettings, setLoadingSettings] = useState(false)
   const [transactionId, setTransactionId] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [depositType, setDepositType] = useState("full")
+  const [availableMonths, setAvailableMonths] = useState<
+    Array<{ month: string; status: string; rejected?: boolean }>
+  >([])
 
 
+
+  useEffect(() => {
+    if (!month) {
+      setDepositSettings(null)
+      setAmount("")
+      return
+    }
+
+    setLoadingSettings(true)
+    fetch(`/api/settings/deposit/effective?month=${encodeURIComponent(month)}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || "Failed to fetch deposit settings")
+        }
+        return res.json()
+      })
+      .then((data) => {
+        setDepositSettings(data)
+        if (data?.monthlyAmount) {
+          setAmount(data.monthlyAmount.toString())
+        } else {
+          setAmount("")
+        }
+      })
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        })
+        setDepositSettings(null)
+        setAmount("")
+      })
+      .finally(() => setLoadingSettings(false))
+  }, [month, toast])
   const depositSchema = z.object({
     month: z.string().min(1, "Month is required"),
     amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
       message: "Amount must be a positive number",
     }),
-    transactionId: z.string().min(1, "Transaction ID is required"),
+    transactionId: z.string().optional(),
     depositType: z.enum(["full", "partial"]),
-    file: z.any().optional().refine(
+    file: z.any().optional()/* .refine(
       (val) => val instanceof File || val === undefined,
       { message: "Expected a File" }
-    )
+    ) */
 
   })
 
@@ -73,7 +102,7 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
       // File size (max 1MB)
       if (selectedFile.size > 1 * 1024 * 1024) {
         console.log("File too large:", selectedFile.size);
-        
+
         toast({
           title: "File too large",
           description: "Please select a file smaller than 1MB",
@@ -129,7 +158,6 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
       depositType,
       file,
     })
-    console.log(parseResult);
 
     if (!parseResult.success) {
       toast({
@@ -154,7 +182,7 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
 
 
       const depositPayload = {
-        userEmail: user?.email,
+        userId: user?.id,
         month,
         amount: Number(amount),
         transactionId,
@@ -175,7 +203,7 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userEmail: user?.email,
+          userId: user?.id,
           action: "upload_deposit",
           details: { month, amount, transactionId, depositType, imageUrl },
           // timestamp: new Date().toISOString(),
@@ -207,40 +235,89 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
     }
   }
 
+  useEffect(() => {
+    async function fetchMonths() {
+      try {
+        const userId = user?.id
+        if (!userId) return
+
+        const res = await fetch(`/api/deposits/months?userId=${encodeURIComponent(userId)}`)
+        const data = await res.json()
+        if (res.ok && data.months) {
+          setAvailableMonths(data.months)
+
+          // Find current month
+          const currentMonth = data.months.find((m: any) => m.status === "current")
+          if (currentMonth) {
+            setMonth(currentMonth.month)
+          } else {
+            setMonth("") // or some fallback
+          }
+        } else {
+          console.error("Failed to fetch months", data.error)
+        }
+      } catch (err) {
+        console.error("Error fetching months", err)
+      }
+    }
+    fetchMonths()
+  }, [user])
+  useEffect(() => {
+    if (!availableMonths.length) return
+
+    const currentMonth = availableMonths.find(m => m.status === "current")
+    if (currentMonth) {
+      setMonth(currentMonth.month)
+      return
+    }
+
+    // Find closest past due month
+    const pastDueMonths = availableMonths
+      .filter(m => m.status === "due")
+      .sort((a, b) => {
+        const dateA = new Date(a.month)
+        const dateB = new Date(b.month)
+        return dateB.getTime() - dateA.getTime() // descending
+      })
+
+    if (pastDueMonths.length > 0) {
+      setMonth(pastDueMonths[0].month)
+    } else {
+      setMonth("") // fallback
+    }
+  }, [availableMonths])
+
+  const getMonthLabel = (month: string) => {
+    try {
+      return format(parse(month, "yyyy-MM", new Date()), "MMMM yyyy")
+    } catch {
+      return month
+    }
+  }
 
   // Generate month options: past 6 months (if not deposited) + next 6 months (always available)
   const getMonthOptions = () => {
-    const options = []
-    const currentDate = new Date()
-    // Past 6 months (including current)
-    for (let i = 0; i < 6; i++) {
-      const pastDate = new Date()
-      pastDate.setMonth(currentDate.getMonth() - i)
-      const monthYear = pastDate.toLocaleString("default", { month: "long", year: "numeric" })
-      options.push(
-        <SelectItem
-          key={`past-${i}`}
-          value={monthYear}
-          disabled={depositedMonths?.includes(monthYear)}
-        >
-          {monthYear} {i > 0 ? "(Past Due)" : ""}
-          {depositedMonths?.includes(monthYear) ? " (Already Deposited)" : ""}
-        </SelectItem>,
-      )
+    if (!availableMonths.length) {
+      return <SelectItem key="loading" value="loading" disabled>Loading months...</SelectItem>
     }
-    // Next 6 months (always available)
-    for (let i = 1; i <= 6; i++) {
-      const futureDate = new Date()
-      futureDate.setMonth(currentDate.getMonth() + i)
-      const monthYear = futureDate.toLocaleString("default", { month: "long", year: "numeric" })
-      options.push(
-        <SelectItem key={`future-${i}`} value={monthYear}>
-          {monthYear} (Advance)
-        </SelectItem>,
+
+    return availableMonths.map(({ month, status, rejected }) => {
+      const isDeposited = depositedMonths?.includes(month)
+      const labelParts = [getMonthLabel(month)]
+
+      if (status === "due") labelParts.push("(Past Due)")
+      else if (status === "advance") labelParts.push("(Advance)")
+      else if (status === "current") labelParts.push("(Current)")
+      if (rejected) labelParts.push("[Rejected]")
+
+      return (
+        <SelectItem key={month} value={month} disabled={isDeposited}>
+          {labelParts.join(" ")} {isDeposited ? "(Already Deposited)" : ""}
+        </SelectItem>
       )
-    }
-    return options
+    })
   }
+
 
   return (
     <Card>
@@ -277,14 +354,14 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
             <Input
               id="amount"
               type="number"
-              value={amount}
+              value={loadingSettings ? "Loading..." : amount}
               onChange={handleAmountChange}
               className={depositType === "full" ? "bg-muted/50" : ""}
               disabled={depositType === "full"}
               required
             />
             <p className="text-sm text-muted-foreground">
-              Fixed monthly deposit amount: ৳{systemSettings.monthlyDepositAmount.toLocaleString()}
+              Fixed monthly deposit amount
             </p>
           </div>
           <div className="space-y-2">
@@ -294,7 +371,7 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
               placeholder="Enter transaction ID"
               value={transactionId}
               onChange={(e) => setTransactionId(e.target.value)}
-              required
+
             />
           </div>
           <div className="space-y-2 col-span-full">

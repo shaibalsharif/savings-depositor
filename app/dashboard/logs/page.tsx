@@ -75,29 +75,15 @@ export default function LogsPage() {
 
   // For members, only show their own logs (handled by backend)
   const filteredLogs = logs.filter((log) => {
-    const actionMatch = filterAction === "all" || log.action === filterAction
+    const actionMatch = filterAction === "all" || log?.action === filterAction
     const searchMatch =
-      log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (log.affectedUser && log.affectedUser.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (log.performedBy.toLowerCase().includes(searchQuery.toLowerCase()))
+      log?.description?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
+      (log?.affectedUser && log?.affectedUser?.toLowerCase().includes(searchQuery?.toLowerCase())) ||
+      (log?.performedBy?.toLowerCase().includes(searchQuery?.toLowerCase()))
     return actionMatch && searchMatch
   })
 
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case "deposit":
-      case "deposit_partial":
-        return <Wallet className="h-4 w-4" />
-      case "withdrawal":
-        return <CreditCard className="h-4 w-4" />
-      case "user_added":
-        return <User className="h-4 w-4" />
-      case "fund_transfer":
-        return <Calendar className="h-4 w-4" />
-      default:
-        return <Calendar className="h-4 w-4" />
-    }
-  }
+
 
   const getActionBadge = (action: string) => {
     switch (action) {

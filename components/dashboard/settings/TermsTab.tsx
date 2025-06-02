@@ -39,25 +39,30 @@ const PREFILL_HTML = `
     />
     <div style="font-size: 0.95rem; color: #555;">Barack Obama</div>
   </div>
-`
+`// your existing PREFILL_HTML here
 
 export default function TermsTab() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const editableRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState(PREFILL_HTML)
+  const [initialContent, setInitialContent] = useState(PREFILL_HTML)
 
   useEffect(() => {
+    setLoading(true)
     fetch("/api/settings/terms")
       .then((res) => res.json())
       .then((data) => {
-        if (data.terms) setContent(data.terms)
+        if (data.terms) {
+          setContent(data.terms)
+          setInitialContent(data.terms)
+        }
       })
       .catch(() => toast({ title: "Failed to load terms", variant: "destructive" }))
       .finally(() => setLoading(false))
   }, [toast])
 
-  // Update state when user edits content
   const onInput = () => {
     if (editableRef.current) {
       setContent(editableRef.current.innerHTML)
@@ -65,6 +70,11 @@ export default function TermsTab() {
   }
 
   const saveTerms = async () => {
+    if (content === initialContent) {
+      toast({ title: "No changes to save" })
+      return
+    }
+    setSaving(true)
     try {
       const res = await fetch("/api/settings/terms", {
         method: "POST",
@@ -73,10 +83,15 @@ export default function TermsTab() {
       })
       if (!res.ok) throw new Error("Failed to save terms")
       toast({ title: "Terms & Conditions saved" })
+      setInitialContent(content) // update initial content after save
     } catch {
       toast({ title: "Error saving terms", variant: "destructive" })
+    } finally {
+      setSaving(false)
     }
   }
+
+  const isDirty = content !== initialContent
 
   return (
     <Card>
@@ -87,19 +102,23 @@ export default function TermsTab() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div
-          ref={editableRef}
-          contentEditable
-          suppressContentEditableWarning
-          onInput={onInput}
-          className="w-full min-h-[350px] border rounded-md p-4 overflow-auto prose prose-sm sm:prose lg:prose-lg dark:prose-invert bg-white"
-          style={{ whiteSpace: "normal" }}
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
+        {loading ? (
+          <div className="text-center py-20 text-gray-500">Loading terms...</div>
+        ) : (
+          <div
+            ref={editableRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={onInput}
+            className="w-full min-h-[350px] border rounded-md p-4 overflow-auto prose prose-sm sm:prose lg:prose-lg dark:prose-invert bg-white"
+            style={{ whiteSpace: "normal" }}
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+        )}
       </CardContent>
       <CardFooter>
-        <Button onClick={saveTerms} disabled={loading}>
-          Save Changes
+        <Button onClick={saveTerms} disabled={loading || saving || !isDirty}>
+          {saving ? "Saving..." : "Save Changes"}
         </Button>
       </CardFooter>
     </Card>

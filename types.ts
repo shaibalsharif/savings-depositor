@@ -2,9 +2,10 @@
 
 export interface Deposit {
   id: number | string;
-  userEmail: string;
+  userId: string;
   month: string;
   amount: number;
+  fundId:number|undefined|""|null,
   transactionId: string;
   depositType: "full" | "partial";
   imageUrl?: string | null;
