@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,14 +19,13 @@ import Link from "next/link";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
 import { Badge } from "../ui/badge";
 
-export function DashboardHeader() {
+export function DashboardHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
   const { getUser, getPermissions } = useKindeAuth();
   const user = getUser()
   const permissions = getPermissions()
 
   const isAdmin = permissions?.permissions?.includes("admin")
   const ismanager = permissions?.permissions?.includes("manager")
-
 
   const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,6 +65,18 @@ export function DashboardHeader() {
 
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
+      {/* Mobile Menu Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden mr-2"
+        onClick={onMenuToggle}
+      >
+        <Menu className="h-6 w-6" />
+        <span className="sr-only">Toggle menu</span>
+      </Button>
+
+      {/* Search Field */}
       <div className="hidden md:block">
         <form>
           <div className="relative">
@@ -78,6 +89,7 @@ export function DashboardHeader() {
         </form>
       </div>
 
+      {/* Right Side Controls */}
       <div className="ml-auto flex items-center gap-2">
         <ModeToggle />
         <DropdownMenu>
@@ -132,13 +144,11 @@ export function DashboardHeader() {
                   />
                   <AvatarFallback>{user?.username.charAt(0)}</AvatarFallback>
                 </Avatar>
-
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <p className="px-2 text-sm font-thin text-justify w-full">{user.username}</p>
-
               <Badge className="text-xs">{isAdmin ? "Admin" : ismanager ? "Manager" : "Member"}</Badge>
               <DropdownMenuSeparator />
               <Link href={"/dashboard/profile"}>
