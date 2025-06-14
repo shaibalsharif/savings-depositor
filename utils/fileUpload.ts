@@ -1,4 +1,3 @@
-import nextConnect from "next-connect";
 import multer from "multer";
 import path from "path";
 

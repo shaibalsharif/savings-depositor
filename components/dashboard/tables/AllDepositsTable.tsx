@@ -11,14 +11,18 @@ import Image from "next/image";
 import { format } from "date-fns";
 
 export function AllDepositsTable({ months }: { months: string[] }) {
+
   const { user } = useKindeAuth();
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [limit, setLimit] = useState(10);
   const [userMap, setUserMap] = useState<Record<string, any>>({});
+
+
+
   const [filter, setFilter] = useState({
-    email: "",
+    user: "",
     status: "all",
     month: "all",
     startDate: "",
@@ -28,13 +32,31 @@ export function AllDepositsTable({ months }: { months: string[] }) {
   const fetchDeposits = async (reset = false) => {
     if (reset) setLimit(10);
     setLoading(true);
+
     const params = new URLSearchParams();
-    if (filter.email) params.append("account", filter.email);
-    if (filter.status !== "all") params.append("status", filter.status);
-    if (filter.month !== "all") params.append("month", filter.month);
-    if (filter.startDate) params.append("startDate", filter.startDate);
-    if (filter.endDate) params.append("endDate", filter.endDate);
+
+    // Updated: Use user id instead of email
+    if (filter.user) params.append("userId", filter.user);
+
+    if (filter.status && filter.status !== "all") {
+      params.append("status", filter.status);
+    }
+
+    if (filter.month && filter.month !== "all") {
+      
+      params.append("month", filter.month);
+    }
+
+    if (filter.startDate) {
+      params.append("startDate", filter.startDate);
+    }
+
+    if (filter.endDate) {
+      params.append("endDate", filter.endDate);
+    }
+
     params.append("limit", limit.toString());
+
     try {
       const res = await fetch(`/api/deposits?${params.toString()}`);
       const { data } = await res.json();
@@ -58,12 +80,14 @@ export function AllDepositsTable({ months }: { months: string[] }) {
     fetchDeposits();
   }, [limit, filter]);
 
-  
+
   useEffect(() => {
     const uniqueUserIds = Array.from(new Set(deposits.map(d => d.userId).filter(Boolean)));
     let cancelled = false;
 
     async function fetchUsersBatch() {
+      
+
       try {
         const res = await fetch("/api/deposits/depositors", {
           method: "POST",
@@ -88,10 +112,12 @@ export function AllDepositsTable({ months }: { months: string[] }) {
     };
   }, [deposits]);
 
+  
   return (
     <div>
       <TableFilter
-        statuses={["pending", "verified", "rejected"]}
+        filterList={['user', 'status', 'month', 'email', 'startDate', 'endDate']}
+        
         months={months}
         onFilter={handleFilter}
       />
@@ -155,13 +181,7 @@ export function AllDepositsTable({ months }: { months: string[] }) {
           )}
         </TableBody>
       </Table>
-      {/* <div className="mt-4">
-        {deposits.map(deposit => (
-          <div key={deposit.id} className="border p-2 mb-2">
-            {deposit.userEmail} - {deposit.month} - {deposit.status}
-          </div>
-        ))}
-      </div> */}
+
       <TableLoadMore
         loading={loading}
         hasMore={hasMore}

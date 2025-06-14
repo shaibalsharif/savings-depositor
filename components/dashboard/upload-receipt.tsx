@@ -64,6 +64,7 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
         return res.json()
       })
       .then((data) => {
+        
         setDepositSettings(data)
         if (data?.monthlyAmount) {
           setAmount(data.monthlyAmount.toString())

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db"; // Your Drizzle instance
+import { db } from "@/lib/db";
 import { logs } from "@/db/schema/logs";
+import { eq, desc, and, gte, lte, or, like } from "drizzle-orm";
 import { z } from "zod";
-import { and, eq, gte, like, lte, or,desc, asc } from "drizzle-orm";
 
 const logSchema = z.object({
   userId: z.string(),
@@ -13,54 +13,67 @@ const logSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const url = new URL(req.url)
-    const userId = url.searchParams.get("userId")
-    const action = url.searchParams.get("action")
-    const startDate = url.searchParams.get("startDate")
-    const endDate = url.searchParams.get("endDate")
-    const query = url.searchParams.get("query")
+    const url = new URL(req.url);
+    const userId = url.searchParams.get("userId") || "";
+    const action = url.searchParams.get("action");
+    const startDate = url.searchParams.get("startDate");
+    const endDate = url.searchParams.get("endDate");
+    const query = url.searchParams.get("query");
+    const limit = Number(url.searchParams.get("limit")) || 10;
+    const cursor = url.searchParams.get("cursor"); // cursor = last createdAt from previous page
 
-    // Build filters dynamically
-    const filters = []
+    const filters = [];
 
     if (userId && userId !== "all") {
-      filters.push(eq(logs.userId, userId))
+      filters.push(eq(logs.userId, userId));
     }
 
     if (action && action !== "all") {
-      filters.push(eq(logs.action, action))
+      filters.push(eq(logs.action, action));
     }
 
     if (startDate) {
-      filters.push(gte(logs.createdAt, new Date(startDate)))
+      filters.push(gte(logs.createdAt, new Date(startDate)));
     }
 
     if (endDate) {
-      filters.push(lte(logs.createdAt, new Date(endDate)))
+      filters.push(lte(logs.createdAt, new Date(endDate)));
     }
 
     if (query) {
-      const q = `%${query.toLowerCase()}%`
+      const q = `%${query.toLowerCase()}%`;
       filters.push(
         or(
           like(logs.details, q),
-          like(logs.action, q),
-          // Add other searchable fields if any
+          like(logs.action, q)
         )
-      )
+      );
     }
 
-    // Query with combined filters (AND)
-    const userLogs = await db
+    // For cursor pagination: fetch logs with createdAt < cursor (assuming descending order)
+    if (cursor) {
+      filters.push(lte(logs.createdAt, new Date(cursor)));
+    }
+
+    const logsResult = await db
       .select()
       .from(logs)
       .where(filters.length > 0 ? and(...filters) : undefined)
-      .orderBy(desc(logs.createdAt))  
+      .orderBy(desc(logs.createdAt))
+      .limit(limit + 1); // fetch one extra to check if more pages exist
 
-    return NextResponse.json({ logs: userLogs })
+    // Determine next cursor
+    let nextCursor = null;
+    if (logsResult.length > limit) {
+      const nextItem = logsResult[limit];
+      nextCursor = nextItem.createdAt.toISOString();
+      logsResult.pop(); // remove extra item
+    }
+
+    return NextResponse.json({ logs: logsResult, nextCursor });
   } catch (error) {
-    console.error("Failed to fetch logs:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error fetching logs:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 

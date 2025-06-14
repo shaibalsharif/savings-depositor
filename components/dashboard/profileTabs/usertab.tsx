@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useUploadThing } from "@/lib/uploadthing"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function UserTab({ user }: { user: any }) {
   const { toast } = useToast()
@@ -71,96 +72,104 @@ export default function UserTab({ user }: { user: any }) {
   }
 
   return (
-    <div className="space-y-6 max-w-xl mx-auto p-4">
-      <div className="flex flex-col items-center">
-        {isEditing ? (
-          <div className="relative border border-dashed rounded-md p-4 w-48 mx-auto">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-2 top-2"
-              onClick={() => {
-                setImagePreviewUrl(null)
-                setSelectedFile(null)
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <div className="flex flex-col items-center gap-2 text-center">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={imagePreviewUrl || profile.picture} />
-                <AvatarFallback>IMG</AvatarFallback>
+    <Card>
+      <CardHeader>
+        <CardTitle>User Account Info</CardTitle>
+        <CardDescription>user account additional information</CardDescription>
+      </CardHeader>
+      <form onSubmit={handleSave}>
+        <CardContent className="space-y-4 md:space-y-2 md:grid md:grid-cols-2 gap-6" >
+          <div className="flex flex-col items-center w-full">
+            {isEditing ? (
+              <div className="relative border border-dashed rounded-md p-4 w-48 mx-auto">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-2"
+                  onClick={() => {
+                    setImagePreviewUrl(null)
+                    setSelectedFile(null)
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage src={imagePreviewUrl || profile.picture} />
+                    <AvatarFallback>IMG</AvatarFallback>
+                  </Avatar>
+                  <p className="text-sm text-muted-foreground">Image ready to upload</p>
+                </div>
+              </div>
+            ) : (
+              <Avatar className="h-30 w-30">
+                <AvatarImage src={profile.picture || ""} />
+                <AvatarFallback>{profile.given_name?.[0] || "U"}</AvatarFallback>
               </Avatar>
-              <p className="text-sm text-muted-foreground">Image ready to upload</p>
+            )}
+            {isEditing && (
+              <>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                  id="profile-image"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="mt-2"
+                >
+                  {uploading ? "Uploading..." : "Upload Image"}
+                </Button>
+              </>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>First Name</Label>
+              <Input
+                value={profile.given_name || ""}
+                onChange={e => setProfile({ ...profile, given_name: e.target.value })}
+                disabled={!isEditing}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Last Name</Label>
+              <Input
+                value={profile.family_name || ""}
+                onChange={e => setProfile({ ...profile, family_name: e.target.value })}
+                disabled={!isEditing}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={profile.email} disabled className="w-full" />
             </div>
           </div>
-        ) : (
-          <Avatar className="h-24 w-24">
-            <AvatarImage src={profile.picture || ""} />
-            <AvatarFallback>{profile.given_name?.[0] || "U"}</AvatarFallback>
-          </Avatar>
-        )}
-        {isEditing && (
-          <>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*"
-              className="hidden"
-              id="profile-image"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="mt-2"
-            >
-              {uploading ? "Uploading..." : "Upload Image"}
+
+          <div className="flex justify-between pt-4 max-w-xl mx-auto">
+            <Button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(!isEditing) }} variant="secondary" className="w-full sm:w-auto">
+              {isEditing ? "Cancel" : "Edit"}
             </Button>
-          </>
-        )}
-      </div>
-
-      <div className="space-y-4 max-w-xl mx-auto">
-        <div>
-          <Label>First Name</Label>
-          <Input
-            value={profile.given_name || ""}
-            onChange={e => setProfile({ ...profile, given_name: e.target.value })}
-            disabled={!isEditing}
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <Label>Last Name</Label>
-          <Input
-            value={profile.family_name || ""}
-            onChange={e => setProfile({ ...profile, family_name: e.target.value })}
-            disabled={!isEditing}
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <Label>Email</Label>
-          <Input value={profile.email} disabled className="w-full" />
-        </div>
-      </div>
-
-      <div className="flex justify-between pt-4 max-w-xl mx-auto">
-        <Button onClick={() => setIsEditing(!isEditing)} variant="secondary" className="w-full sm:w-auto">
-          {isEditing ? "Cancel" : "Edit"}
-        </Button>
-        {isEditing && (
-          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        )}
-      </div>
-    </div>
+            {isEditing && (
+              <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </form>
+    </Card>
   )
 }

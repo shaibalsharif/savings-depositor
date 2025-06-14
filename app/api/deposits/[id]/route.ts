@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { deposits, funds, logs } from "@/db/schema/logs";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 export async function PATCH(
@@ -10,44 +11,45 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const depositId = parseInt(id, 10);
-  const body = await request.json(); // <-- Only once!
+  const body = await request.json();
 
-  const { status, fundId } = body;
-
+  const { status, fundId, note } = body;
   const { getUser } = getKindeServerSession();
-
   const user = await getUser();
-  // Fetch deposit and fund
+
   const deposit = await db
     .select()
     .from(deposits)
     .where(eq(deposits.id, depositId))
     .limit(1);
-  if (!deposit)
+
+  if (!deposit || deposit.length === 0)
     return NextResponse.json({ error: "Deposit not found" }, { status: 404 });
 
   if (status === "verified") {
-    // 1. Update deposit status and fundId
     await db.transaction(async (trx) => {
-      await trx
-        .update(deposits)
-        .set({
-          status: "verified",
-          fundId,
-          updatedBy: user?.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(deposits.id, depositId));
-      // 2. Fetch deposit amount (since deposits.amount is not available in funds update)
+      // 1. Get deposit amount
       const [depositRecord] = await trx
         .select({ amount: deposits.amount })
         .from(deposits)
         .where(eq(deposits.id, depositId));
 
-      if (!depositRecord) {
-        throw new Error("Deposit not found");
-      }
-      // 3. Update fund balance by adding deposit amount
+      if (!depositRecord) throw new Error("Deposit not found");
+
+      // 2. Get current fund balance
+      const fundRecord = (
+        await trx.execute(
+          sql`SELECT balance FROM ${funds} WHERE ${funds.id} = ${fundId} FOR UPDATE`
+        )
+      ).rows[0];
+
+      if (!fundRecord) throw new Error("Fund not found");
+
+      // 3. Calculate updated balance
+      const newBalance =
+        Number(fundRecord.balance) + Number(depositRecord.amount);
+
+      // 4. Update fund balance
       await trx
         .update(funds)
         .set({
@@ -55,11 +57,24 @@ export async function PATCH(
         })
         .where(eq(funds.id, fundId));
 
-      // 4. Insert log
+      // 5. Update deposit with status, fundId, updated balance, updatedBy
+      await trx
+        .update(deposits)
+        .set({
+          status: "verified",
+          fundId,
+          updatedBy: user?.id,
+          updatedAt: new Date(),
+          note: note,
+          updatedBalance: newBalance.toString(),
+        })
+        .where(eq(deposits.id, depositId));
+
+      // 6. Log action
       await trx.insert(logs).values({
         userId: user?.id!,
         action: "approve_deposit",
-        details: JSON.stringify({ depositId, fundId }),
+        details: JSON.stringify({ depositId, fundId, newBalance }),
       });
     });
   } else if (status === "rejected") {
@@ -67,7 +82,10 @@ export async function PATCH(
       .update(deposits)
       .set({
         status: "rejected",
+        note: note,
+
         updatedBy: user?.id,
+
         updatedAt: new Date(),
       })
       .where(eq(deposits.id, depositId));
@@ -81,24 +99,3 @@ export async function PATCH(
 
   return NextResponse.json({ success: true });
 }
-
-// // In your page component
-// const fetchUserDeposits = async () => {
-//   const res = await fetch(`/api/deposits/user?status=${filterStatus}&month=${filterMonth}`);
-//   const data = await res.json();
-//   setDeposits(data);
-// };
-
-// const fetchAllDeposits = async () => {
-//   const res = await fetch(`/api/deposits/all?email=${selectedEmail}&status=${filterStatus}`);
-//   const data = await res.json();
-//   setDeposits(data);
-// };
-
-// const handleVerify = async (depositId: string) => {
-//   await fetch(`/api/deposits/${depositId}`, {
-//     method: "PATCH",
-//     body: JSON.stringify({ status: "verified" })
-//   });
-//   refreshData();
-// };

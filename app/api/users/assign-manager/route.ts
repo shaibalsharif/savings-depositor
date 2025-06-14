@@ -42,9 +42,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({ permission_id: managerPerm.id }),
     }
   );
-  if (!assignRes.ok) {
-    console.log(assignRes);
-    
+  if (!assignRes.ok) {    
     return NextResponse.json({ error: "Failed to assign manager" }, { status: 500 });
   }
 

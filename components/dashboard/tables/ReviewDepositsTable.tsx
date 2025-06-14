@@ -7,10 +7,35 @@ import { Deposit } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Eye, CheckCircle2, XCircle } from "lucide-react";
 import Image from "next/image";
 import { format } from "date-fns";
+import { TableFilter } from "./TableFilter";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
-export function ReviewDepositsTable({ onAction }: { onAction: (id: number | string, action: "verified" | "rejected", fundId?: number) => void }) {
+
+
+const MONTHS = [
+  "January 2025",
+  "February 2025",
+  "March 2025",
+  "April 2025",
+  "May 2025",
+  "June 2025",
+  "July 2025",
+  "August 2025",
+  "September 2025",
+  "October 2025",
+  "November 2025",
+  "December 2025"
+];
+
+
+export function ReviewDepositsTable({ onAction }: {
+  onAction: (id: number | string, action: "verified" | "rejected",
+    fundId?: number, note?: string) => void
+}) {
   const { user } = useKindeAuth();
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -18,6 +43,7 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
   const [limit, setLimit] = useState(10);
 
   // Modal states
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null | undefined>(null);
   const [selectedDepositId, setSelectedDepositId] = useState<number | string | null>(null);
   const [showFundDialog, setShowFundDialog] = useState(false);
   const [selectedFundId, setSelectedFundId] = useState<number | null>(null);
@@ -27,8 +53,16 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
 
   const [funds, setFunds] = useState<any[]>([]);
-
+  const [note, setNote] = useState<string | number | readonly string[] | undefined>(undefined);
   const [userMap, setUserMap] = useState<Record<string, any>>({});
+
+  const [filter, setFilter] = useState({
+    status: "all",
+    month: "all",
+    startDate: "",
+    endDate: "",
+  });
+
 
   useEffect(() => {
     fetchDeposits();
@@ -65,10 +99,15 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
   }, [deposits]);
 
   // Fetch deposits
-  async function fetchDeposits() {
+  async function fetchDeposits(reset = false) {
+    if (reset) setLimit(10);
     setLoading(true);
     const params = new URLSearchParams();
-    params.append("status", "pending");
+    params.append("status", 'pending');
+    if (filter.month !== "all") params.append("month", filter.month);
+    if (filter.startDate) params.append("startDate", filter.startDate);
+    if (filter.endDate) params.append("endDate", filter.endDate);
+    // params.append("userId", user?.id || "");
     params.append("limit", limit.toString());
     try {
       const res = await fetch(`/api/deposits?${params.toString()}`);
@@ -106,7 +145,8 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
   const handleApprove = () => {
 
     if (selectedDepositId !== null && selectedFundId !== null) {
-      onAction(selectedDepositId, "verified", selectedFundId);
+      onAction(selectedDepositId, "verified", selectedFundId, note?.toString());
+
       resetModals();
     }
   };
@@ -120,9 +160,10 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
   // Confirm reject action
   const handleRejectConfirm = () => {
     if (verifyIdForReject !== null) {
-      onAction(verifyIdForReject, "rejected");
+      onAction(verifyIdForReject, "rejected", 0, note?.toString());
       setShowRejectConfirm(false);
       setVerifyIdForReject(null);
+      setNote(undefined)
     }
   };
 
@@ -134,14 +175,31 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
     setShowConfirmApprove(false);
     setVerifyIdForReject(null);
     setShowRejectConfirm(false);
+    setNote(undefined)
+
+  };
+
+  const handleFilter = (filters: any) => {
+    setFilter(filters);
+    fetchDeposits(true);
   };
 
   const handleLoadMore = () => {
     setLimit(prev => prev + 10);
   };
 
+  useEffect(() => {
+    if (user?.email) fetchDeposits();
+  }, [limit, filter, user?.email]);
+
   return (
     <div>
+      <TableFilter
+
+        filterList={['user', 'month', 'startDate', 'endDate']}
+        months={MONTHS}
+        onFilter={handleFilter}
+      />
       <Table>
         <TableHeader>
           <TableRow>
@@ -166,7 +224,7 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     {user?.picture ? (
-                      <Image src={user.picture} alt={user.name||"user image"} width={32} height={32} className="rounded-full" />
+                      <Image src={user.picture} alt={user.name || "user image"} width={32} height={32} className="rounded-full" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
                         {user?.name?.[0]?.toUpperCase() || "U"}
@@ -189,12 +247,18 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
                   </div>
                 </TableCell>
                 <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
-                <TableCell className="flex flex-col gap-2">
-                  <Button onClick={() => handleVerifyClick(deposit.id)}>Verify</Button>
-                  {deposit.imageUrl ? (
-                    <Button onClick={() => window.open(deposit.imageUrl?.toString(), "_blank")}>See Proof</Button>
-                  ) : null}
-                  <Button variant="destructive" onClick={() => handleRejectClick(deposit.id)}>Reject</Button>
+                <TableCell className="flex gap-2 flex-wrap">
+                  <Button size="icon" variant="outline" onClick={() => handleVerifyClick(deposit.id)}>
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  </Button>
+                  {deposit.imageUrl && (
+                    <Button size="icon" variant="outline" onClick={() => setImagePreviewUrl(deposit.imageUrl)}>
+                      <Eye className="h-4 w-4 text-blue-600" />
+                    </Button>
+                  )}
+                  <Button size="icon" variant="destructive" onClick={() => handleRejectClick(deposit.id)}>
+                    <XCircle className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               </TableRow>
             );
@@ -203,6 +267,23 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
       </Table>
 
       <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />
+
+      <Dialog open={!!imagePreviewUrl} onOpenChange={() => setImagePreviewUrl(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Image Preview</DialogTitle>
+            <DialogDescription>Proof of Transaction</DialogDescription>
+          </DialogHeader>
+          {imagePreviewUrl && (
+            <div className="w-full flex justify-center">
+              <Image src={imagePreviewUrl} alt="Proof" width={500} height={500} className="rounded" />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImagePreviewUrl(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Fund Selection Dialog */}
       <Dialog open={showFundDialog} onOpenChange={setShowFundDialog}>
@@ -225,6 +306,15 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
                 </p>
               </div>
             ))}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="note">Note (Optional)</Label>
+            <Textarea
+              id="note"
+              placeholder="Add a note for this"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
           </div>
           <DialogFooter>
             <Button disabled={!selectedFundId} onClick={handleFundConfirm}>
@@ -268,6 +358,15 @@ export function ReviewDepositsTable({ onAction }: { onAction: (id: number | stri
             <DialogDescription>
               Are you sure you want to reject this deposit?
             </DialogDescription>
+            <div className="space-y-2">
+              <Label htmlFor="note">Note (Optional)</Label>
+              <Textarea
+                id="note"
+                placeholder="Add a note for this"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
           </DialogHeader>
           <DialogFooter>
             <Button variant="destructive" onClick={handleRejectConfirm}>Yes, Reject</Button>

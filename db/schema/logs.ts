@@ -4,6 +4,7 @@ import {
   serial,
   varchar,
   text,
+  uuid,
   numeric,
   timestamp,
   jsonb,
@@ -28,6 +29,12 @@ export const deposits = pgTable("deposits", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+  updatedBalance: numeric("updated_balance", {
+    precision: 10,
+    scale: 2,
+  }).default(sql`NULL`),
+  note: varchar("note", { length: 200 }).default(sql`NULL`),
+
   updatedAt: timestamp("updated_at", { withTimezone: true }),
   updatedBy: varchar("updated_by", { length: 255 }),
 });
@@ -123,6 +130,19 @@ export const depositSettings = pgTable("deposit_settings", {
 //   details: text("details"),
 //   createdAt: timestamp("created_at").defaultNow().notNull(),
 // })
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  recipientUserId: text("recipient_user_id").notNull(),
+  senderUserId: text("sender_user_id"),
+  type: varchar("type", { length: 50 }).notNull(),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata"),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  relatedEntityId: text("related_entity_id"),
+  roleTarget: varchar("role_target", { length: 50 }),
+});
 
 export const terms = pgTable("terms", {
   id: serial("id").primaryKey(),

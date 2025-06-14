@@ -82,6 +82,7 @@
       "tailwindcss-animate": "^1.0.7",
       "tsc": "^2.0.4",
       "uploadthing": "^7.7.2",
+      "use-debounce": "^10.0.4",
       "vaul": "^0.9.6",
       "zod": "^3.25.23"
    },

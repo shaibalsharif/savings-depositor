@@ -1,0 +1,1 @@
+ALTER TABLE "deposits" ADD COLUMN "note" varchar(200) DEFAULT NULL;

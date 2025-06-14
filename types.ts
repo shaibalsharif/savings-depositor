@@ -5,12 +5,14 @@ export interface Deposit {
   userId: string;
   month: string;
   amount: number;
-  fundId:number|undefined|""|null,
+  fundId: number | undefined | "" | null;
   transactionId: string;
   depositType: "full" | "partial";
   imageUrl?: string | null;
   status: "pending" | "verified" | "rejected";
+  updatedBalance: number;
   createdAt: string;
+  updatedAt: string;
   // ...add other fields as needed
 }
 
@@ -22,6 +24,4 @@ export interface DepositFilters {
   limit?: number;
 }
 
-export interface Fund {
-
-}
+export interface Fund {}

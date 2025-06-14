@@ -5,18 +5,18 @@ import { desc, eq, and, isNull, or, lt } from "drizzle-orm";
 import { deposits, depositSettings, logs } from "@/db/schema/logs";
 import { format, startOfMonth, addMonths } from "date-fns";
 
-function checkAdminOrManager(user: any) {
-  return true; // user?.role === "admin" || user?.role === "manager";
+function checkAdminOrManager(permissions: string[]) {
+  return permissions.includes("admin") || permissions.includes("manager");
 }
-
 export async function GET() {
-  const { getUser } = getKindeServerSession();
+  const { getUser, getPermissions } = getKindeServerSession();
   const user = await getUser();
+  const permissions = (await getPermissions()) || { permissions: [] };
 
   if (!user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!checkAdminOrManager(user)) {
+  if (!checkAdminOrManager(permissions.permissions)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -55,12 +55,14 @@ export async function GET() {
   }
 }
 export async function POST(request: Request) {
-  const { getUser } = getKindeServerSession();
+  const { getUser, getPermissions } = getKindeServerSession();
   const user = await getUser();
+  const permissions = (await getPermissions()) || { permissions: [] };
+
   if (!user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!checkAdminOrManager(user)) {
+  if (!checkAdminOrManager(permissions.permissions)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 

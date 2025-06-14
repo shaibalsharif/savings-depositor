@@ -14,8 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 
 export default function FundsPage() {
-  const { user } = useKindeAuth()
-  console.log(user);
+  const { getPermissions } = useKindeAuth()
   const { toast } = useToast()
   const [funds, setFunds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,7 +29,12 @@ export default function FundsPage() {
   const [transferTo, setTransferTo] = useState<number | null>(null)
   const [transferNote, setTransferNote] = useState("")
   const [transferLoading, setTransferLoading] = useState(false)
-  const isFinanceManager = true // Replace with your real check
+
+
+  const { permissions } = getPermissions()
+  const isAdmin = permissions?.includes("admin")
+  const isManager = permissions?.includes("manager")
+
 
   // Fetch funds and transactions
   const fetchData = async () => {
@@ -151,7 +155,7 @@ export default function FundsPage() {
     setTransferTo(transferFrom)
   }
 
-  if (!isFinanceManager) {
+  if (!isAdmin && !isManager) {
     return (
       <div className="flex h-full items-center justify-center">
         <Card className="max-w-md">

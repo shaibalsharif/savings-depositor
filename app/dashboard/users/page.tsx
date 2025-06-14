@@ -32,7 +32,7 @@ function getUserRole(permissions: string[] = []) {
 }
 
 export default function UsersPage() {
-  const { user } = useKindeAuth()
+  const { user,getPermissions } = useKindeAuth()
   const { toast } = useToast()
   const [members, setMembers] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -57,7 +57,8 @@ export default function UsersPage() {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { startUpload } = useUploadThing("userImage")
-  const isAdmin = true//user?.permissions?.includes("admin")
+  const {permissions}= getPermissions()
+  const isAdmin = permissions?.includes('admin')
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -152,20 +153,20 @@ export default function UsersPage() {
     }
   }
 
- const filteredMembers = members
-  .filter(member => {
-    const matchesSearch = member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && (showSuspended ? member.status === "archived" : member.status === "active");
-  })
-  .sort((a, b) => {
-    const getPriority = (member: any) => {
-      if (member.permissions?.includes('admin')) return 0;
-      if (member.permissions?.includes('manager')) return 1;
-      return 2;
-    };
-    return getPriority(a) - getPriority(b);
-  });
+  const filteredMembers = members
+    .filter(member => {
+      const matchesSearch = member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch && (showSuspended ? member.status === "archived" : member.status === "active");
+    })
+    .sort((a, b) => {
+      const getPriority = (member: any) => {
+        if (member.permissions?.includes("admin")) return 0;
+        if (member.permissions?.includes("manager")) return 1;
+        return 2;
+      };
+      return getPriority(a) - getPriority(b);
+    });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -367,7 +368,7 @@ export default function UsersPage() {
                                 </Dialog>
                               )}
 
-                              {(!isCurrentUser && !role.includes('manager')) && (
+                              {(!isCurrentUser && !role.includes("manager")) && (
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button
@@ -530,7 +531,7 @@ export default function UsersPage() {
                                 </Dialog>
                               )}
 
-                              {(!isCurrentUser && !role.includes('manager')) && (
+                              {(!isCurrentUser && !role.includes("manager")) && (
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button

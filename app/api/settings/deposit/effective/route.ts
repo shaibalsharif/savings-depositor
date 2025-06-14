@@ -16,7 +16,6 @@ export async function GET(req: Request) {
       { status: 400 }
     );
   }
- console.log(month);
  
 
   try {
@@ -36,7 +35,6 @@ export async function GET(req: Request) {
       )
       .orderBy(desc(depositSettings.effectiveMonth))
       .limit(1);
-    console.log(setting);
 
     return NextResponse.json(setting[0] || null);
   } catch (error) {

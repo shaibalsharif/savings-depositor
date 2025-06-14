@@ -1,64 +1,111 @@
-import { db } from "@/lib/db";
-import { deposits } from "@/db/schema/logs";
-import { eq, and, sql } from "drizzle-orm";
+"use client";
+
+import { useState, useEffect } from "react";
+import { TableLoadMore } from "@/components/dashboard/tables/TableLoadMore";
+import { Deposit } from "@/types";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Image from "next/image";
+import { format, parseISO, addMonths, subMonths, startOfMonth } from "date-fns";
 
-// Utility to get month string, e.g. "May 2025"
-function getMonthString(date: Date) {
-  return date.toLocaleString("default", { month: "long", year: "numeric" });
-}
+export default function DepositStatusPage() {
+  const { user } = useKindeAuth();
+  const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [limit, setLimit] = useState(10);
+  const [userMap, setUserMap] = useState<Record<string, any>>({});
 
-// To get previous/next month
-function addMonth(date: Date, diff: number) {
-  const newDate = new Date(date);
-  newDate.setMonth(newDate.getMonth() + diff);
-  return newDate;
-}
+  // Calculate current month as yyyy-MM string
+  const currentMonthDate = startOfMonth(new Date());
+  const [selectedMonthDate, setSelectedMonthDate] = useState<Date>(currentMonthDate);
 
-export default async function DepositStatusPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
-  // Await searchParams for compatibility with latest Next.js
-  const params = await searchParams ?? {};
-  const now = new Date();
-  const selectedMonth = typeof params.month === "string" && params.month
-    ? params.month
-    : getMonthString(now);
+  // Format selected month string for API call
+  const selectedMonth = format(selectedMonthDate, "yyyy-MM");
+  const displayMonth = format(selectedMonthDate, "MMMM yyyy");
 
-  // 2. Calculate previous/next months for buttons
-  const selectedDate = new Date(`${selectedMonth} 01`);
-  const prevMonth = getMonthString(addMonth(selectedDate, -1));
-  const nextMonth = getMonthString(addMonth(selectedDate, 1));
+  // Calculate previous and next month strings for navigation
+  const prevMonthDate = subMonths(selectedMonthDate, 1);
+  const nextMonthDate = addMonths(selectedMonthDate, 1);
+  const prevMonth = format(prevMonthDate, "yyyy-MM");
+  const nextMonth = format(nextMonthDate, "yyyy-MM");
 
-  // 3. Query all verified deposits for this month, sorted by earliest
-  const verifiedDeposits = await db
-    .select()
-    .from(deposits)
-    .where(
-      and(
-        eq(deposits.month, selectedMonth),
-        eq(deposits.status, "verified")
-      )
-    )
-    .orderBy(sql`${deposits.createdAt} ASC`);
+  // Fetch deposits filtered by status=verified and selectedMonth
+  const fetchDeposits = async (reset = false) => {
+    if (reset) setLimit(10);
+    setLoading(true);
 
-  // 4. Render as a table
+    const params = new URLSearchParams({
+      status: "verified",
+      month: selectedMonth,
+      limit: limit.toString(),
+    });
+
+    try {
+      const res = await fetch(`/api/deposits?${params.toString()}`);
+      const { data } = await res.json();
+      setDeposits(data || []);
+      setHasMore(data && data.length >= limit);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load deposits on limit or selectedMonth change
+  useEffect(() => {
+    fetchDeposits();
+  }, [limit, selectedMonth]);
+
+  // Fetch user info batch for deposits
+  useEffect(() => {
+    const uniqueUserIds = Array.from(new Set(deposits.map(d => d.userId).filter(Boolean)));
+    let cancelled = false;
+
+    async function fetchUsersBatch() {
+      try {
+        const res = await fetch("/api/deposits/depositors", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds: uniqueUserIds }),
+        });
+        if (!res.ok) throw new Error("Failed to fetch users batch");
+        const data = await res.json();
+        if (!cancelled) setUserMap(data);
+      } catch {
+        if (!cancelled) setUserMap({});
+      }
+    }
+
+    if (uniqueUserIds.length) fetchUsersBatch();
+
+    return () => { cancelled = true; };
+  }, [deposits]);
+
+  const handleLoadMore = () => {
+    setLimit(prev => prev + 10);
+  };
+
+  // Handlers for month navigation
+  const handlePrevMonth = () => {
+    setSelectedMonthDate(prevMonthDate);
+    setLimit(10); // reset pagination on month change
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonthDate(nextMonthDate);
+    setLimit(10);
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-8">
       <Card>
         <CardHeader className="flex flex-col gap-2">
-          <CardTitle>
-            Verified Deposits for {selectedMonth}
-          </CardTitle>
+          <CardTitle>Verified Deposits for {displayMonth}</CardTitle>
           <div className="flex gap-2">
-            <form method="get">
-              <input type="hidden" name="month" value={prevMonth} />
-              <Button type="submit" variant="outline">Previous</Button>
-            </form>
-            <form method="get">
-              <input type="hidden" name="month" value={nextMonth} />
-              <Button type="submit" variant="outline">Next</Button>
-            </form>
+            <Button variant="outline" onClick={handlePrevMonth}>Previous</Button>
+            <Button variant="outline" onClick={handleNextMonth}>Next</Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -69,31 +116,64 @@ export default async function DepositStatusPage({ searchParams }: { searchParams
                 <TableHead>Month</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Transaction ID</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Fund</TableHead>
+                <TableHead>Deposit Date</TableHead>
+                <TableHead>Approved At</TableHead>
+                <TableHead>Type</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {verifiedDeposits.length === 0 ? (
+              {deposits.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No verified deposits found for this month.
                   </TableCell>
                 </TableRow>
               ) : (
-                verifiedDeposits.map((deposit) => (
-                  <TableRow key={deposit.id}>
-                    <TableCell>{deposit.userEmail}</TableCell>
-                    <TableCell>{deposit.month}</TableCell>
-                    <TableCell>৳{Number(deposit.amount).toLocaleString()}</TableCell>
-                    <TableCell>{deposit.transactionId}</TableCell>
-                    <TableCell>{new Date(deposit.createdAt).toLocaleString()}</TableCell>
-                    <TableCell>{deposit.fundId ?? "N/A"}</TableCell>
-                  </TableRow>
-                ))
+                deposits.map((deposit) => {
+                  const user = userMap[deposit.userId];
+                  const depositDate = new Date(deposit.createdAt);
+                  const approvedDate = deposit.updatedAt ? new Date(deposit.updatedAt) : null;
+
+                  return (
+                    <TableRow key={deposit.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          {user?.picture ? (
+                            <Image 
+                              src={user.picture} 
+                              alt={user.username || "User"} 
+                              width={32} 
+                              height={32} 
+                              className="rounded-full"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                              {user?.username?.[0]?.toUpperCase() || "U"}
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span>{user?.username || "Unknown User"}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {user?.email || user?.preferred_email}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{format(parseISO(deposit.month + "-01"), "MMM yyyy")}</TableCell>
+                      <TableCell>৳{Number(deposit.amount).toLocaleString()}</TableCell>
+                      <TableCell>{deposit.transactionId || "N/A"}</TableCell>
+                      <TableCell>{format(depositDate, "dd MMM yyyy HH:mm")}</TableCell>
+                      <TableCell>{approvedDate ? format(approvedDate, "dd MMM yyyy HH:mm") : "N/A"}</TableCell>
+                      <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
+          <div className="mt-4 flex justify-center">
+            <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />
+          </div>
         </CardContent>
       </Card>
     </div>

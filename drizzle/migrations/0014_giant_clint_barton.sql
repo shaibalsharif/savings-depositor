@@ -1,0 +1,1 @@
+ALTER TABLE "deposits" ADD COLUMN "updated_balance" numeric(10, 2) DEFAULT 'NULL';

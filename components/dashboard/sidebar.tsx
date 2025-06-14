@@ -12,21 +12,22 @@ import {
   Bell,
   History,
   Banknote,
+  User,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
+import { LogoutLink, useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 
 export function DashboardSidebar() {
-  const { user, /* permissions, logout */ } = useKindeAuth()
+  const { user, permissions } = useKindeAuth()
 
   const pathname = usePathname()// In real use, you might use usePathname from next/navigation
 
   // Permission checks (adjust as per your Kinde permissions)
-  const isAdmin = true//permissions?.admin === 'true'
-  const isFinanceManager = true//permissions?.finance_manager === 'true' || isAdmin
+  const isAdmin = permissions?.permissions?.includes('admin')
+  const isManager = permissions?.permissions?.includes('manager')
 
   const routes = [
     {
@@ -47,26 +48,27 @@ export function DashboardSidebar() {
       href: "/dashboard/deposit-status",
       active: pathname === "/dashboard/deposit-status",
     },
-    {
-      label: "Deposit Settings",
-      icon: Settings,
-      href: "/dashboard/deposit-settings",
-      active: pathname === "/dashboard/deposit-settings",
-      showIf: isFinanceManager,
-      disabled: true,
-    },
+    // {
+    //   label: "Deposit Settings",
+    //   icon: Settings,
+    //   href: "/dashboard/deposit-settings",
+    //   active: pathname === "/dashboard/deposit-settings",
+    //   showIf: isManager,
+    //   disabled: true,
+    // },
     {
       label: "Withdrawals",
       icon: CreditCard,
       href: "/dashboard/withdrawals",
       active: pathname === "/dashboard/withdrawals",
+      disabled: false
     },
     {
       label: "Fund Management",
       icon: Banknote,
       href: "/dashboard/funds",
       active: pathname === "/dashboard/funds",
-      showIf: isFinanceManager,
+      showIf: isManager || isAdmin,
     },
     {
       label: "Users",
@@ -75,13 +77,13 @@ export function DashboardSidebar() {
       active: pathname === "/dashboard/users",
       showIf: isAdmin,
     },
-    {
-      label: "Members",
-      icon: Users,
-      href: "/dashboard/members",
-      active: pathname === "/dashboard/members",
-      showIf: !isAdmin,
-    },
+    // {
+    //   label: "Members",
+    //   icon: Users,
+    //   href: "/dashboard/members",
+    //   active: pathname === "/dashboard/members",
+    //   showIf: !isAdmin,
+    // },
     {
       label: "Activity Logs",
       icon: History,
@@ -95,20 +97,26 @@ export function DashboardSidebar() {
       href: "/dashboard/notifications",
       active: pathname === "/dashboard/notifications",
     },
+    // {
+    //   label: "Analytics",
+    //   icon: BarChart3,
+    //   href: "/dashboard/analytics",
+    //   active: pathname === "/dashboard/analytics",
+    //   showIf: isManager,
+    //   disabled: true, // Disable for now, implement later
+    // },
     {
-      label: "Analytics",
-      icon: BarChart3,
-      href: "/dashboard/analytics",
-      active: pathname === "/dashboard/analytics",
-      showIf: isFinanceManager,
-      disabled: true, // Disable for now, implement later
+      label: "Profile",
+      icon: User,
+      href: "/dashboard/profile",
+      active: pathname === "/dashboard/profile",
     },
     {
       label: "Settings",
       icon: Settings,
       href: "/dashboard/settings",
       active: pathname === "/dashboard/settings",
-      showIf: isAdmin,
+      showIf: isAdmin || isManager,
     },
   ]
 
@@ -163,12 +171,16 @@ export function DashboardSidebar() {
             <p className="font-medium">{user?.given_name} {user?.family_name}</p>
             <p className="text-xs text-muted-foreground">{user?.email}</p>
           </div>
+
           <Button
             variant="ghost"
             size="icon"
-          // onClick={() => logout({ returnTo: window.location.origin })}
+
           >
-            <LogOut className="h-4 w-4" />
+            <LogoutLink >
+              <LogOut className="h-4 w-4" >
+
+              </LogOut></LogoutLink>
             <span className="sr-only">Log out</span>
           </Button>
         </div>

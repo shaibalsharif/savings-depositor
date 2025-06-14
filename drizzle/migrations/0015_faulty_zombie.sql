@@ -1,0 +1,1 @@
+ALTER TABLE "deposits" ALTER COLUMN "updated_balance" SET DEFAULT NULL;

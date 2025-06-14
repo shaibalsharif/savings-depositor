@@ -5,6 +5,14 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUploadThing } from "@/lib/uploadthing"
 import { useToast } from "@/hooks/use-toast"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 export default function NomineeTab({ user }: { user: any }) {
   const { toast } = useToast()
@@ -49,66 +57,128 @@ export default function NomineeTab({ user }: { user: any }) {
       }
       toast({ title: "Nominee information saved!" })
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" })
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      })
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <form className="space-y-4 max-w-xl mx-auto p-4 sm:p-6" onSubmit={e => { e.preventDefault(); handleSave() }}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label>Name</Label>
-          <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required className="w-full" />
-        </div>
-        <div>
-          <Label>Relation</Label>
-          <Input value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} required className="w-full" />
-        </div>
-        <div>
-          <Label>Date of Birth</Label>
-          <Input type="date" value={form.dob} onChange={e => setForm(f => ({ ...f, dob: e.target.value }))} required className="w-full" />
-        </div>
-        <div>
-          <Label>Mobile</Label>
-          <Input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))} required className="w-full" />
-        </div>
-        <div>
-          <Label>NID Number</Label>
-          <Input value={form.nidNumber} onChange={e => setForm(f => ({ ...f, nidNumber: e.target.value }))} required className="w-full" />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Address</Label>
-          <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} required className="w-full" />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Photo</Label>
-          <div className="flex items-center gap-2">
-            {imagePreviewUrl && (
-              <Avatar>
-                <AvatarImage src={imagePreviewUrl} />
-                <AvatarFallback>IMG</AvatarFallback>
-              </Avatar>
-            )}
-            <input
-              type="file"
-              onChange={handleFileChange}
-              accept="image/*"
-              className="hidden"
-              id="nominee-photo"
-            />
-            <label htmlFor="nominee-photo">
-              <Button variant="outline" asChild>Upload</Button>
-            </label>
+    <Card>
+      <CardHeader>
+        <CardTitle>Nominee Info</CardTitle>
+        <CardDescription>Nominee Information one-time change</CardDescription>
+      </CardHeader>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleSave()
+        }}
+      >
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div>
+              <Label>Relation</Label>
+              <Input
+                value={form.relation}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, relation: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div>
+              <Label>Date of Birth</Label>
+              <Input
+                type="date"
+                value={form.dob}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, dob: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div>
+              <Label>Mobile</Label>
+              <Input
+                value={form.mobile}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, mobile: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div>
+              <Label>NID Number</Label>
+              <Input
+                value={form.nidNumber}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, nidNumber: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Address</Label>
+              <Input
+                value={form.address}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, address: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Photo</Label>
+              <div className="flex items-center gap-4">
+                {imagePreviewUrl && (
+                  <Avatar>
+                    <AvatarImage src={imagePreviewUrl} />
+                    <AvatarFallback>IMG</AvatarFallback>
+                  </Avatar>
+                )}
+                <div>
+                  <input
+                    type="file"
+                    id="nominee-photo"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <label htmlFor="nominee-photo">
+                    <Button type="button" variant="outline">
+                      Upload
+                    </Button>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div className="flex justify-center">
-        <Button type="submit" disabled={saving} className="w-full sm:w-auto px-8 py-2">
-          {saving ? "Saving..." : "Save"}
-        </Button>
-      </div>
-    </form>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Button
+            type="submit"
+            disabled={saving}
+            className="w-full sm:w-auto px-8 py-2"
+          >
+            {saving ? "Saving..." : "Save"}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
   )
 }

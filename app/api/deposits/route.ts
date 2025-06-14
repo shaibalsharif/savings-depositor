@@ -49,8 +49,6 @@ export async function POST(req: NextRequest) {
     );
 
   if (existing.length > 0) {
-    console.log("yes sss");
-
     return NextResponse.json(
       { error: "Deposit for this month already exists." },
       { status: 409 }
@@ -86,6 +84,7 @@ export async function GET(request: Request) {
     endDate: searchParams.get("endDate") ?? undefined,
   });
 
+
   // Build query conditions
   let conditions = [];
   if (filters.id) conditions.push(eq(deposits.userId, filters.id));
@@ -95,6 +94,7 @@ export async function GET(request: Request) {
     conditions.push(eq(deposits.status, filters.status));
   if (filters.month && filters.month !== "all")
     conditions.push(eq(deposits.month, filters.month));
+
   if (filters.startDate && filters.endDate) {
     conditions.push(
       and(
@@ -102,7 +102,13 @@ export async function GET(request: Request) {
         lte(deposits.createdAt, new Date(filters.endDate))
       )
     );
-  }
+  } else if (filters.startDate)
+    conditions.push(gte(deposits.createdAt, new Date(filters.startDate)));
+  else if (filters.endDate)
+    conditions.push(lte(deposits.createdAt, new Date(filters.endDate)));
+
+
+  
   const limit = parseInt(searchParams.get("limit") || "10");
   const offset = parseInt(searchParams.get("offset") || "0");
   // Execute query

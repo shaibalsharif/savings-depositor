@@ -10,17 +10,30 @@ import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
 import type { Deposit, DepositFilters } from "@/types";
 
 const MONTHS = [
-  "January 2025", "February 2025", "March 2025", "April 2025", "May 2025", "June 2025"
+  "January 2025",
+  "February 2025",
+  "March 2025",
+  "April 2025",
+  "May 2025",
+  "June 2025",
+  "July 2025",
+  "August 2025",
+  "September 2025",
+  "October 2025",
+  "November 2025",
+  "December 2025"
 ];
 
+
 export default function DepositsPage() {
-  const { user } = useKindeAuth();
+  const { user, getPermissions } = useKindeAuth();
+  const permissions = getPermissions()
 
   // Role checks
-  const roles = ['admin']// user?.roles || [user?.role];
-  const isAdmin = roles?.includes("admin");
-  const isManager = roles?.includes("manager");
-  const isMember = roles?.includes("member") || (!isAdmin && !isManager);
+
+  const isAdmin = permissions?.permissions?.includes("admin");
+  const isManager = permissions?.permissions?.includes("manager");
+
 
   // // State for all deposits (fetched from API)
   // const [allDeposits, setAllDeposits] = useState([]);
@@ -105,11 +118,12 @@ export default function DepositsPage() {
   // };
 
   // Handler for approving deposit (Review tab)
-  const handleAction = async (depositId: number, status: "verified" | "rejected", fundId: number) => {
+  const handleAction = async (depositId: number, status: "verified" | "rejected", fundId: number, note: string | undefined
+  ) => {
     await fetch(`/api/deposits/${depositId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, fundId }),
+      body: JSON.stringify({ status, fundId, note }),
     });
     // refetch deposits if needed
   };
@@ -132,13 +146,14 @@ export default function DepositsPage() {
         <TabsList>
           <TabsTrigger value="upload">Upload Receipt</TabsTrigger>
           <TabsTrigger value="your">Your Deposits</TabsTrigger>
-          {(isAdmin || isManager) && (
-            <>
-              <TabsTrigger value="all">All Deposits</TabsTrigger>
-              <TabsTrigger value="review">Review Deposits</TabsTrigger>
-            </>
-          )}
+
+
+          <TabsTrigger value="all">All Deposits</TabsTrigger>
+          <TabsTrigger value="review" disabled={!isAdmin && !isManager}>Review Deposits</TabsTrigger>
+
+
         </TabsList>
+
         {/* Upload Receipt Tab */}
         <TabsContent value="upload">
           <UploadReceipt
@@ -151,17 +166,17 @@ export default function DepositsPage() {
           <YourDepositsTable months={MONTHS} />
         </TabsContent>
         {/* All Deposits Tab (Admin/Manager) */}
-        {(isAdmin || isManager) && (
-          <TabsContent value="all">
-            <AllDepositsTable months={MONTHS} />
-          </TabsContent>
-        )}
+
+        <TabsContent value="all">
+          <AllDepositsTable months={MONTHS} />
+        </TabsContent>
+
         {/* Review Deposits Tab (Admin/Manager) */}
         {(isAdmin || isManager) && (
           <TabsContent value="review">
-            <ReviewDepositsTable onAction={(id, action, fundId) => {
+            <ReviewDepositsTable onAction={(id, action, fundId, note) => {
               if (typeof id === "number") {
-                void handleAction(id, action, fundId || 0); // ignore the returned Promise
+                void handleAction(id, action, fundId || 0, note); // ignore the returned Promise
               } else {
                 console.warn("Invalid ID type, expected number:", id);
               }

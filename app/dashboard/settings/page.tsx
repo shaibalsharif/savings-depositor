@@ -9,14 +9,14 @@ import DepositSettingsTab from "@/components/dashboard/settings/DepositSettingsT
 import NotificationsTab from "@/components/dashboard/settings/NotificationsTab"
 
 export default function SettingsPage() {
-  const { user, isLoading } = useKindeAuth()
+  const { isLoading, permissions } = useKindeAuth()
   const [activeTab, setActiveTab] = useState("notifications")
-
   if (isLoading) return <div>Loading...</div>
 
-  const isAdminOrManager = true//user?.role === "admin" || user?.role === "manager"
+  const isAdmin = permissions?.permissions.includes("admin")
+  const isManager = permissions?.permissions.includes("manager")
 
-  if (!isAdminOrManager) {
+  if (!isAdmin && !isManager) {
     return (
       <div className="flex h-full items-center justify-center p-4">
         <Card className="max-w-md">
@@ -41,7 +41,7 @@ export default function SettingsPage() {
           <TabsTrigger value="deposit" className="data-[state=active]:bg-background data-[state=active]:shadow">
             Deposit Settings
           </TabsTrigger>
-          <TabsTrigger value="terms" className="data-[state=active]:bg-background data-[state=active]:shadow">
+          <TabsTrigger disabled={!isAdmin} value="terms" className="data-[state=active]:bg-background data-[state=active]:shadow">
             Terms & Conditions
           </TabsTrigger>
         </TabsList>
@@ -54,9 +54,9 @@ export default function SettingsPage() {
           <DepositSettingsTab />
         </TabsContent>
 
-        <TabsContent value="terms">
+        {isAdmin ? <TabsContent value="terms">
           <TermsTab />
-        </TabsContent>
+        </TabsContent> : <></>}
       </Tabs>
     </div>
   )

@@ -1,243 +1,282 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, CreditCard, User, Wallet } from "lucide-react"
-import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
+import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TableLoadMore } from "@/components/dashboard/tables/TableLoadMore";
+import { format, parseISO, isValid } from "date-fns";
+import { TableFilter } from "@/components/dashboard/tables/TableFilter";
 
-type Log = {
-  id: string
-  action: string
-  description: string
-  amount?: number
-  createdAt: string
-  performedBy: string
-  affectedUser?: string
-}
+const PAGE_LIMIT = 10;
+
+const getActionBadge = (action: string) => {
+  switch (action) {
+    case "approve_deposit":
+      return <Badge variant="success">Deposit Approved</Badge>;
+    case "upload_deposit":
+      return <Badge variant="default">Deposit Uploaded</Badge>;
+    case "create_fund":
+      return <Badge variant="success">Fund Created</Badge>;
+    default:
+      return <Badge variant="outline">{action.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</Badge>;
+  }
+};
+
+const DateWithTime = ({ value }: { value?: string | null }) => {
+  if (!value) return <span className="text-muted-foreground">N/A</span>;
+  const date = parseISO(value);
+  if (!isValid(date)) return <span className="text-muted-foreground">N/A</span>;
+  return (
+    <div>
+      {format(date, "dd MMM yyyy")}
+      <div className="text-xs text-muted-foreground">{format(date, "HH:mm:ss")}</div>
+    </div>
+  );
+};
+
+const renderDetails = (action: string, details: any) => {
+  try {
+    const obj = typeof details === "string" ? JSON.parse(details) : details;
+    switch (action) {
+      case "approve_deposit":
+        return (
+          <>
+            <div>Deposit ID: <b>{obj.depositId}</b></div>
+            <div>Fund ID: <b>{obj.fundId}</b></div>
+            <div>New Balance: <b>৳{obj.newBalance}</b></div>
+          </>
+        );
+      case "upload_deposit":
+        return (
+          <>
+            <div>Month: <b>{obj.month}</b></div>
+            <div>Amount: <b>৳{obj.amount}</b></div>
+          </>
+        );
+      default:
+        return <pre className="text-xs bg-muted/50 rounded p-2 whitespace-pre-wrap max-w-[300px]">{JSON.stringify(obj, null, 2)}</pre>;
+    }
+  } catch {
+    return <span>{details}</span>;
+  }
+};
 
 export default function LogsPage() {
-  const { user } = useKindeAuth()
-  const [logs, setLogs] = useState<Log[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filterAction, setFilterAction] = useState<string>("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({})
-  const [selectedUser, setSelectedUser] = useState<string>("")
+  const { user } = useKindeAuth();
+  const [tab, setTab] = useState<"my" | "all">("my");
+  const [logs, setLogs] = useState<any[]>([]);
+  const [userMap, setUserMap] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState({
+    userId: "", // will be set dynamically
+    action: "all",
+    startDate: "",
+    endDate: "",
+    query: "",
+  });
+  const [error, setError] = useState<string | null>(null);
 
-  const isAdmin = true// user?.permissions?.admin === "true"
-  const isFinanceManager = true//user?.permissions?.finance_manager === "true" || isAdmin
-  const isMember = true// !isAdmin && !isFinanceManager
+  const canSeeAll = true//user?.role === "admin" || user?.role === "manager";
 
-  // Fetch logs on mount and when filters change
-
-  const [users, setUsers] = useState<{ email: string }[]>([])
-
+  // Update userId filter based on tab
   useEffect(() => {
-    if (isAdmin || isFinanceManager) {
-      fetch("/api/users")
-        .then(res => res.json())
-        .then(({ users }) => setUsers(users))
-        .catch(console.error)
+    setFilter((prev) => ({
+      ...prev,
+      userId: tab === "my" ? (user?.id || "") : "", // empty means all users for "all" tab
+    }));
+    setPage(1);
+  }, [tab, user?.id]);
+
+  const fetchLogs = useCallback(async (reset = false) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+
+      if (filter.userId) params.append("userId", filter.userId);
+      if (filter.action && filter.action !== "all") params.append("action", filter.action);
+      if (filter.startDate) params.append("startDate", filter.startDate);
+      if (filter.endDate) params.append("endDate", filter.endDate);
+      if (filter.query) params.append("query", filter.query);
+
+      params.append("limit", PAGE_LIMIT.toString());
+      if (!reset && nextCursor) {
+        params.append("cursor", nextCursor);
+      }
+
+      const res = await fetch(`/api/logs?${params.toString()}`, {
+        headers: { "x-user-role": "admin", }// user?.role || "" },
+      });
+
+      if (!res.ok) {
+        setError("Failed to fetch logs");
+        setLoading(false);
+        return;
+      }
+
+      const json = await res.json();
+      const newLogs = json.logs || [];
+
+      setLogs((prev) => (reset ? newLogs : [...prev, ...newLogs]));
+      setNextCursor(json.nextCursor || null);
+      setHasMore(Boolean(json.nextCursor));
+    } catch {
+      setError("Failed to fetch logs");
+    } finally {
+      setLoading(false);
     }
-  }, [isAdmin, isFinanceManager])
+  }, [filter, nextCursor, /* user?.role */]);
+  const handleLoadMore = () => {
+    if (hasMore && !loading) {
+      fetchLogs(false);
+    }
+  };
   useEffect(() => {
-    const fetchLogs = async () => {
-      setLoading(true)
+    fetchLogs(true);
+  }, [fetchLogs]);
+
+  // const handleLoadMore = () => {
+  //   if (hasMore && !loading) setPage((p) => p + 1);
+  // };
+
+  // Batch fetch user info for logs
+  useEffect(() => {
+    const uniqueUserIds = Array.from(new Set(logs.map(l => l.user_id).filter(Boolean)));
+    if (uniqueUserIds.length === 0) {
+      setUserMap({});
+      return;
+    }
+    let cancelled = false;
+    async function fetchUsers() {
       try {
-        const params = new URLSearchParams()
-        if (filterAction !== "all") params.set("action", filterAction)
-        if (isAdmin || isFinanceManager) {
-          if (selectedUser) params.set("userId", selectedUser)
-        }
-        if (dateRange.start) params.set("startDate", dateRange.start)
-        if (dateRange.end) params.set("endDate", dateRange.end)
-        if (searchQuery) params.set("query", searchQuery)
-        // For members, backend will filter by user.email
-        const res = await fetch(`/api/logs?${params.toString()}`)
-        const { logs } = await res.json()
-        setLogs(logs)
-      } catch (err) {
-        console.error("Failed to fetch logs:", err)
-      } finally {
-        setLoading(false)
+        const res = await fetch("/api/deposits/depositors", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds: uniqueUserIds }),
+        });
+        if (!res.ok) throw new Error("Failed to fetch users");
+        const data = await res.json();
+        if (!cancelled) setUserMap(data);
+      } catch {
+        if (!cancelled) setUserMap({});
       }
     }
-    fetchLogs()
-  }, [filterAction, selectedUser, dateRange, searchQuery, user?.email])
+    fetchUsers();
+    return () => { cancelled = true; };
+  }, [logs]);
 
+  const handleFilter = (newFilter: any) => {
+    setFilter((prev) => ({ ...prev, ...newFilter }));
+    setPage(1);
+  };
 
+  useEffect(() => {
+    setFilter({
+      userId: "", // will be set dynamically
+      action: "all",
+      startDate: "",
+      endDate: "",
+      query: "",
+    })
+  }, [tab])
 
+  return (
+    <div className="container py-8">
+      <h1 className="text-2xl font-bold mb-2">Logs</h1>
+      <p className="mb-6 text-muted-foreground">View and filter logs</p>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "my" | "all")}>
+        <TabsList>
+          <TabsTrigger value="my">My Logs</TabsTrigger>
+          {canSeeAll && <TabsTrigger value="all">All Logs</TabsTrigger>}
+        </TabsList>
 
-  // For members, only show their own logs (handled by backend)
-  const filteredLogs = logs.filter((log) => {
-    const actionMatch = filterAction === "all" || log?.action === filterAction
-    const searchMatch =
-      log?.description?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
-      (log?.affectedUser && log?.affectedUser?.toLowerCase().includes(searchQuery?.toLowerCase())) ||
-      (log?.performedBy?.toLowerCase().includes(searchQuery?.toLowerCase()))
-    return actionMatch && searchMatch
-  })
+        <TabsContent value="my">
+          <TableFilter
+            filterList={["action", "startDate", "endDate", "query"]}
+            months={[]}
+            onFilter={handleFilter}
+          />
+          <LogsTable logs={logs} userMap={userMap} />
+          <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />
+          {error && <div className="text-red-600 mt-2">{error}</div>}
+        </TabsContent>
 
+        {canSeeAll && (
+          <TabsContent value="all">
+            <TableFilter
+              filterList={["user", "action", "startDate", "endDate", "query"]}
+              months={[]}
+              onFilter={handleFilter}
+            />
+            <LogsTable logs={logs} userMap={userMap} />
+            <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />
+            {error && <div className="text-red-600 mt-2">{error}</div>}
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
+  );
+}
 
-
-  const getActionBadge = (action: string) => {
-    switch (action) {
-      case "deposit":
-        return <Badge variant="success">Deposit</Badge>
-      case "deposit_partial":
-        return (
-          <Badge variant="outline" className="bg-amber-50 text-amber-700 hover:bg-amber-50">
-            Partial Deposit
-          </Badge>
-        )
-      case "withdrawal":
-        return <Badge variant="destructive">Withdrawal</Badge>
-      case "user_added":
-        return <Badge variant="secondary">User Added</Badge>
-      case "fund_transfer":
-        return <Badge variant="default">Fund Transfer</Badge>
-      default:
-        return <Badge variant="outline">Other</Badge>
-    }
+function LogsTable({ logs, userMap }: { logs: any[]; userMap: Record<string, any> }) {
+  if (logs.length === 0) {
+    return <div className="text-center text-muted-foreground py-4">No logs found.</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Activity Logs</h1>
-        <p className="text-muted-foreground">
-          {isMember ? "View your activity history" : "Track all system activities and transactions"}
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Activity History</CardTitle>
-          <CardDescription>
-            {isMember ? "Your personal activity log" : "Comprehensive log of all system activities"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6 flex flex-wrap gap-4">
-            <div className="w-full md:w-auto">
-              <Label htmlFor="action-filter">Filter by Action</Label>
-              <Select value={filterAction} onValueChange={setFilterAction}>
-                <SelectTrigger id="action-filter" className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Select action" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Actions</SelectItem>
-                  <SelectItem value="deposit">Deposit</SelectItem>
-                  <SelectItem value="deposit_partial">Partial Deposit</SelectItem>
-                  <SelectItem value="withdrawal">Withdrawal</SelectItem>
-                  <SelectItem value="user_added">User Added</SelectItem>
-                  <SelectItem value="fund_transfer">Fund Transfer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {(isAdmin || isFinanceManager) && (
-              <div className="w-full md:w-auto">
-                <Label htmlFor="user-filter">Filter by User</Label>
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger id="user-filter" className="w-full md:w-[180px]">
-                    <SelectValue placeholder="All Users" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
-                    <SelectItem value="user-1">User-1</SelectItem>
-                    <SelectItem value="user-2">User-2</SelectItem>
-                    {/* In a real app, fetch users and map here */}
-                    {/* Example: users.map(u => <SelectItem key={u.email} value={u.email}>{u.email}</SelectItem>) */}
-                    {/* For this demo, you would fetch users and populate this */}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="w-full md:w-auto">
-              <Label htmlFor="date-start">From</Label>
-              <Input
-                id="date-start"
-                type="date"
-                value={dateRange.start || ""}
-                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="w-full md:w-[150px]"
-              />
-            </div>
-            <div className="w-full md:w-auto">
-              <Label htmlFor="date-end">To</Label>
-              <Input
-                id="date-end"
-                type="date"
-                value={dateRange.end || ""}
-                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="w-full md:w-[150px]"
-              />
-            </div>
-
-            <div className="w-full md:w-auto md:flex-1">
-              <Label htmlFor="search">Search</Label>
-              <Input
-                id="search"
-                placeholder="Search by description or user..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Description</TableHead>
-                  {(isAdmin || isFinanceManager) && <TableHead>User</TableHead>}
-                  <TableHead>Amount</TableHead>
-                  {(isAdmin || isFinanceManager) && <TableHead>Performed By</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={(isAdmin || isFinanceManager) ? 6 : 4} className="text-center">
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredLogs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={(isAdmin || isFinanceManager) ? 6 : 4} className="text-center">
-                      No logs found
-                    </TableCell>
-                  </TableRow>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>User</TableHead>
+          <TableHead>Action</TableHead>
+          <TableHead>Details</TableHead>
+          <TableHead>Date</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {logs.map((log) => {
+          const user = userMap[log.user_id];
+          return (
+            <TableRow key={log.id}>
+              <TableCell>
+                {log.user_id ? (
+                  user ? (
+                    <div className="flex items-center space-x-2">
+                      {user.picture ? (
+                        <Image src={user.picture} alt={user.name || "User"} width={32} height={32} className="rounded-full" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
+                          {user.name?.[0]?.toUpperCase() || "U"}
+                        </div>
+                      )}
+                      <div className="flex flex-col">
+                        <span>{user.name || "Unknown"}</span>
+                        <span className="text-xs text-muted-foreground">{user.email}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <span>Loading...</span>
+                  )
                 ) : (
-                  filteredLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{new Date(log.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>{getActionBadge(log.action)}</TableCell>
-                      <TableCell>{log.description}</TableCell>
-                      {(isAdmin || isFinanceManager) && (
-                        <TableCell>{log.affectedUser || "System"}</TableCell>
-                      )}
-                      <TableCell>{log.amount ? `৳ ${log.amount.toLocaleString()}` : "-"}</TableCell>
-                      {(isAdmin || isFinanceManager) && (
-                        <TableCell>{log.performedBy}</TableCell>
-                      )}
-                    </TableRow>
-                  ))
+                  <span className="italic text-gray-400">System</span>
                 )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
+              </TableCell>
+              <TableCell>{getActionBadge(log.action)}</TableCell>
+              <TableCell>{renderDetails(log.action, log.details)}</TableCell>
+              <TableCell>
+                <DateWithTime value={log.createdAt} />
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
 }

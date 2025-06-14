@@ -7,6 +7,8 @@ import SignatureCanvas from "react-signature-canvas"
 import { useUploadThing } from "@/lib/uploadthing"
 import { useToast } from "@/hooks/use-toast"
 import NidPhotoInput from "./nidPhotoInput"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+
 
 export default function PersonalInfoTab({ user }: { user: any }) {
   const { toast } = useToast()
@@ -107,104 +109,110 @@ export default function PersonalInfoTab({ user }: { user: any }) {
   }
 
   return (
-    <form className="space-y-6 max-w-xl mx-auto p-4 sm:p-6" onSubmit={e => { e.preventDefault(); handleSave() }}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label>Name (English)</Label>
-          <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full" />
-        </div>
-        <div>
-          <Label>Name (Bangla)</Label>
-          <Input value={form.nameBn} onChange={e => setForm({ ...form, nameBn: e.target.value })} className="w-full" />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Father's Name</Label>
-          <Input value={form.father} onChange={e => setForm({ ...form, father: e.target.value })} className="w-full" />
-        </div>
-        <div>
-          <Label>Date of Birth</Label>
-          <Input type="date" value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })} className="w-full" />
-        </div>
-        <div>
-          <Label>Profession</Label>
-          <Input value={form.profession} onChange={e => setForm({ ...form, profession: e.target.value })} className="w-full" />
-        </div>
-        <div>
-          <Label>Religion</Label>
-          <Input value={form.religion} onChange={e => setForm({ ...form, religion: e.target.value })} className="w-full" />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Present Address</Label>
-          <Input value={form.presentAddress} onChange={e => setForm({ ...form, presentAddress: e.target.value })} className="w-full" />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Permanent Address</Label>
-          <Input value={form.permanentAddress} onChange={e => setForm({ ...form, permanentAddress: e.target.value })} className="w-full" />
-        </div>
-        <div>
-          <Label>Mobile</Label>
-          <Input value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value })} className="w-full" />
-        </div>
-        <div>
-          <Label>NID Number</Label>
-          <Input value={form.nidNumber} onChange={e => setForm({ ...form, nidNumber: e.target.value })} className="w-full" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <NidPhotoInput
-          label="NID Front Photo"
-          existingImageUrl={form.nidFront}
-          onChange={file => {
-            setNidFrontFile(file)
-            if (!file) setForm(f => ({ ...f, nidFront: "" }))
-          }}
-        />
-        <NidPhotoInput
-          label="NID Back Photo"
-          existingImageUrl={form.nidBack}
-          onChange={file => {
-            setNidBackFile(file)
-            if (!file) setForm(f => ({ ...f, nidBack: "" }))
-          }}
-        />
-      </div>
-
-      <div>
-        <Label>Signature</Label>
-        <div className="border rounded p-2 max-w-full overflow-auto">
-          <SignatureCanvas
-            ref={sigCanvasRef}
-            penColor="black"
-            canvasProps={{ width: 400, height: 150, className: "w-full" }}
-          />
-          <div className="flex gap-2 mt-2">
-            <Button type="button" onClick={() => sigCanvasRef.current?.clear()}>Clear</Button>
-            <Button type="button" onClick={handleSignatureSave}>Save Signature</Button>
+    <Card>
+      <CardHeader>
+        <CardTitle>Personal Information</CardTitle>
+      </CardHeader>
+      <form className=" p-4 sm:p-6" onSubmit={e => { e.preventDefault(); handleSave() }}>
+        <CardContent className="space-y-2 md:space-y-2 md:grid md:grid-cols-2 gap-6" >
+          <div className="">
+            <Label>Name (English)</Label>
+            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full" />
           </div>
-        </div>
-      </div>
+          <div className="!m-0">
+            <Label>Name (Bangla)</Label>
+            <Input value={form.nameBn} onChange={e => setForm({ ...form, nameBn: e.target.value })} className="w-full" />
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Father's Name</Label>
+            <Input value={form.father} onChange={e => setForm({ ...form, father: e.target.value })} className="w-full" />
+          </div>
+          <div>
+            <Label>Date of Birth</Label>
+            <Input type="date" value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })} className="w-full" />
+          </div>
+          <div>
+            <Label>Profession</Label>
+            <Input value={form.profession} onChange={e => setForm({ ...form, profession: e.target.value })} className="w-full" />
+          </div>
+          <div>
+            <Label>Religion</Label>
+            <Input value={form.religion} onChange={e => setForm({ ...form, religion: e.target.value })} className="w-full" />
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Present Address</Label>
+            <Input value={form.presentAddress} onChange={e => setForm({ ...form, presentAddress: e.target.value })} className="w-full" />
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Permanent Address</Label>
+            <Input value={form.permanentAddress} onChange={e => setForm({ ...form, permanentAddress: e.target.value })} className="w-full" />
+          </div>
+          <div>
+            <Label>Mobile</Label>
+            <Input value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value })} className="w-full" />
+          </div>
+          <div>
+            <Label>NID Number</Label>
+            <Input value={form.nidNumber} onChange={e => setForm({ ...form, nidNumber: e.target.value })} className="w-full" />
+          </div>
 
-      <div>
-        <Label>Position</Label>
-        <select
-          value={form.position}
-          onChange={e => setForm({ ...form, position: e.target.value })}
-          className="w-full border rounded px-2 py-1"
-          required
-        >
-          <option value="">Select position</option>
-          <option value="president">President</option>
-          <option value="gs">GS</option>
-          <option value="os">OS</option>
-          <option value="fs">FS</option>
-          <option value="member">Member</option>
-        </select>
-      </div>
 
-      <div className="flex justify-center">
-        <Button type="submit" className="w-full sm:w-auto px-8 py-2">Save</Button>
-      </div>
-    </form>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <NidPhotoInput
+              label="NID Front Photo"
+              existingImageUrl={form.nidFront}
+              onChange={file => {
+                setNidFrontFile(file)
+                if (!file) setForm(f => ({ ...f, nidFront: "" }))
+              }}
+            />
+            <NidPhotoInput
+              label="NID Back Photo"
+              existingImageUrl={form.nidBack}
+              onChange={file => {
+                setNidBackFile(file)
+                if (!file) setForm(f => ({ ...f, nidBack: "" }))
+              }}
+            />
+          </div>
+
+          <div>
+            <Label>Signature</Label>
+            <div className="border rounded p-2 max-w-full overflow-auto">
+              <SignatureCanvas
+                ref={sigCanvasRef}
+                penColor="black"
+                canvasProps={{ width: 400, height: 150, className: "w-full" }}
+              />
+              <div className="flex gap-2 mt-2">
+                <Button type="button" onClick={() => sigCanvasRef.current?.clear()}>Clear</Button>
+                <Button type="button" onClick={handleSignatureSave}>Save Signature</Button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <Label>Position</Label>
+            <select
+              value={form.position}
+              onChange={e => setForm({ ...form, position: e.target.value })}
+              className="w-full border rounded px-2 py-1"
+              required
+            >
+              <option value="">Select position</option>
+              <option value="president">President</option>
+              <option value="gs">GS</option>
+              <option value="os">OS</option>
+              <option value="fs">FS</option>
+              <option value="member">Member</option>
+            </select>
+          </div>
+
+          <CardFooter>
+            <Button type="submit" className="w-full">Save</Button>
+          </CardFooter>
+        </CardContent>
+      </form>
+    </Card>
   )
 }

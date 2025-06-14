@@ -6,9 +6,12 @@ export async function GET() {
   const token = await getKindeManagementToken();
 
   // Get all users
-  const usersRes = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/users?page_size=100`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const usersRes = await fetch(
+    `${process.env.KINDE_ISSUER_URL}/api/v1/users?page_size=100`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
 
   if (!usersRes.ok)
     return NextResponse.json(
@@ -38,6 +41,7 @@ export async function GET() {
           ? `${user.given_name} ${user.family_name || ""}`
           : user.email,
         email: user.email,
+        username:user.username,
         avatar: user.picture,
         permissions: permsData.permissions?.map((p: any) => p.key) || [],
         status: user.is_suspended ? "archived" : "active",
@@ -97,19 +101,18 @@ export async function POST(req: NextRequest) {
             type: "phone",
             is_verified: false,
             details: {
-              phone: phone?.includes("+880")
-                ? phone
-                : phone.charAt(0) == "0"
-                ? `+88${phone}`
-                : `+880${phone}`,
+              phone:
+                phone?.includes("+880") || phone?.includes("880")
+                  ? phone
+                  : phone.charAt(0) == "0"
+                  ? `+88${phone}`
+                  : `+880${phone}`,
               phone_country_id: "bd", // optionally make this dynamic
             },
           },
         ]
       : []),
   ];
-
-
 
   const res = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/user`, {
     method: "POST",
