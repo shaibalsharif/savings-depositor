@@ -6,12 +6,16 @@ import { AuthProvider } from "@/lib/kinde-provider"
 import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
-
 export const metadata: Metadata = {
-  title: "Group Savings Management",
-  description: "A platform for managing group savings and contributions",
-  generator: 'v0.dev'
-}
+  title: 'Money Depositor',
+  description: 'Track monthly savings and manage deposits in a collective goal-based system.',
+  themeColor: '#0d9488',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
+  }
+};
 
 export default function RootLayout({
   children,
