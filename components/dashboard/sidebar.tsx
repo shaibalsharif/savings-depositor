@@ -128,13 +128,16 @@ export function DashboardSidebar({
   ]
 
   return (
-    <div className={cn(
-      "flex h-full w-64 flex-col border-r bg-muted/40 fixed inset-y-0 z-50",
-      "transform transition-transform duration-300 ease-in-out",
-      "md:relative md:translate-x-0",
-      isMobileOpen ? "translate-x-0" : "-translate-x-full"
-    )}>
-      {/* Mobile Close Button */}
+    <div
+      className={cn(
+        "fixed left-0 top-14 z-40 w-64 flex flex-col bg-muted/90 border-r", // start below header
+        "h-[calc(100vh-56px)]", // header height = h-14 = 56px
+        "transform transition-transform duration-300 ease-in-out",
+        "md:relative md:top-0 md:h-[calc(100vh-56px)] md:translate-x-0",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full"
+      )}
+    >
+      {/* Only needed for mobile close */}
       <div className="md:hidden flex items-center justify-between p-4 border-b">
         <h2 className="text-lg font-semibold">Group Savings</h2>
         <button
@@ -145,30 +148,20 @@ export function DashboardSidebar({
         </button>
       </div>
 
-
-      <div className="flex h-14 items-center border-b px-4 py-2">
+      {/* Optional static header for sidebar on desktop */}
+      <div className="hidden md:flex h-14 items-center border-b px-4 py-2">
         <h2 className="text-lg font-semibold">Group Savings</h2>
       </div>
-      <div className="flex-1 overflow-auto py-2">
+
+      {/* Scrollable nav section */}
+      <div className="flex-1 overflow-y-auto py-2">
         <nav className="grid items-start px-2 text-sm font-medium">
           {routes.map((route) => {
-            if (route.showIf === false) return null
-            const isActive = route.active
-
-            const linkContent = (
-              <>
-                <route.icon className="h-4 w-4" />
-                {route.label}
-              </>
-            )
+            if (route.showIf === false) return null;
 
             return (
-              <Link
-                key={route.href}
-                href={route.href}
-                className="relative"
-              >
-                {isActive && (
+              <Link key={route.href} href={route.href} className="relative">
+                {route.active && (
                   <motion.div
                     layoutId="activeSidebarItem"
                     className="absolute inset-0 z-0 rounded-lg bg-muted"
@@ -178,17 +171,22 @@ export function DashboardSidebar({
                 <span
                   className={cn(
                     "relative z-10 flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
-                    isActive ? "text-primary scale-[1.05] font-semibold" : "text-muted-foreground hover:text-primary scale-100",
+                    route.active
+                      ? "text-primary scale-[1.05] font-semibold"
+                      : "text-muted-foreground hover:text-primary scale-100",
                     route.disabled ? "opacity-50 pointer-events-none" : ""
                   )}
                 >
-                  {linkContent}
+                  <route.icon className="h-4 w-4" />
+                  {route.label}
                 </span>
               </Link>
-            )
+            );
           })}
         </nav>
       </div>
+
+      {/* Pinned logout section */}
       <div className="mt-auto border-t p-4">
         <div className="flex items-center gap-2 text-sm">
           <div className="flex-1">
@@ -196,19 +194,16 @@ export function DashboardSidebar({
             <p className="text-xs text-muted-foreground">{user?.email}</p>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-
-          >
-            <LogoutLink >
-              <LogOut className="h-4 w-4" >
-
-              </LogOut></LogoutLink>
-            <span className="sr-only">Log out</span>
-          </Button>
+          <LogoutLink>
+            <Button variant="ghost" size="icon">
+              <LogOut className="h-4 w-4" />
+              <span className="sr-only">Log out</span>
+            </Button>
+          </LogoutLink>
         </div>
       </div>
     </div>
+
+
   )
 }
