@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
 
 export default function Home() {
   return (
@@ -10,7 +11,11 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-primary-foreground">Group Savings</h1>
             <div className="space-x-2">
               <Button variant="outline" className="text-primary-foreground" asChild>
-                <Link href="/login">Login</Link>
+                <LoginLink  >{/* No props needed */}
+
+                  Sign in
+
+                </LoginLink>
               </Button>
             </div>
           </div>
@@ -25,7 +30,7 @@ export default function Home() {
               progress.
             </p>
             <Button size="lg" asChild>
-              <Link href="/login">Get Started</Link>
+              <LoginLink  > Get Started</LoginLink>
             </Button>
           </div>
         </section>
