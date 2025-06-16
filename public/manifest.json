@@ -4,8 +4,8 @@
   "description": "Track monthly savings and manage deposits with your group. A collective goal-based savings app for members.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0d9488",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0D9488",
   "orientation": "portrait",
   "icons": [
     {

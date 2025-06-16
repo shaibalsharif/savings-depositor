@@ -15,16 +15,6 @@ const {getUser} = getKindeServerSession();
 const user = await getUser();
 
 
-//FETCH BALANCE DATA
-//FETCH MEMBER DATA
-//TOAT DEPOIST OF MONTH ALSO PERCENTAGE
-//FETCH RECENT DEPOSITS
-//FETCH RECENT WITHDRAWALS
-//FETCH DEPOSIT TRENDS
-//FETCH TOP CONTRIBUTORS
-//FETCH WITHDRAWAL PURPOSES
-
-
   return (
     <div className="space-y-6">
       <div>
