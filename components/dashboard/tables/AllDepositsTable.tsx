@@ -43,7 +43,7 @@ export function AllDepositsTable({ months }: { months: string[] }) {
     }
 
     if (filter.month && filter.month !== "all") {
-      
+
       params.append("month", filter.month);
     }
 
@@ -86,7 +86,7 @@ export function AllDepositsTable({ months }: { months: string[] }) {
     let cancelled = false;
 
     async function fetchUsersBatch() {
-      
+
 
       try {
         const res = await fetch("/api/deposits/depositors", {
@@ -112,76 +112,77 @@ export function AllDepositsTable({ months }: { months: string[] }) {
     };
   }, [deposits]);
 
-  
+
   return (
     <div>
       <TableFilter
         filterList={['user', 'status', 'month', 'email', 'startDate', 'endDate']}
-        
+
         months={months}
         onFilter={handleFilter}
       />
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>User</TableHead>
-            <TableHead>Month</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Transaction ID</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Type</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {deposits.length === 0 ? (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">No deposits found</TableCell>
+              <TableHead>User</TableHead>
+              <TableHead>Month</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Transaction ID</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Type</TableHead>
             </TableRow>
-          ) : (
-            deposits.map((deposit) => {
-              const user = userMap[deposit.userId];
-              const createdAt = new Date(deposit.createdAt);
-              const dateStr = createdAt.toLocaleDateString();
-              const timeStr = createdAt.toLocaleTimeString();
-              return (
-                <TableRow key={deposit.id}>
-                  <TableCell><div className="flex items-center space-x-2">
-                    {user?.picture ? (
-                      <Image src={user.picture} alt={user.name || "user image"} width={32} height={32} className="rounded-full" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
-                        {user?.name?.[0]?.toUpperCase() || "U"}
+          </TableHeader>
+          <TableBody>
+            {deposits.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">No deposits found</TableCell>
+              </TableRow>
+            ) : (
+              deposits.map((deposit) => {
+                const user = userMap[deposit.userId];
+                const createdAt = new Date(deposit.createdAt);
+                const dateStr = createdAt.toLocaleDateString();
+                const timeStr = createdAt.toLocaleTimeString();
+                return (
+                  <TableRow key={deposit.id}>
+                    <TableCell><div className="flex items-center space-x-2">
+                      {user?.picture ? (
+                        <Image src={user.picture} alt={user.name || "user image"} width={32} height={32} className="rounded-full" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
+                          {user?.name?.[0]?.toUpperCase() || "U"}
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1">
+                        <span>{user?.username || "Loading..."}</span>
+                        <span className="text-xs text-muted-foreground">{user?.preferred_email}</span>
+                        <span className="text-xs text-muted-foreground">{user?.phone}</span>
                       </div>
-                    )}
-                    <div className="flex flex-col gap-1">
-                      <span>{user?.username || "Loading..."}</span>
-                      <span className="text-xs text-muted-foreground">{user?.preferred_email}</span>
-                      <span className="text-xs text-muted-foreground">{user?.phone}</span>
-                    </div>
-                  </div></TableCell>
-                  <TableCell>{format(new Date(deposit.month + "-01"), "MMMM-yy")}</TableCell>
-                  <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
-                  <TableCell>{deposit.transactionId || "N/A"}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div>{dateStr}</div>
-                      <div className="text-xs text-muted-foreground">{timeStr}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
-                      {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
-                </TableRow>
-              )
-            })
-          )}
-        </TableBody>
-      </Table>
-
+                    </div></TableCell>
+                    <TableCell>{format(new Date(deposit.month + "-01"), "MMMM-yy")}</TableCell>
+                    <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
+                    <TableCell>{deposit.transactionId || "N/A"}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div>{dateStr}</div>
+                        <div className="text-xs text-muted-foreground">{timeStr}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
+                        {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
       <TableLoadMore
         loading={loading}
         hasMore={hasMore}

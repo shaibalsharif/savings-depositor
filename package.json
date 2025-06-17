@@ -77,6 +77,7 @@
     "react-quill-new": "^3.4.6",
     "react-resizable-panels": "^2.1.7",
     "react-signature-canvas": "^1.1.0-alpha.2",
+    "react-wavify": "^1.11.1",
     "react-webcam": "^7.2.0",
     "recharts": "latest",
     "sonner": "^1.7.1",

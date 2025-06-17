@@ -200,6 +200,7 @@ export function ReviewDepositsTable({ onAction }: {
         months={MONTHS}
         onFilter={handleFilter}
       />
+       <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -264,7 +265,7 @@ export function ReviewDepositsTable({ onAction }: {
             );
           })}
         </TableBody>
-      </Table>
+      </Table></div>
 
       <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />
 

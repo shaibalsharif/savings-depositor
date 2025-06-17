@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({
   children,
-
 }: {
   children: React.ReactNode;
 }) {
@@ -29,7 +28,7 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <DashboardHeader onMenuToggle={() => setIsMobileOpen(!isMobileOpen)} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden max-h-[calc(100vh-56px)]">
         {isMobileOpen && (
           <div
             className="fixed inset-0 z-40 bg-black/50 md:hidden"

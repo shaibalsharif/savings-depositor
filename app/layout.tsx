@@ -33,7 +33,8 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <AuthProvider>{children}
+          <AuthProvider>
+            {children}
             <Toaster />
           </AuthProvider>
         </ThemeProvider>

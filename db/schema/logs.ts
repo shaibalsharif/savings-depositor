@@ -151,6 +151,45 @@ export const terms = pgTable("terms", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// --- withdrawals Table (for actions) ---
+export const withdrawals = pgTable("withdrawals", {
+  id: serial("id").primaryKey(),
+
+  // Who is requesting
+  userId: varchar("user_id", { length: 255 }).notNull(),
+
+  // Amount requested
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+
+  // Which fund/account is being withdrawn from
+  fundId: integer("fund_id")
+    .references(() => funds.id)
+    .notNull(),
+
+  // Purpose/category (e.g., Emergency Fund, Medical Expenses)
+  purpose: varchar("purpose", { length: 128 }).notNull(),
+
+  // Details/description of the request
+  details: text("details"),
+
+  // Status: pending, approved, rejected, etc.
+  status: varchar("status", { length: 32 }).notNull().default("pending"),
+
+  // Who approved/rejected (optional, for audit)
+  reviewedBy: varchar("reviewed_by", { length: 255 }),
+
+  // When requested
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+
+  // When status changed
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+
+  // For future extensibility (e.g., attachment, receipt, etc.)
+  attachmentUrl: text("attachment_url"),
+});
+
 // --- Logs Table (for actions) ---
 export const logs = pgTable("logs", {
   id: serial("id").primaryKey(),

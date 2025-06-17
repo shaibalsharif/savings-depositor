@@ -53,7 +53,7 @@ export function YourDepositsTable({ months }: { months: string[] }) {
       const res = await fetch(`/api/deposits/total?userId=${userId}&month=${month}`);
       if (!res.ok) return 0;
       const { total } = await res.json();
-      
+
       setTotalDepositByUser(prev => ({ ...prev, [userId]: total || 0 }));
     } catch {
       setTotalDepositByUser(prev => ({ ...prev, [userId]: 0 }));
@@ -126,63 +126,64 @@ export function YourDepositsTable({ months }: { months: string[] }) {
         months={months}
         onFilter={handleFilter}
       />
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Month</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Transaction ID</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {deposits.length === 0 ? (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">No deposits found</TableCell>
+              <TableHead>Month</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Transaction ID</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Action</TableHead>
             </TableRow>
-          ) : (
-            deposits.map((deposit) => {
-              const createdAt = new Date(deposit.createdAt);
-              const dateStr = createdAt.toLocaleDateString();
-              const timeStr = createdAt.toLocaleTimeString();
-              const userTotalDeposit = totalDepositByUser[deposit.userId] || 0;
+          </TableHeader>
+          <TableBody>
+            {deposits.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">No deposits found</TableCell>
+              </TableRow>
+            ) : (
+              deposits.map((deposit) => {
+                const createdAt = new Date(deposit.createdAt);
+                const dateStr = createdAt.toLocaleDateString();
+                const timeStr = createdAt.toLocaleTimeString();
+                const userTotalDeposit = totalDepositByUser[deposit.userId] || 0;
 
-              return (
-                <TableRow key={deposit.id}>
-                  <TableCell>{format(deposit.month, "MMMM yyyy")}</TableCell>
-                  <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
-                  <TableCell>{deposit.transactionId || "N/A"}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div>{dateStr}</div>
-                      <div className="text-xs text-muted-foreground">{timeStr}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
-                      {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
-                  <TableCell>
-                    <button
-                      disabled={deposit.status !== "verified"}
-                      onClick={() => openReceiptDialog(deposit)}
-                      className={`rounded px-3 py-1 text-white ${deposit.status === "verified" ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
-                    >
-                      Show Receipt
-                    </button>
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
-
+                return (
+                  <TableRow key={deposit.id}>
+                    <TableCell>{format(deposit.month, "MMMM yyyy")}</TableCell>
+                    <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
+                    <TableCell>{deposit.transactionId || "N/A"}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div>{dateStr}</div>
+                        <div className="text-xs text-muted-foreground">{timeStr}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
+                        {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
+                    <TableCell>
+                      <button
+                        disabled={deposit.status !== "verified"}
+                        onClick={() => openReceiptDialog(deposit)}
+                        className={`rounded px-3 py-1 text-white ${deposit.status === "verified" ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
+                      >
+                        Show Receipt
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
       <TableLoadMore
         loading={loading}
         hasMore={hasMore}

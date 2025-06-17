@@ -231,52 +231,53 @@ function LogsTable({ logs, userMap }: { logs: any[]; userMap: Record<string, any
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>User</TableHead>
-          <TableHead>Action</TableHead>
-          <TableHead>Details</TableHead>
-          <TableHead>Date</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {logs.map((log) => {
-          const user = userMap[log.user_id];
-          return (
-            <TableRow key={log.id}>
-              <TableCell>
-                {log.user_id ? (
-                  user ? (
-                    <div className="flex items-center space-x-2">
-                      {user.picture ? (
-                        <Image src={user.picture} alt={user.name || "User"} width={32} height={32} className="rounded-full" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
-                          {user.name?.[0]?.toUpperCase() || "U"}
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>User</TableHead>
+            <TableHead>Action</TableHead>
+            <TableHead>Details</TableHead>
+            <TableHead>Date</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {logs.map((log) => {
+            const user = userMap[log.user_id];
+            return (
+              <TableRow key={log.id}>
+                <TableCell>
+                  {log.user_id ? (
+                    user ? (
+                      <div className="flex items-center space-x-2">
+                        {user.picture ? (
+                          <Image src={user.picture} alt={user.name || "User"} width={32} height={32} className="rounded-full" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
+                            {user.name?.[0]?.toUpperCase() || "U"}
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span>{user.name || "Unknown"}</span>
+                          <span className="text-xs text-muted-foreground">{user.email}</span>
                         </div>
-                      )}
-                      <div className="flex flex-col">
-                        <span>{user.name || "Unknown"}</span>
-                        <span className="text-xs text-muted-foreground">{user.email}</span>
                       </div>
-                    </div>
+                    ) : (
+                      <span>Loading...</span>
+                    )
                   ) : (
-                    <span>Loading...</span>
-                  )
-                ) : (
-                  <span className="italic text-gray-400">System</span>
-                )}
-              </TableCell>
-              <TableCell>{getActionBadge(log.action)}</TableCell>
-              <TableCell>{renderDetails(log.action, log.details)}</TableCell>
-              <TableCell>
-                <DateWithTime value={log.createdAt} />
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                    <span className="italic text-gray-400">System</span>
+                  )}
+                </TableCell>
+                <TableCell>{getActionBadge(log.action)}</TableCell>
+                <TableCell>{renderDetails(log.action, log.details)}</TableCell>
+                <TableCell>
+                  <DateWithTime value={log.createdAt} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table></div>
   );
 }

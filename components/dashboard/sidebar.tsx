@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import {
-  BarChart3,
+
   CreditCard,
   Home,
   LogOut,
@@ -133,7 +133,7 @@ export function DashboardSidebar({
         "fixed left-0 top-14 z-40 w-64 flex flex-col bg-muted/90 border-r", // start below header
         "h-[calc(100vh-56px)]", // header height = h-14 = 56px
         "transform transition-transform duration-300 ease-in-out",
-        "md:relative md:top-0 md:h-[calc(100vh-56px)] md:translate-x-0",
+        "md:relative md:top-0  md:translate-x-0",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >

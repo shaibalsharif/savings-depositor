@@ -109,68 +109,70 @@ export default function DepositStatusPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Month</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Transaction ID</TableHead>
-                <TableHead>Deposit Date</TableHead>
-                <TableHead>Approved At</TableHead>
-                <TableHead>Type</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {deposits.length === 0 ? (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No verified deposits found for this month.
-                  </TableCell>
+                  <TableHead>User</TableHead>
+                  <TableHead>Month</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Transaction ID</TableHead>
+                  <TableHead>Deposit Date</TableHead>
+                  <TableHead>Approved At</TableHead>
+                  <TableHead>Type</TableHead>
                 </TableRow>
-              ) : (
-                deposits.map((deposit) => {
-                  const user = userMap[deposit.userId];
-                  const depositDate = new Date(deposit.createdAt);
-                  const approvedDate = deposit.updatedAt ? new Date(deposit.updatedAt) : null;
+              </TableHeader>
+              <TableBody>
+                {deposits.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      No verified deposits found for this month.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  deposits.map((deposit) => {
+                    const user = userMap[deposit.userId];
+                    const depositDate = new Date(deposit.createdAt);
+                    const approvedDate = deposit.updatedAt ? new Date(deposit.updatedAt) : null;
 
-                  return (
-                    <TableRow key={deposit.id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {user?.picture ? (
-                            <Image 
-                              src={user.picture} 
-                              alt={user.username || "User"} 
-                              width={32} 
-                              height={32} 
-                              className="rounded-full"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                              {user?.username?.[0]?.toUpperCase() || "U"}
+                    return (
+                      <TableRow key={deposit.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            {user?.picture ? (
+                              <Image
+                                src={user.picture}
+                                alt={user.username || "User"}
+                                width={32}
+                                height={32}
+                                className="rounded-full"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                {user?.username?.[0]?.toUpperCase() || "U"}
+                              </div>
+                            )}
+                            <div className="flex flex-col">
+                              <span>{user?.username || "Unknown User"}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {user?.email || user?.preferred_email}
+                              </span>
                             </div>
-                          )}
-                          <div className="flex flex-col">
-                            <span>{user?.username || "Unknown User"}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {user?.email || user?.preferred_email}
-                            </span>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{format(parseISO(deposit.month + "-01"), "MMM yyyy")}</TableCell>
-                      <TableCell>৳{Number(deposit.amount).toLocaleString()}</TableCell>
-                      <TableCell>{deposit.transactionId || "N/A"}</TableCell>
-                      <TableCell>{format(depositDate, "dd MMM yyyy HH:mm")}</TableCell>
-                      <TableCell>{approvedDate ? format(approvedDate, "dd MMM yyyy HH:mm") : "N/A"}</TableCell>
-                      <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                        <TableCell>{format(parseISO(deposit.month + "-01"), "MMM yyyy")}</TableCell>
+                        <TableCell>৳{Number(deposit.amount).toLocaleString()}</TableCell>
+                        <TableCell>{deposit.transactionId || "N/A"}</TableCell>
+                        <TableCell>{format(depositDate, "dd MMM yyyy HH:mm")}</TableCell>
+                        <TableCell>{approvedDate ? format(approvedDate, "dd MMM yyyy HH:mm") : "N/A"}</TableCell>
+                        <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
           <div className="mt-4 flex justify-center">
             <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />
           </div>

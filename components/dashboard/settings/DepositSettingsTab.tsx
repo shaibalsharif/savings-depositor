@@ -168,36 +168,37 @@ export default function DepositSettingsTab() {
         {upcomingSettings.length === 0 ? <CardDescription>No upcoming settings.</CardDescription> : <></>}
       </CardHeader>
       {upcomingSettings.length !== 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Effective Month</TableHead>
-              <TableHead>Monthly Amount</TableHead>
-              <TableHead>Due Day</TableHead>
-              <TableHead>Reminder Day</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {upcomingSettings.map((setting: DepositSetting) => (
-              <TableRow key={setting.id}>
-                <TableCell>{setting.effectiveMonth}</TableCell>
-                <TableCell>{setting.monthlyAmount}</TableCell>
-                <TableCell>{setting.dueDay}</TableCell>
-                <TableCell>{setting.reminderDay}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="destructive"
-                    onClick={() => deleteUpcomingSetting(setting.id)}
-                    disabled={loading}
-                  >
-                    Delete
-                  </Button>
-                </TableCell>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Effective Month</TableHead>
+                <TableHead>Monthly Amount</TableHead>
+                <TableHead>Due Day</TableHead>
+                <TableHead>Reminder Day</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {upcomingSettings.map((setting: DepositSetting) => (
+                <TableRow key={setting.id}>
+                  <TableCell>{setting.effectiveMonth}</TableCell>
+                  <TableCell>{setting.monthlyAmount}</TableCell>
+                  <TableCell>{setting.dueDay}</TableCell>
+                  <TableCell>{setting.reminderDay}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="destructive"
+                      onClick={() => deleteUpcomingSetting(setting.id)}
+                      disabled={loading}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table></div>
       ) : <></>}
     </Card>
   );
