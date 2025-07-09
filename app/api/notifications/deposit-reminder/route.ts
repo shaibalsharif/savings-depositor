@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getKindeManagementToken } from "@/lib/kinde-management";
-import { deposits, notifications } from "@/db/schema/logs";
+import { deposits, notifications } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {

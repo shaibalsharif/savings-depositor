@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const validation = updateSchema.safeParse(body);
 
     if (!validation.success) {
-      const errors = validation.error.errors.map(err => ({
+      const errors = validation.error.errors.map((err) => ({
         field: err.path.join("."),
         message: err.message,
       }));
@@ -53,18 +53,25 @@ export async function POST(request: Request) {
       picture: body.picture || null,
     };
 
-    const updateRes = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${user.id}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(updateBody),
-    });
+
+    const updateRes = await fetch(
+      `${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${user.id}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateBody),
+      }
+    );
 
     if (!updateRes.ok) {
       const errData = await updateRes.json();
-      return NextResponse.json({ error: errData.message || "Failed to update user" }, { status: 500 });
+      return NextResponse.json(
+        { error: errData.message || "Failed to update user" },
+        { status: 500 }
+      );
     }
 
     const updatedUser = await updateRes.json();
@@ -80,6 +87,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ user: updatedUser });
   } catch (error) {
     console.error("[PROFILE_UPDATE_ERROR]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

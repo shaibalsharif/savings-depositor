@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { and, eq, isNull, lte, gte, or, like, desc } from "drizzle-orm";
-import { notifications } from "@/db/schema/logs";
+import { notifications } from "@/db/schema";
 
 export async function GET(req: NextRequest) {
   try {

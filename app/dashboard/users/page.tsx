@@ -32,7 +32,7 @@ function getUserRole(permissions: string[] = []) {
 }
 
 export default function UsersPage() {
-  const { user,getPermissions } = useKindeAuth()
+  const { user, getPermissions } = useKindeAuth()
   const { toast } = useToast()
   const [members, setMembers] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -57,7 +57,7 @@ export default function UsersPage() {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { startUpload } = useUploadThing("userImage")
-  const {permissions}= getPermissions()
+  const { permissions } = getPermissions()
   const isAdmin = permissions?.includes('admin')
 
   useEffect(() => {
@@ -305,10 +305,10 @@ export default function UsersPage() {
                                 <AvatarImage src={member.avatar} />
 
 
-                                <AvatarFallback>{member.name?.[0] || member.email[0]}</AvatarFallback>
+                                <AvatarFallback>{member.username?.[0] || member.email[0]}</AvatarFallback>
                               </Avatar>
                               <div>
-                                {member.name || "Unnamed User"}
+                                {`${member.first_name} ${member.last_name}` || "Unnamed User"}
                                 {isCurrentUser && <span className="ml-2 text-muted-foreground">(You)</span>}
                               </div>
                             </div>
@@ -468,10 +468,10 @@ export default function UsersPage() {
                             <div className="flex items-center gap-3">
                               <Avatar>
                                 <AvatarImage src={member.avatar} />
-                                <AvatarFallback>{member.name?.[0] || member.email[0]}</AvatarFallback>
+                                <AvatarFallback>{member.username?.[0] || member.email[0]}</AvatarFallback>
                               </Avatar>
                               <div>
-                                {member.name || "Unnamed User"}
+                                {`${member.first_name} ${member.last_name}` || "Unnamed User"}
                                 {isCurrentUser && <span className="ml-2 text-muted-foreground">(You)</span>}
                               </div>
                             </div>

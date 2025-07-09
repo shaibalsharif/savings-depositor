@@ -6,12 +6,11 @@ import { getKindeServerSession, LoginLink } from "@kinde-oss/kinde-auth-nextjs/s
 export default async function HomePage() {
   const { isAuthenticated } = getKindeServerSession();
   const auth = await isAuthenticated();
-  console.log(auth);
-
+ 
   if (auth) {
     // Redirect to dashboard root (formerly /dashboard)
     return (
-      <meta http-equiv="refresh" content="0;url=/dashboard" />
+      <meta httpEquiv="refresh" content="0;url=/dashboard" />
     );
   }
 

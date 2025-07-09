@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { eq, and, gte, lte, isNull } from "drizzle-orm"
 import { format, startOfMonth, subMonths, addMonths, parse } from "date-fns"
-import { deposits, depositSettings } from "@/db/schema/logs"
+import { deposits, depositSettings } from "@/db/schema"
 
 export async function GET(req: NextRequest) {
   try {

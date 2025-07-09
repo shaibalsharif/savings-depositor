@@ -1,6 +1,6 @@
 // components/dashboard/recent-withdrawals.tsx
 import { db } from "@/lib/db"
-import { withdrawals } from "@/db/schema/logs" // Ensure you have a withdrawals table/schema
+import { withdrawals } from "@/db/schema" // Ensure you have a withdrawals table/schema
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { desc, sql } from "drizzle-orm"

@@ -1,6 +1,6 @@
 // utils/notifications.ts
 
-import { notifications } from "@/db/schema/logs";
+import { notifications } from "@/db/schema";
 import { db } from "@/lib/db";
 
 export interface NotificationPayload {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { desc, eq, and, isNull, or, lt } from "drizzle-orm";
-import { deposits, depositSettings, logs } from "@/db/schema/logs";
+import { deposits, depositSettings, logs } from "@/db/schema";
 import { format, startOfMonth, addMonths } from "date-fns";
 
 function checkAdminOrManager(permissions: string[]) {

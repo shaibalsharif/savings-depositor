@@ -9,6 +9,8 @@ import NomineeTab from "@/components/dashboard/profileTabs/nomineeTab"
 
 export default function ProfilePage() {
   const { user, isLoading } = useKindeAuth()
+
+  
   const [activeTab, setActiveTab] = useState("user")
 
   if (isLoading || !user) return <div>Loading...</div>
@@ -24,7 +26,7 @@ export default function ProfilePage() {
         </TabsList>
 
         <TabsContent value="user">
-          <UserTab user={user} />
+          <UserTab  />
         </TabsContent>
 
         <TabsContent value="personal">

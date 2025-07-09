@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { inArray } from "drizzle-orm";
-import { notifications } from "@/db/schema/logs";
+import { notifications } from "@/db/schema";
 
 export async function POST(req: NextRequest) {
   try {

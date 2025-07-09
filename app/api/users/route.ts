@@ -2,28 +2,57 @@ import { NextRequest, NextResponse } from "next/server";
 import { getKindeManagementToken } from "@/lib/kinde-management";
 import { z } from "zod";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const token = await getKindeManagementToken();
+  const searchParams = req.nextUrl.searchParams;
+  const user_id = searchParams.get("user_id"); // Optional single user ID
 
-  // Get all users
-  const usersRes = await fetch(
-    `${process.env.KINDE_ISSUER_URL}/api/v1/users?page_size=100`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
+  let users: any[] = [];
 
-  if (!usersRes.ok)
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
+  if (user_id) {
+    // Fetch single user using new Kinde API
+    const userRes = await fetch(
+      `${
+        process.env.KINDE_ISSUER_URL
+      }/api/v1/users?user_id=${encodeURIComponent(user_id)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
     );
-  const { users } = await usersRes.json();
 
-  // For each user, fetch their permissions and status
+    if (!userRes.ok) {
+      return NextResponse.json(
+        { error: "Failed to fetch user" },
+        { status: 500 }
+      );
+    }
+
+    const json = await userRes.json();
+
+    users = json.users || [];
+  } else {
+    // Fetch all users
+    const usersRes = await fetch(
+      `${process.env.KINDE_ISSUER_URL}/api/v1/users?page_size=100`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (!usersRes.ok) {
+      return NextResponse.json(
+        { error: "Failed to fetch users" },
+        { status: 500 }
+      );
+    }
+
+    const json = await usersRes.json();
+    users = json.users || [];
+  }
+
+  // Enrich with permissions and format the response
   const detailedUsers = await Promise.all(
     users.map(async (user: any) => {
-      // Get permissions
       const permsRes = await fetch(
         `${process.env.KINDE_ISSUER_URL}/api/v1/organizations/${process.env.KINDE_ORG_CODE}/users/${user.id}/permissions`,
         {
@@ -37,20 +66,19 @@ export async function GET() {
 
       return {
         id: user.id,
-        name: user.given_name
-          ? `${user.given_name} ${user.family_name || ""}`
-          : user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
         email: user.email,
-        username:user.username,
         avatar: user.picture,
         permissions: permsData.permissions?.map((p: any) => p.key) || [],
         status: user.is_suspended ? "archived" : "active",
       };
     })
   );
-
   return NextResponse.json({ users: detailedUsers });
 }
+
 const CreateUserSchema = z.object({
   email: z.string().email(),
   given_name: z.string().min(1, "First name is required"),

@@ -1,7 +1,7 @@
 // app/api/deposit-settings/effective/route.ts
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { depositSettings } from "@/db/schema/logs";
+import { depositSettings } from "@/db/schema";
 import { desc, and, lte, or, isNull, gt } from "drizzle-orm";
 
 

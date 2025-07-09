@@ -25,3 +25,18 @@ export interface DepositFilters {
 }
 
 export interface Fund {}
+
+
+export interface Withdrawal {
+  id: number | string;
+  userId: string;
+  username: string;
+  useremail: string;
+  email: string;
+  amount: number;
+  purpose: string;
+  details: string;
+  attachmentUrl: string | null;
+  status: "pending";
+  createdAt: any;
+}

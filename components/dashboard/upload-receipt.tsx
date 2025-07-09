@@ -31,7 +31,6 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
   const { toast } = useToast()
   const { user } = useKindeAuth()
 
-
   const { startUpload } = useUploadThing("depositImage")
   const [month, setMonth] = useState("")
   const [amount, setAmount] = useState(systemSettings.monthlyDepositAmount.toString())
@@ -174,6 +173,8 @@ export function UploadReceipt({ onUploadComplete, depositedMonths }: UploadRecei
     try {
       let imageUrl = null
       if (file) {
+        console.log(file);
+        
         const uploadRes = await startUpload([file])
         if (!uploadRes || !uploadRes[0]?.ufsUrl) {
           throw new Error("Image upload failed")

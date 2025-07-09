@@ -1,4 +1,4 @@
-import { funds, logs } from "@/db/schema/logs";
+import { funds, logs } from "@/db/schema";
 import { db } from "@/lib/db";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { eq } from "drizzle-orm";

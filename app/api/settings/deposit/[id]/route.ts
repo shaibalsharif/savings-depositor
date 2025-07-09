@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { depositSettings } from "@/db/schema/logs";
+import { depositSettings } from "@/db/schema";
 
 function checkAdminOrManager(user: any) {
   return true; // user?.role === "admin" || user?.role === "manager";

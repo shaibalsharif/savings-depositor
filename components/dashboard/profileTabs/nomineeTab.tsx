@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Upload, X } from "lucide-react"
 
 export default function NomineeTab({ user }: { user: any }) {
   const { toast } = useToast()
@@ -25,43 +26,65 @@ export default function NomineeTab({ user }: { user: any }) {
     address: "",
     photo: "",
   })
+  const [initialValues, setInitialValues] = useState<typeof form>(form)
+  const [file, setFile] = useState<File | null>(null)
+
   const [saving, setSaving] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-  const { startUpload } = useUploadThing("userPhoto")
+  const { startUpload } = useUploadThing("nomineePhoto")
+
+
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const res = await fetch("/api/profile/nominee")
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.nomineeInfo) {
+        setForm(data.nomineeInfo)
+        setInitialValues(data.nomineeInfo)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const isFieldDisabled = (key: keyof typeof form) => !!initialValues[key]
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return
+    if (!e.target.files?.length) return
     const file = e.target.files[0]
-    setSelectedFile(file)
-    setImagePreviewUrl(URL.createObjectURL(file))
+    setFile(file)
+    setForm(f => ({ ...f, photo: URL.createObjectURL(file) }))
   }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      let photoUrl = form.photo
-      if (selectedFile) {
-        const uploaded = await startUpload([selectedFile])
-        if (uploaded?.[0]?.ufsUrl) photoUrl = uploaded[0].ufsUrl
+      let photoUrl = initialValues.photo
+      if (file) {
+        const uploaded = await startUpload([file])
+        if (uploaded?.[0]?.url) {
+          photoUrl = uploaded[0].url
+        }
       }
+
       const payload = { ...form, photo: photoUrl }
-      const res = await fetch("/api/nominee", {
+
+      const res = await fetch("/api/profile/nominee", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
+
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error || "Failed to save nominee")
       }
+
       toast({ title: "Nominee information saved!" })
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: err.message, variant: "destructive" })
     } finally {
       setSaving(false)
     }
@@ -73,108 +96,64 @@ export default function NomineeTab({ user }: { user: any }) {
         <CardTitle>Nominee Info</CardTitle>
         <CardDescription>Nominee Information one-time change</CardDescription>
       </CardHeader>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          handleSave()
-        }}
-      >
+      <form onSubmit={(e) => { e.preventDefault(); handleSave() }}>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Name</Label>
-              <Input
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div>
-              <Label>Relation</Label>
-              <Input
-                value={form.relation}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, relation: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div>
-              <Label>Date of Birth</Label>
-              <Input
-                type="date"
-                value={form.dob}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, dob: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div>
-              <Label>Mobile</Label>
-              <Input
-                value={form.mobile}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, mobile: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div>
-              <Label>NID Number</Label>
-              <Input
-                value={form.nidNumber}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, nidNumber: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Address</Label>
-              <Input
-                value={form.address}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, address: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Photo</Label>
-              <div className="flex items-center gap-4">
-                {imagePreviewUrl && (
-                  <Avatar>
-                    <AvatarImage src={imagePreviewUrl} />
-                    <AvatarFallback>IMG</AvatarFallback>
-                  </Avatar>
-                )}
-                <div>
-                  <input
-                    type="file"
-                    id="nominee-photo"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <label htmlFor="nominee-photo">
-                    <Button type="button" variant="outline">
-                      Upload
-                    </Button>
-                  </label>
+            {["name", "relation", "dob", "mobile", "nidNumber", "address"].map(field => (
+              <div key={field} className={field === "address" ? "sm:col-span-2" : ""}>
+                <Label>{field === "nidNumber" ? "NID Number" : field.charAt(0).toUpperCase() + field.slice(1)}</Label>
+                <Input
+                  type={field === "dob" ? "date" : "text"}
+                  value={form[field as keyof typeof form]}
+                  onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
+                  disabled={isFieldDisabled(field as keyof typeof form)}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Custom Upload */}
+          <div className="space-y-2 col-span-full">
+            <Label htmlFor="receipt">Photo</Label>
+            {file ? (
+              <div className="relative rounded-md border border-dashed p-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-2"
+                  onClick={() => setFile(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <div className="text-center">
+                  <p className="font-medium">{file.name}</p>
+                  <p className="text-sm text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-8">
+                <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+                <div className="mb-2 text-center">
+                  <p className="font-medium">Drag and drop your nominee photo</p>
+                  <p className="text-sm text-muted-foreground">Supports JPEG/PNG (max 1MB)</p>
+                </div>
+                <Input
+                  id="receipt"
+                  type="file"
+                  className="hidden"
+                  accept=".jpeg,.jpg,.png"
+                  onChange={handleFileChange}
+                />
+                <Button type="button" variant="outline" onClick={() => document.getElementById("receipt")?.click()}>
+                  Select File
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Button
-            type="submit"
-            disabled={saving}
-            className="w-full sm:w-auto px-8 py-2"
-          >
+          <Button type="submit" disabled={saving} className="w-full sm:w-auto px-8 py-2">
             {saving ? "Saving..." : "Save"}
           </Button>
         </CardFooter>

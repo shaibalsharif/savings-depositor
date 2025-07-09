@@ -1,6 +1,6 @@
 // components/dashboard/recent-deposits.tsx
 import { db } from "@/lib/db"
-import { deposits } from "@/db/schema/logs"
+import { deposits } from "@/db/schema"
 import { desc, sql } from "drizzle-orm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"

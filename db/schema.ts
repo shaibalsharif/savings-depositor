@@ -79,36 +79,38 @@ export const fundTransactions = pgTable("fund_transactions", {
 
 export const personalInfo = pgTable("personal_info", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 }).notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  nameBn: varchar("name_bn", { length: 255 }).notNull(),
-  father: varchar("father", { length: 255 }).notNull(),
-  dob: date("dob").notNull(),
-  profession: varchar("profession", { length: 255 }).notNull(),
-  religion: varchar("religion", { length: 255 }).notNull(),
-  presentAddress: text("present_address").notNull(),
-  permanentAddress: text("permanent_address").notNull(),
-  mobile: varchar("mobile", { length: 20 }).notNull(),
-  nidNumber: varchar("nid_number", { length: 17 }).notNull(),
-  nidFront: text("nid_front").notNull(),
-  nidBack: text("nid_back").notNull(),
-  signature: text("signature").notNull(),
-  photo: text("photo").notNull(),
-  position: varchar("position", { length: 50 }).notNull(),
+  userId: varchar("user_id", { length: 255 }).notNull(), // always required
+
+  // Only `name` is required now
+  name: varchar("name", { length: 255 }),
+
+  nameBn: varchar("name_bn", { length: 255 }),
+  father: varchar("father", { length: 255 }),
+  dob: date("dob"),
+  profession: varchar("profession", { length: 255 }),
+  religion: varchar("religion", { length: 255 }),
+  presentAddress: text("present_address"),
+  permanentAddress: text("permanent_address"),
+  mobile: varchar("mobile", { length: 20 }),
+  nidNumber: varchar("nid_number", { length: 17 }),
+  nidFront: text("nid_front"),
+  nidBack: text("nid_back"),
+  signature: text("signature"),
+  position: varchar("position", { length: 50 }).notNull().default("member"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const nomineeInfo = pgTable("nominee_info", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 255 }).notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  relation: varchar("relation", { length: 255 }).notNull(),
-  dob: date("dob").notNull(),
-  mobile: varchar("mobile", { length: 20 }).notNull(),
-  nidNumber: varchar("nid_number", { length: 17 }).notNull(),
-  address: text("address").notNull(),
-  photo: text("photo").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  name: varchar("name", { length: 255 }),
+  relation: varchar("relation", { length: 255 }),
+  dob: date("dob"),
+  mobile: varchar("mobile", { length: 20 }),
+  nidNumber: varchar("nid_number", { length: 17 }),
+  address: text("address"),
+  photo: text("photo"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const depositSettings = pgTable("deposit_settings", {
@@ -142,6 +144,7 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   relatedEntityId: text("related_entity_id"),
   roleTarget: varchar("role_target", { length: 50 }),
+  actionRequired: boolean("action_required").default(false),
 });
 
 export const terms = pgTable("terms", {
@@ -154,40 +157,29 @@ export const terms = pgTable("terms", {
 // --- withdrawals Table (for actions) ---
 export const withdrawals = pgTable("withdrawals", {
   id: serial("id").primaryKey(),
-
   // Who is requesting
   userId: varchar("user_id", { length: 255 }).notNull(),
-
   // Amount requested
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
-
   // Which fund/account is being withdrawn from
-  fundId: integer("fund_id")
-    .references(() => funds.id)
-    .notNull(),
-
+  fundId: integer("fund_id").references(() => funds.id),
   // Purpose/category (e.g., Emergency Fund, Medical Expenses)
   purpose: varchar("purpose", { length: 128 }).notNull(),
-
   // Details/description of the request
   details: text("details"),
-
   // Status: pending, approved, rejected, etc.
   status: varchar("status", { length: 32 }).notNull().default("pending"),
-
   // Who approved/rejected (optional, for audit)
   reviewedBy: varchar("reviewed_by", { length: 255 }),
-
   // When requested
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-
   // When status changed
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-
   // For future extensibility (e.g., attachment, receipt, etc.)
   attachmentUrl: text("attachment_url"),
+  rejectionReason: text("rejection_reason"),
 });
 
 // --- Logs Table (for actions) ---

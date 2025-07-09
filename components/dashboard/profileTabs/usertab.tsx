@@ -1,4 +1,5 @@
-import { useState, useRef } from "react"
+'use client'
+import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -7,17 +8,45 @@ import { X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useUploadThing } from "@/lib/uploadthing"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 
-export default function UserTab({ user }: { user: any }) {
+export default function UserTab() {
+
+  const { user } = useKindeAuth()
+  const userId = user?.id
   const { toast } = useToast()
-  const [profile, setProfile] = useState<any>(user)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(user.picture || null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { startUpload } = useUploadThing("userPhoto")
+  const { startUpload } = useUploadThing("userImage")
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await fetch(`/api/users?user_id=${userId}`)
+        const data = await res.json()
+
+
+        setProfile(data.users[0])
+        console.log(data.users);
+
+        setImagePreviewUrl(data.users[0].avatar || null)
+      } catch {
+        toast({ title: "Failed to load user", variant: "destructive" })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
+  }, [userId]) // ✅ This MUST NOT be empty or missing
+
+  // if (loading || !profile) return <div>Loading...</div>
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
@@ -26,26 +55,35 @@ export default function UserTab({ user }: { user: any }) {
     setImagePreviewUrl(URL.createObjectURL(file))
   }
 
-  const handleSave = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
     setSaving(true)
     try {
       let pictureUrl = profile.picture
 
       if (selectedFile) {
         setUploading(true)
-        const uploaded = await startUpload([selectedFile])
+        console.log(selectedFile);
+        const file = selectedFile
+
+        const uploaded = await startUpload([file])
+        console.log(uploaded);
+
         if (uploaded?.[0]?.ufsUrl) {
           pictureUrl = uploaded[0].ufsUrl
+
         } else {
           throw new Error("Image upload failed")
         }
       }
 
       const updateData = {
-        given_name: profile.given_name,
-        family_name: profile.family_name,
+        given_name: profile.first_name,
+        family_name: profile.last_name,
         picture: pictureUrl,
       }
+
+
 
       const res = await fetch("/api/profile", {
         method: "POST",
@@ -70,6 +108,10 @@ export default function UserTab({ user }: { user: any }) {
       setUploading(false)
     }
   }
+
+  if (!profile || loading)
+    return <>Loading...</>
+
 
   return (
     <Card>
@@ -96,16 +138,17 @@ export default function UserTab({ user }: { user: any }) {
                 </Button>
                 <div className="flex flex-col items-center gap-2 text-center">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src={imagePreviewUrl || profile.picture} />
+                    <AvatarImage src={imagePreviewUrl || profile.avatar} />
                     <AvatarFallback>IMG</AvatarFallback>
                   </Avatar>
                   <p className="text-sm text-muted-foreground">Image ready to upload</p>
                 </div>
               </div>
             ) : (
-              <Avatar className="h-30 w-30">
-                <AvatarImage src={profile.picture || ""} />
-                <AvatarFallback>{profile.given_name?.[0] || "U"}</AvatarFallback>
+              <Avatar className="h-32 w-32 ">
+
+                <AvatarImage className="size-30" src={profile.avatar  || ""} />
+                <AvatarFallback>{profile.first_name?.[0] || "U"}</AvatarFallback>
               </Avatar>
             )}
             {isEditing && (
@@ -135,8 +178,8 @@ export default function UserTab({ user }: { user: any }) {
             <div className="space-y-2">
               <Label>First Name</Label>
               <Input
-                value={profile.given_name || ""}
-                onChange={e => setProfile({ ...profile, given_name: e.target.value })}
+                value={profile.first_name || ""}
+                onChange={e => setProfile({ ...profile, first_name: e.target.value })}
                 disabled={!isEditing}
                 className="w-full"
               />
@@ -145,8 +188,8 @@ export default function UserTab({ user }: { user: any }) {
             <div className="space-y-2">
               <Label>Last Name</Label>
               <Input
-                value={profile.family_name || ""}
-                onChange={e => setProfile({ ...profile, family_name: e.target.value })}
+                value={profile.last_name || ""}
+                onChange={e => setProfile({ ...profile, last_name: e.target.value })}
                 disabled={!isEditing}
                 className="w-full"
               />

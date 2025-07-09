@@ -141,6 +141,34 @@
       "when": 1750074640597,
       "tag": "0019_cultured_sasquatch",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1750672590723,
+      "tag": "0020_hot_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1750675219343,
+      "tag": "0021_salty_chamber",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1750675293501,
+      "tag": "0022_outstanding_skrulls",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1751193760755,
+      "tag": "0023_pink_sue_storm",
+      "breakpoints": true
     }
   ]
 }

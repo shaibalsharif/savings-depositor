@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { terms } from "@/db/schema/logs";
+import { terms } from "@/db/schema";
 
 function checkAdminOrManager(user: any) {
   return true //user?.role === "admin" || user?.role === "manager";

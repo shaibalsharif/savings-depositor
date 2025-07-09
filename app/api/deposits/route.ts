@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db"; // Your Drizzle instance
-import { deposits } from "@/db/schema/logs";
+import { deposits } from "@/db/schema";
 import { and, eq, like, desc, sql, gte, lte, not } from "drizzle-orm";
 import { z } from "zod";
 // Zod validation schema

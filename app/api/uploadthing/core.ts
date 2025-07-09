@@ -5,8 +5,9 @@ const f = createUploadthing();
 
 export const OurFileRouter = {
   depositImage: f({ image: { maxFileSize: "1MB" } }).onUploadComplete(() => {}),
+  withdrawalImage: f({ image: { maxFileSize: "1MB" } }).onUploadComplete(() => {}),
   userImage: f({ image: { maxFileSize: "1MB" } }).onUploadComplete(() => {}),
-  userPhoto: f({ image: { maxFileSize: "1MB" } }).onUploadComplete(() => {}),
+  nomineePhoto: f({ image: { maxFileSize: "1MB" } }).onUploadComplete(() => {}),
   userDocuments: f({ image: { maxFileSize: "1MB" } }).onUploadComplete(
     () => {}
   ), // <-- make sure this exists

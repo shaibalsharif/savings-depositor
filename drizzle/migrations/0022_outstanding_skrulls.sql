@@ -1,0 +1,1 @@
+ALTER TABLE "nominee_info" ALTER COLUMN "dob" DROP NOT NULL;
