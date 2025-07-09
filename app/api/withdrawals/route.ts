@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db"; // Your Drizzle instance
-import { withdrawals } from "@/db/schema";
-import { and, eq, like, desc, sql, gte, lte, not } from "drizzle-orm";
+import { withdrawals, personalInfo } from "@/db/schema";
+import { and, eq, desc, sql, gte, lte, isNotNull } from "drizzle-orm";
+
 import { z } from "zod";
 import { getKindeManagementToken } from "@/lib/kinde-management";
+import {
+  eachMonthOfInterval,
+  startOfMonth,
+  endOfMonth,
+  format,
+  parseISO,
+} from "date-fns";
 
 // Define an interface for the user details you expect from Kinde Auth
 interface KindeUser {
@@ -135,59 +143,133 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+  try {
+    const { searchParams } = new URL(request.url);
 
-  // Parse and validate query parameters
-  const filters = filterSchema.parse({
-    id: searchParams.get("userId") ?? undefined,
-    status: searchParams.get("status") ?? undefined,
-    startDate: searchParams.get("startDate") ?? undefined,
-    endDate: searchParams.get("endDate") ?? undefined,
-  });
+    const status = searchParams.get("status"); // 'all', 'pending', 'approved', 'rejected'
+    const monthFilter = searchParams.get("month"); // e.g., "2025-06"
+    const startDate = searchParams.get("startDate"); // YYYY-MM-DD
+    const endDate = searchParams.get("endDate"); // YYYY-MM-DD
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const offset = parseInt(searchParams.get("offset") || "0", 10); // For offset-based pagination
 
-  // Build query conditions
-  let conditions = [];
-  if (filters.id) conditions.push(eq(withdrawals.userId, filters.id));
-  if (filters.status && filters.status !== "all")
-    conditions.push(eq(withdrawals.status, filters.status));
+    if (isNaN(limit) || limit <= 0) {
+      return NextResponse.json(
+        { error: "Invalid limit parameter" },
+        { status: 400 }
+      );
+    }
+    if (isNaN(offset) || offset < 0) {
+      return NextResponse.json(
+        { error: "Invalid offset parameter" },
+        { status: 400 }
+      );
+    }
 
-  if (filters.startDate && filters.endDate) {
-    conditions.push(
-      and(
-        gte(withdrawals.createdAt, new Date(filters.startDate)),
-        lte(withdrawals.createdAt, new Date(filters.endDate))
-      )
+    const conditions = [];
+
+    // Status filter
+    if (status && status !== "all") {
+      conditions.push(eq(withdrawals.status, status));
+    } else {
+      // If status is 'all' or not provided, ensure we don't fetch null statuses (though unlikely)
+      conditions.push(isNotNull(withdrawals.status));
+    }
+
+    // Date range filtering
+    if (startDate && endDate) {
+      const parsedStartDate = parseISO(startDate);
+      const parsedEndDate = parseISO(endDate);
+
+      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid start or end date format. Use YYYY-MM-DD." },
+          { status: 400 }
+        );
+      }
+      conditions.push(gte(withdrawals.createdAt, parsedStartDate));
+      // End date includes the whole day
+      conditions.push(lte(withdrawals.createdAt, endOfDay(parsedEndDate)));
+    } else if (monthFilter && monthFilter !== "all") {
+      // Filter by month (e.g., "2025-06")
+      // We'll treat `createdAt` as a timestamp without timezone for this comparison
+      // Drizzle's `sql.raw` or `sql.placeholder` for date extraction might be needed for perfect match
+      // For simplicity and common use, let's derive start/end of month
+      try {
+        const [yearStr, monthStr] = monthFilter.split("-");
+        const year = parseInt(yearStr, 10);
+        const month = parseInt(monthStr, 10) - 1; // Month is 0-indexed for Date constructor
+        const dateInMonth = new Date(year, month, 1);
+
+        const startOfM = startOfMonth(dateInMonth);
+        const endOfM = endOfMonth(dateInMonth);
+
+        conditions.push(gte(withdrawals.createdAt, startOfM));
+        conditions.push(lte(withdrawals.createdAt, endOfM));
+      } catch (e) {
+        return NextResponse.json(
+          { error: "Invalid month format. Use YYYY-MM." },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Fetch withdrawals with user info
+    const allWithdrawals = await db
+      .select()
+      .from(withdrawals)
+      .leftJoin(personalInfo, eq(withdrawals.userId, personalInfo.userId)) // Join to get user details
+      .where(and(...conditions))
+      .orderBy(desc(withdrawals.createdAt)) // Order by most recent first
+      .limit(limit)
+      .offset(offset);
+
+    // To get the total count for pagination
+    const [totalCountResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(withdrawals)
+      .where(and(...conditions));
+
+    const totalWithdrawals = totalCountResult.count;
+
+    // Map the results to combine withdrawal and user info
+    const data = allWithdrawals.map((row) => ({
+      ...row.withdrawals,
+      // Include user details directly if they exist
+      user: row.personal_info
+        ? {
+            id: row.personal_info.userId,
+            name: row.personal_info.name,
+            mobile: row.personal_info.mobile,
+            // Add other personal_info fields you want to expose
+          }
+        : null,
+      // Kinde user details would typically be fetched separately on the frontend
+      // based on the userId if needed for profile pictures etc.
+    }));
+
+    return NextResponse.json(
+      {
+        data,
+        total: totalWithdrawals,
+        limit,
+        offset,
+        hasMore: offset + limit < totalWithdrawals,
+      },
+      { status: 200 }
     );
-  } else if (filters.startDate)
-    conditions.push(gte(withdrawals.createdAt, new Date(filters.startDate)));
-  else if (filters.endDate)
-    conditions.push(lte(withdrawals.createdAt, new Date(filters.endDate)));
+  } catch (error: any) {
+    console.error("Failed to fetch withdrawals:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch withdrawals", details: error.message },
+      { status: 500 }
+    );
+  }
+}
 
-  const limit = parseInt(searchParams.get("limit") || "10");
-  const offset = parseInt(searchParams.get("offset") || "0");
-  // Execute query
-  const data = await db
-    .select()
-    .from(withdrawals)
-    .where(conditions.length > 0 ? and(...conditions) : sql`1=1`)
-    .limit(limit)
-    .offset(offset)
-    .orderBy(sql`${withdrawals.createdAt} DESC`);
-
-  // Extract all unique user IDs from the fetched withdrawal data
-  const uniqueUserIds = [...new Set(data.map((item) => item.userId))];
-
-  const kindeUserDetailsMap = await fetchKindeUserDetails(uniqueUserIds);
-
-  const augmentedData = data.map((withdrawal) => {
-    const userDetails = kindeUserDetailsMap.get(withdrawal.userId);
-
-    return {
-      ...withdrawal,
-      username: userDetails?.username, // Add username if found
-      email: userDetails?.email, // Add email if found
-    };
-  });
-
-  return NextResponse.json({ data: augmentedData });
+// Helper function to get end of day (inclusive)
+function endOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
 }

@@ -1,7 +1,7 @@
 // /app/withdrawals/page.tsx
 'use client'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import AllWithdrawalsTab from "./_components/AllWithdrawalsTab";
+import AllWithdrawalsTab from "./_components/AllWithdrawalsTab";
 import RequestWithdrawalTab from "./_components/RequestWithdrawalTab";
 import PendingWithdrawalsTab from "./_components/PendingWithdrawalsTab";
 
@@ -22,7 +22,7 @@ export default function WithdrawalsPage() {
           {isManager && <TabsTrigger value="pending">Pending Approval</TabsTrigger>}
         </TabsList>
         <TabsContent value="all">
-          {/* <AllWithdrawalsTab /> */}
+          <AllWithdrawalsTab />
         </TabsContent>
         <TabsContent value="request">
           <RequestWithdrawalTab />

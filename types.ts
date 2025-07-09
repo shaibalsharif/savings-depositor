@@ -27,16 +27,29 @@ export interface DepositFilters {
 export interface Fund {}
 
 
+// Assuming this is your base Withdrawal type
 export interface Withdrawal {
-  id: number | string;
-  userId: string;
-  username: string;
-  useremail: string;
-  email: string;
-  amount: number;
-  purpose: string;
-  details: string;
-  attachmentUrl: string | null;
-  status: "pending";
-  createdAt: any;
+    id: number;
+    userId: string;
+    amount: string; // Drizzle's numeric maps to string in TypeScript by default
+    fundId: number | null;
+    purpose: string;
+    details: string | null;
+    // HERE IS THE CHANGE: Define status as a union of literal strings
+    status: 'pending' | 'approved' | 'rejected';
+    reviewedBy: string | null;
+    createdAt: Date; // Drizzle's timestamp with timezone typically maps to Date
+    reviewedAt: Date | null;
+    attachmentUrl: string | null;
+    rejectionReason: string | null;
+}
+
+// Your FullWithdrawal interface
+export interface FullWithdrawal extends Withdrawal {
+    user: {
+        id: string;
+        name?: string;
+        mobile?: string;
+        // ... any other fields from personalInfo you're joining
+    } | null;
 }
