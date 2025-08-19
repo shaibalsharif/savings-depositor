@@ -1,38 +1,41 @@
-// /app/withdrawals/page.tsx
-'use client'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AllWithdrawalsTab from "./_components/AllWithdrawalsTab";
-import RequestWithdrawalTab from "./_components/RequestWithdrawalTab";
-import PendingWithdrawalsTab from "./_components/PendingWithdrawalsTab";
+'use server'
 
-export default function WithdrawalsPage() {
-  const permissions = { permissions: ["admin", "manager"] }; // getPermissions();
-  const isManager = permissions?.permissions?.includes("manager");
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { getWithdrawalData } from "@/lib/actions/withdrawals/withdrawals";
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Withdrawal Management</h1>
-        <p className="text-muted-foreground">Request and track withdrawals from the group fund</p>
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import WithdrawalsClientPage from "@/components/dashboard/withdrawals/WithdrawalsClientPage";
+
+export default async function WithdrawalsPage() {
+  const { getPermissions, isAuthenticated } = getKindeServerSession();
+  const isUserAuthenticated = await isAuthenticated();
+
+  // FIX: Explicitly type the default permissions array as string[]
+  const permissions = (await getPermissions()) || { permissions: [] as string[] };
+
+  const isManager = permissions.permissions.includes("manager");
+  const isAdmin = permissions.permissions.includes("admin");
+
+  // The rest of your code remains the same
+  if (!isUserAuthenticated || (!isManager && !isAdmin)) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Access Restricted</CardTitle>
+            <CardDescription>You do not have permission to access withdrawal management.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Please contact an administrator if you believe this is an error.</p>
+          </CardContent>
+        </Card>
       </div>
-      <Tabs defaultValue={isManager ? "request" : "request"}>
-        <TabsList>
-          <TabsTrigger value="all">All Withdrawals</TabsTrigger>
-          <TabsTrigger value="request">Request Withdrawal</TabsTrigger>
-          {isManager && <TabsTrigger value="pending">Pending Approval</TabsTrigger>}
-        </TabsList>
-        <TabsContent value="all">
-          <AllWithdrawalsTab />
-        </TabsContent>
-        <TabsContent value="request">
-          <RequestWithdrawalTab />
-        </TabsContent>
-        {isManager && (
-          <TabsContent value="pending">
-            <PendingWithdrawalsTab />
-          </TabsContent>
-        )}
-      </Tabs>
-    </div>
-  );
+    );
+  }
+
+  const withdrawalData = await getWithdrawalData();
+  const funds = "funds" in withdrawalData ? withdrawalData.funds : [];
+  const withdrawals = "withdrawals" in withdrawalData ? withdrawalData.withdrawals : [];
+
+  return <WithdrawalsClientPage initialWithdrawals={withdrawals} initialFunds={funds} isManager={isManager} />;
 }

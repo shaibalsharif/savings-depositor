@@ -1,100 +1,94 @@
-"use client"
+// components/dashboard/profileTabs/nidPhotoInput.tsx
+// (Complete component assuming its structure)
+"use client";
 
-import { useState, useRef } from "react"
-import Webcam from "react-webcam"
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Upload, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export default function NidPhotoInput({
-  label,
-  existingImageUrl,
-  onChange,
-}: {
-  label: string
-  existingImageUrl?: string
-  onChange: (file: File | null) => void
-}) {
-  const [showCamera, setShowCamera] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string | undefined>(existingImageUrl)
-  const webcamRef = useRef<Webcam>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+interface NidPhotoInputProps {
+  label: string;
+  existingImageUrl?: string | undefined;
+  onChange: (file: File | null) => void;
+  disabled: boolean; // <-- FIX: Add the disabled prop here
+}
 
-  // When user selects file from upload
+export default function NidPhotoInput({ label, existingImageUrl, onChange, disabled }: NidPhotoInputProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(existingImageUrl || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return
-    const file = e.target.files[0]
-    setPreviewUrl(URL.createObjectURL(file))
-    onChange(file)
-  }
+    const file = e.target.files?.[0];
+    if (file) {
+      setPreviewUrl(URL.createObjectURL(file));
+      onChange(file);
+    } else {
+      setPreviewUrl(null);
+      onChange(null);
+    }
+  };
 
-  // Capture photo from webcam
-  const capturePhoto = () => {
-    if (!webcamRef.current) return
-    const imageSrc = webcamRef.current.getScreenshot()
-    if (!imageSrc) return
-
-    fetch(imageSrc)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], `${label.replace(/\s+/g, "-").toLowerCase()}.jpeg`, { type: "image/jpeg" })
-        setPreviewUrl(imageSrc)
-        onChange(file)
-        setShowCamera(false)
-      })
-  }
-
-  // Clear selected image and reset
-  const clearImage = () => {
-    setPreviewUrl(undefined)
-    onChange(null)
-    if (fileInputRef.current) fileInputRef.current.value = ""
-  }
+  const handleRemove = () => {
+    setPreviewUrl(null);
+    onChange(null);
+  };
+  
+  useEffect(() => {
+    setPreviewUrl(existingImageUrl || null);
+  }, [existingImageUrl]);
 
   return (
-    <div className="mb-4">
-      <label className="block font-medium mb-1">{label}</label>
-
+    <div className="space-y-2">
+      <Label>{label}</Label>
       {previewUrl ? (
-        <div className="relative inline-block">
-          <img src={previewUrl} alt={`${label} preview`} className="h-40 w-auto rounded border" />
-          <button
-            type="button"
-            onClick={clearImage}
-            className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-75"
-            aria-label="Remove image"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      ) : showCamera ? (
-        <div className="mb-2">
-          <Webcam
-            audio={false}
-            ref={webcamRef}
-            screenshotFormat="image/jpeg"
-            className="rounded border"
-          />
-          <div className="flex gap-2 mt-2">
-            <Button onClick={capturePhoto}>Capture</Button>
-            <Button variant="outline" onClick={() => setShowCamera(false)}>Cancel</Button>
+        <div className="relative rounded-md border border-dashed p-4">
+          {!disabled && ( // Only show remove button if not disabled
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2"
+              onClick={handleRemove}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+          <div className="flex flex-col items-center gap-2 text-center">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={previewUrl} />
+              <AvatarFallback>NID</AvatarFallback>
+            </Avatar>
+            <p className="text-sm text-muted-foreground">Image selected</p>
           </div>
         </div>
       ) : (
-        <div className="flex gap-2">
-          <input
+        <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-8">
+          <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+          <div className="mb-2 text-center">
+            <p className="font-medium">Upload {label}</p>
+          </div>
+          <Input
+            id={`nid-${label.toLowerCase()}`}
             type="file"
+            className="hidden"
             accept="image/*"
             onChange={handleFileChange}
             ref={fileInputRef}
-            id={`${label}-file-input`}
-            className="hidden"
+            disabled={disabled}
           />
-          <label htmlFor={`${label}-file-input`}>
-            <Button variant="outline" asChild>Upload Image</Button>
-          </label>
-          <Button variant="outline" onClick={() => setShowCamera(true)}>Take Photo</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+          >
+            Select File
+          </Button>
         </div>
       )}
     </div>
-  )
+  );
 }

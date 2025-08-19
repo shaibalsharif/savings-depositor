@@ -1,42 +1,32 @@
-"use client"
+// app/dashboard/profile/page.tsx
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import ProfileTabs from "@/components/dashboard/profileTabs/ProfileTabs";
+import { fetchUserProfile, fetchPersonalInfo, fetchNomineeInfo } from "@/lib/actions/profile/profile";
 
-import { useState } from "react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
-import UserTab from "@/components/dashboard/profileTabs/usertab"
-import PersonalInfoTab from "@/components/dashboard/profileTabs/personal-infoTab"
-import NomineeTab from "@/components/dashboard/profileTabs/nomineeTab"
+export default async function ProfilePage() {
+  const { getUser } = getKindeServerSession();
+  const kindeUser = await getUser();
 
-export default function ProfilePage() {
-  const { user, isLoading } = useKindeAuth()
+  if (!kindeUser?.id) {
+    return <div>Please log in to view your profile.</div>;
+  }
 
-  
-  const [activeTab, setActiveTab] = useState("user")
-
-  if (isLoading || !user) return <div>Loading...</div>
+  // Fetch all data for the tabs in parallel
+  const [profileData, personalInfoData, nomineeInfoData] = await Promise.all([
+    fetchUserProfile(kindeUser.id),
+    fetchPersonalInfo(kindeUser.id),
+    fetchNomineeInfo(kindeUser.id),
+  ]);
 
   return (
     <div className="container py-8">
-       <h1 className="text-2xl font-bold mb-2">Profile</h1>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="user">User</TabsTrigger>
-          <TabsTrigger value="personal">Personal Information</TabsTrigger>
-          <TabsTrigger value="nominee">Nominee</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="user">
-          <UserTab  />
-        </TabsContent>
-
-        <TabsContent value="personal">
-          <PersonalInfoTab user={user} />
-        </TabsContent>
-
-        <TabsContent value="nominee">
-          <NomineeTab user={user} />
-        </TabsContent>
-      </Tabs>
+      <h1 className="text-2xl font-bold mb-2">Profile</h1>
+      <ProfileTabs
+        user={{ ...kindeUser, phone: kindeUser.phone_number || null }}
+        profileData={profileData}
+        personalInfoData={personalInfoData}
+        nomineeInfoData={nomineeInfoData}
+      />
     </div>
-  )
+  );
 }

@@ -1,70 +1,43 @@
+// /app/withdrawals/_components/ApproveWithdrawalModal.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Withdrawal } from "@/types"; // Assuming you have this type defined
+import { FullWithdrawal, Fund } from "@/types";
 import Image from "next/image";
 import { Eye } from "lucide-react";
-import { toast } from "sonner"; // Assuming you have a toast notification library
-
-interface Fund {
-    id: number;
-    title: string;
-    balance: number;
-    currency: string;
-}
 
 interface ApproveWithdrawalModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (fundId: number, withdrawal: Withdrawal) => Promise<void>; // Modified to pass withdrawal
+    onConfirm: (fundId: number) => Promise<void>;
     isLoading: boolean;
-    selectedWithdrawal: Withdrawal | null; // Pass the selected withdrawal
+    selectedWithdrawal: FullWithdrawal | null;
+    funds: Fund[]; // FIX: Funds are now passed as a prop
 }
 
-const ApproveWithdrawalModal: React.FC<ApproveWithdrawalModalProps> = ({
+export default function ApproveWithdrawalModal({
     isOpen,
     onClose,
     onConfirm,
     isLoading,
     selectedWithdrawal,
-}) => {
+    funds, // FIX: Destructure the funds prop
+}: ApproveWithdrawalModalProps) {
     const [selectedFundId, setSelectedFundId] = useState<number | null>(null);
-    const [funds, setFunds] = useState<Fund[]>([]);
-    const [fetchingFunds, setFetchingFunds] = useState(true);
-
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
+    // FIX: Remove the useEffect that fetches funds, as they are now passed as a prop.
     useEffect(() => {
         if (isOpen) {
             setSelectedFundId(null); // Reset selection when modal opens
-            fetchFunds();
         }
     }, [isOpen]);
 
-    async function fetchFunds() {
-        setFetchingFunds(true);
-        try {
-            const res = await fetch("/api/funds");
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.error || "Failed to fetch funds");
-            }
-            const data = await res.json();
-            setFunds(data.funds || []);
-        } catch (error: any) {
-            console.error("Error fetching funds:", error);
-            toast.error(error.message || "Failed to load funds.");
-        } finally {
-            setFetchingFunds(false);
-        }
-    }
-
     const handleConfirm = () => {
-        if (selectedFundId !== null && selectedWithdrawal) {
-            onConfirm(selectedFundId, selectedWithdrawal);
-            // Don't reset selectedFundId here; it will be reset when modal closes/reopens
+        if (selectedFundId !== null) {
+            onConfirm(selectedFundId);
         }
     };
 
@@ -92,9 +65,7 @@ const ApproveWithdrawalModal: React.FC<ApproveWithdrawalModalProps> = ({
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 max-h-96 overflow-y-auto">
-                        {fetchingFunds ? (
-                            <p className="col-span-full text-center text-muted-foreground">Loading funds...</p>
-                        ) : funds.length > 0 ? (
+                        {funds.length > 0 ? (
                             funds.map((fund) => (
                                 <div
                                     key={fund.id}
@@ -106,7 +77,6 @@ const ApproveWithdrawalModal: React.FC<ApproveWithdrawalModalProps> = ({
                                     <p className="text-sm text-muted-foreground">
                                         Balance: ৳ {Number(fund.balance).toLocaleString()} {fund.currency}
                                     </p>
-                                    {/* <p className="text-xs text-gray-500 mt-1">{fund.description}</p> */}
                                 </div>
                             ))
                         ) : (
@@ -117,14 +87,14 @@ const ApproveWithdrawalModal: React.FC<ApproveWithdrawalModalProps> = ({
                         <Button variant="outline" onClick={onClose} disabled={isLoading}>
                             Cancel
                         </Button>
-                        <Button onClick={handleConfirm} disabled={isLoading || selectedFundId === null || fetchingFunds}>
+                        <Button onClick={handleConfirm} disabled={isLoading || selectedFundId === null}>
                             {isLoading ? "Confirming..." : "Confirm Approval"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Image Preview Dialog (similar to ReviewDepositsTable) */}
+            {/* Image Preview Dialog */}
             <Dialog open={!!imagePreviewUrl} onOpenChange={() => setImagePreviewUrl(null)}>
                 <DialogContent>
                     <DialogHeader>
@@ -144,5 +114,3 @@ const ApproveWithdrawalModal: React.FC<ApproveWithdrawalModalProps> = ({
         </>
     );
 };
-
-export default ApproveWithdrawalModal;

@@ -1,42 +1,70 @@
 // components/dashboard/recent-deposits.tsx
-import { db } from "@/lib/db"
-import { deposits } from "@/db/schema"
-import { desc, sql } from "drizzle-orm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
 import Link from "next/link"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
+import { format } from "date-fns"
 
-export async function RecentDeposits() {
-  const recentDeposits = await db
-    .select()
-    .from(deposits)
-    .where(sql`${deposits.status} = 'verified'`)
-    .orderBy(desc(deposits.createdAt))
-    .limit(5)
+interface RecentDepositsProps {
+  data: {
+    id: number;
+    amount: string;
+    createdAt: Date;
+    userId: string;
+    user: { name: string | null; picture: string | null };
+  }[];
+  users: any[];
+}
+
+export function RecentDeposits({ data, users }: RecentDepositsProps) {
+  const getUserDetails = (userId: string) => {
+    return users.find(u => u.id === userId) || {
+      first_name: "Unknown",
+      last_name: "User",
+      picture: null
+    };
+  };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Recent Deposits</CardTitle>
-        <CardDescription>Latest verified transactions</CardDescription>
+      <CardHeader className="flex flex-row justify-between items-center">
+        <div>
+          <CardTitle>Recent Deposits</CardTitle>
+          <CardDescription>Latest verified transactions</CardDescription>
+        </div>
+        <Link href={"/dashboard/deposit-status"} passHref>
+          <Button variant="outline" size="sm">See All</Button>
+        </Link>
       </CardHeader>
       <CardContent className="grid gap-4">
-        {recentDeposits.map((deposit) => (
-          <div key={deposit.id} className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">User #{deposit.userId.slice(-4)}</p>
-              <p className="text-sm text-muted-foreground">
-                {new Date(deposit.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-medium">৳{deposit.amount}</p>
-            </div>
-          </div>
-        ))}
-        <Button className="mt-4 w-full" variant="outline">
-          <Link href={"/dashboard/deposits"}>See All Deposits</Link>
-        </Button>
+        {data.length === 0 ? (
+          <p className="text-muted-foreground text-center">No recent deposits found.</p>
+        ) : (
+          data.map((deposit) => {
+            const userDetails = getUserDetails(deposit.userId);
+            const fullName = `${userDetails.first_name} ${userDetails.last_name}`;
+
+            return (
+              <div key={deposit.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Avatar>
+                    <AvatarImage src={userDetails.picture || ''} />
+                    <AvatarFallback>{fullName?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <p className="font-medium">{fullName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(deposit.createdAt), "dd MMM yyyy")}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">৳{Number(deposit.amount).toLocaleString()}</p>
+                </div>
+              </div>
+            );
+          })
+        )}
       </CardContent>
     </Card>
   )

@@ -11,7 +11,7 @@ import {
   Calendar,
   Bell,
   History,
-  Banknote, X, Menu,
+  Banknote, X,
   User,
 } from "lucide-react"
 
@@ -30,9 +30,9 @@ export function DashboardSidebar({
 }) {
   const { user, permissions } = useKindeAuth()
 
-  const pathname = usePathname()// In real use, you might use usePathname from next/navigation
+  const pathname = usePathname()
 
-  // Permission checks (adjust as per your Kinde permissions)
+
   const isAdmin = permissions?.permissions?.includes('admin')
   const isManager = permissions?.permissions?.includes('manager')
 
@@ -47,7 +47,7 @@ export function DashboardSidebar({
       label: "Deposits",
       icon: Wallet,
       href: "/dashboard/deposits",
-      active: pathname === "/dashboard/deposits",
+      active: pathname.startsWith("/dashboard/deposits"),
     },
     {
       label: "Deposit Status",
@@ -55,14 +55,7 @@ export function DashboardSidebar({
       href: "/dashboard/deposit-status",
       active: pathname === "/dashboard/deposit-status",
     },
-    // {
-    //   label: "Deposit Settings",
-    //   icon: Settings,
-    //   href: "/dashboard/deposit-settings",
-    //   active: pathname === "/dashboard/deposit-settings",
-    //   showIf: isManager,
-    //   disabled: true,
-    // },
+
     {
       label: "Withdrawals",
       icon: CreditCard,
@@ -84,13 +77,7 @@ export function DashboardSidebar({
       active: pathname === "/dashboard/users",
       showIf: isAdmin,
     },
-    // {
-    //   label: "Members",
-    //   icon: Users,
-    //   href: "/dashboard/members",
-    //   active: pathname === "/dashboard/members",
-    //   showIf: !isAdmin,
-    // },
+
     {
       label: "Activity Logs",
       icon: History,
@@ -104,14 +91,7 @@ export function DashboardSidebar({
       href: "/dashboard/notifications",
       active: pathname === "/dashboard/notifications",
     },
-    // {
-    //   label: "Analytics",
-    //   icon: BarChart3,
-    //   href: "/dashboard/analytics",
-    //   active: pathname === "/dashboard/analytics",
-    //   showIf: isManager,
-    //   disabled: true, // Disable for now, implement later
-    // },
+
     {
       label: "Profile",
       icon: User,

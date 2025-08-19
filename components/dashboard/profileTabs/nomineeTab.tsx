@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useUploadThing } from "@/lib/uploadthing"
-import { useToast } from "@/hooks/use-toast"
+"use client";
+
+import { useState, useRef, useMemo } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUploadThing } from "@/lib/uploadthing";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -12,83 +14,95 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Upload, X } from "lucide-react"
+} from "@/components/ui/card";
+import { Upload, X } from "lucide-react";
+import { NomineeInfoData, saveNomineeInfo } from "@/lib/actions/profile/profile";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
 
-export default function NomineeTab({ user }: { user: any }) {
-  const { toast } = useToast()
-  const [form, setForm] = useState({
-    name: "",
-    relation: "",
-    dob: "",
-    mobile: "",
-    nidNumber: "",
-    address: "",
-    photo: "",
-  })
-  const [initialValues, setInitialValues] = useState<typeof form>(form)
-  const [file, setFile] = useState<File | null>(null)
+interface NomineeTabProps {
+  initialInfo: { nomineeInfo: NomineeInfoData | null } | { error: string };
+}
 
-  const [saving, setSaving] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-  const { startUpload } = useUploadThing("nomineePhoto")
+export default function NomineeTab({ initialInfo }: NomineeTabProps) {
+  const { user } = useKindeAuth();
+  const { toast } = useToast();
 
+  const initialForm = {
+    name: null,
+    relation: null,
+    dob: null,
+    mobile: null,
+    nidNumber: null,
+    address: null,
+    photo: null,
+  };
 
+  const [form, setForm] = useState<NomineeInfoData>(
+    "error" in initialInfo ? initialForm : initialInfo.nomineeInfo || initialForm
+  );
+  const [initialValues, setInitialValues] = useState<NomineeInfoData>(form);
+  const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const res = await fetch("/api/profile/nominee")
-      if (!res.ok) return
-      const data = await res.json()
-      if (data.nomineeInfo) {
-        setForm(data.nomineeInfo)
-        setInitialValues(data.nomineeInfo)
-      }
-    }
-    fetchData()
-  }, [])
+  const { startUpload } = useUploadThing("nomineePhoto");
 
-  const isFieldDisabled = (key: keyof typeof form) => !!initialValues[key]
+  // Use a useMemo hook to check if the form is "dirty" (has changes)
+  const isDirty = useMemo(() => {
+    // Check for changes in file
+    if (file) return true;
+
+    // Check for changes in other fields
+    return Object.keys(form).some(key => {
+      const fieldKey = key as keyof NomineeInfoData;
+      // Compare current form value to initial value
+      return form[fieldKey] !== initialValues[fieldKey];
+    });
+  }, [form, initialValues, file]);
+
+  const isFieldDisabled = (key: keyof NomineeInfoData) => initialValues[key] !== null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return
-    const file = e.target.files[0]
-    setFile(file)
-    setForm(f => ({ ...f, photo: URL.createObjectURL(file) }))
-  }
+    if (!e.target.files?.length) return;
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+    setForm(f => ({ ...f, photo: URL.createObjectURL(selectedFile) }));
+  };
 
-  const handleSave = async () => {
-    setSaving(true)
+  const handleRemovePhoto = () => {
+    setFile(null);
+    setForm(f => ({ ...f, photo: null }));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+
+    setLoading(true);
     try {
-      let photoUrl = initialValues.photo
+      let photoUrl = form.photo;
       if (file) {
-        const uploaded = await startUpload([file])
+        const uploaded = await startUpload([file]);
         if (uploaded?.[0]?.url) {
-          photoUrl = uploaded[0].url
+          photoUrl = uploaded[0].url;
         }
       }
 
-      const payload = { ...form, photo: photoUrl }
+      const payload = { ...form, photo: photoUrl };
 
-      const res = await fetch("/api/profile/nominee", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
+      const result = await saveNomineeInfo(user.id, payload);
 
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Failed to save nominee")
+      if ("error" in result) {
+        throw new Error(result.error);
       }
 
-      toast({ title: "Nominee information saved!" })
+      toast({ title: "Nominee information saved!" });
+      setInitialValues(payload);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" })
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
-      setSaving(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Card>
@@ -96,7 +110,7 @@ export default function NomineeTab({ user }: { user: any }) {
         <CardTitle>Nominee Info</CardTitle>
         <CardDescription>Nominee Information one-time change</CardDescription>
       </CardHeader>
-      <form onSubmit={(e) => { e.preventDefault(); handleSave() }}>
+      <form onSubmit={handleSave}>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {["name", "relation", "dob", "mobile", "nidNumber", "address"].map(field => (
@@ -104,31 +118,33 @@ export default function NomineeTab({ user }: { user: any }) {
                 <Label>{field === "nidNumber" ? "NID Number" : field.charAt(0).toUpperCase() + field.slice(1)}</Label>
                 <Input
                   type={field === "dob" ? "date" : "text"}
-                  value={form[field as keyof typeof form]}
+                  value={form[field as keyof typeof form] || ""}
                   onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
-                  disabled={isFieldDisabled(field as keyof typeof form)}
+                  disabled={isFieldDisabled(field as keyof NomineeInfoData) || loading}
                 />
               </div>
             ))}
           </div>
 
-          {/* Custom Upload */}
           <div className="space-y-2 col-span-full">
-            <Label htmlFor="receipt">Photo</Label>
-            {file ? (
-              <div className="relative rounded-md border border-dashed p-4">
+            <Label>Photo</Label>
+            {(file || form.photo) && !isFieldDisabled("photo") ? (
+              <div className="relative rounded-md border border-dashed p-4 w-48 mx-auto">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   className="absolute right-2 top-2"
-                  onClick={() => setFile(null)}
+                  onClick={handleRemovePhoto}
                 >
                   <X className="h-4 w-4" />
                 </Button>
-                <div className="text-center">
-                  <p className="font-medium">{file.name}</p>
-                  <p className="text-sm text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage src={file ? URL.createObjectURL(file) : form.photo || ""} />
+                    <AvatarFallback>IMG</AvatarFallback>
+                  </Avatar>
+                  <p className="text-sm text-muted-foreground">Image ready to upload</p>
                 </div>
               </div>
             ) : (
@@ -139,13 +155,18 @@ export default function NomineeTab({ user }: { user: any }) {
                   <p className="text-sm text-muted-foreground">Supports JPEG/PNG (max 1MB)</p>
                 </div>
                 <Input
-                  id="receipt"
+                  id="nominee-photo-file"
                   type="file"
                   className="hidden"
                   accept=".jpeg,.jpg,.png"
                   onChange={handleFileChange}
                 />
-                <Button type="button" variant="outline" onClick={() => document.getElementById("receipt")?.click()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById("nominee-photo-file")?.click()}
+                  disabled={isFieldDisabled("photo") || loading}
+                >
                   Select File
                 </Button>
               </div>
@@ -153,11 +174,11 @@ export default function NomineeTab({ user }: { user: any }) {
           </div>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Button type="submit" disabled={saving} className="w-full sm:w-auto px-8 py-2">
-            {saving ? "Saving..." : "Save"}
+          <Button type="submit" disabled={!isDirty || loading} className="w-full sm:w-auto px-8 py-2">
+            {loading ? "Saving..." : "Save"}
           </Button>
         </CardFooter>
       </form>
     </Card>
-  )
+  );
 }

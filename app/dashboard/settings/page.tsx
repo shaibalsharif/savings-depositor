@@ -1,20 +1,23 @@
-"use client"
+// app/dashboard/settings/page.tsx
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { getDepositSettings } from "@/lib/actions/settings/depositSettings";
+import { getTerms } from "@/lib/actions/settings/terms";
+import { getNotificationSettings } from "@/lib/actions/settings/notifications";
+import DepositSettingsClientTab from "@/components/dashboard/settings/DepositSettingsTab";
+import NotificationsClientTab from "@/components/dashboard/settings/NotificationsTab";
+import TermsClientTab from "@/components/dashboard/settings/TermsTab";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 
-import { useState } from "react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
-import { Card } from "@/components/ui/card"
-import TermsTab from "@/components/dashboard/settings/TermsTab"
-import DepositSettingsTab from "@/components/dashboard/settings/DepositSettingsTab"
-import NotificationsTab from "@/components/dashboard/settings/NotificationsTab"
+export default async function SettingsPage() {
+  const { getUser, getPermissions } = getKindeServerSession();
+  const [user, permissions] = await Promise.all([
+    getUser(),
+    getPermissions(),
+  ]);
 
-export default function SettingsPage() {
-  const { isLoading, permissions } = useKindeAuth()
-  const [activeTab, setActiveTab] = useState("notifications")
-  if (isLoading) return <div>Loading...</div>
-
-  const isAdmin = permissions?.permissions.includes("admin")
-  const isManager = permissions?.permissions.includes("manager")
+  const isAdmin = permissions?.permissions?.includes("admin") || false;
+  const isManager = permissions?.permissions?.includes("manager") || false;
 
   if (!isAdmin && !isManager) {
     return (
@@ -26,14 +29,20 @@ export default function SettingsPage() {
           </p>
         </Card>
       </div>
-    )
+    );
   }
+
+  const [depositSettingsResult, termsResult, notificationsResult] = await Promise.all([
+    getDepositSettings(),
+    getTerms(),
+    getNotificationSettings(user?.id!),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      
+      <Tabs defaultValue="deposit" className="space-y-6">
         <TabsList className="grid grid-cols-3 rounded-md border bg-muted p-1">
           <TabsTrigger value="notifications" className="data-[state=active]:bg-background data-[state=active]:shadow">
             Notifications
@@ -47,17 +56,19 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="notifications">
-          <NotificationsTab />
+          <NotificationsClientTab initialSettings={notificationsResult} />
         </TabsContent>
 
         <TabsContent value="deposit">
-          <DepositSettingsTab />
+          <DepositSettingsClientTab initialSettings={depositSettingsResult} />
         </TabsContent>
 
-        {isAdmin ? <TabsContent value="terms">
-          <TermsTab />
-        </TabsContent> : <></>}
+        {isAdmin && (
+          <TabsContent value="terms">
+            <TermsClientTab initialContent={termsResult} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
-  )
+  );
 }

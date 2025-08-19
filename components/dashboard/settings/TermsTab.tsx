@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { useState, useRef } from "react"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { saveTerms as saveTermsAction } from "@/lib/actions/settings/terms" // FIX: Rename imported action
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
 
 const PREFILL_HTML = `
   <div style="text-align: center; margin-bottom: 2rem;">
@@ -39,59 +41,48 @@ const PREFILL_HTML = `
     />
     <div style="font-size: 0.95rem; color: #555;">Barack Obama</div>
   </div>
-`// your existing PREFILL_HTML here
+`
 
-export default function TermsTab() {
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const editableRef = useRef<HTMLDivElement>(null)
-  const [content, setContent] = useState(PREFILL_HTML)
-  const [initialContent, setInitialContent] = useState(PREFILL_HTML)
-
-  useEffect(() => {
-    setLoading(true)
-    fetch("/api/settings/terms")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.terms) {
-          setContent(data.terms)
-          setInitialContent(data.terms)
-        }
-      })
-      .catch(() => toast({ title: "Failed to load terms", variant: "destructive" }))
-      .finally(() => setLoading(false))
-  }, [toast])
+export default function TermsTab({ initialContent }: { initialContent: string | { error: string } }) {
+  const { toast } = useToast();
+  const { user } = useKindeAuth();
+  const [saving, setSaving] = useState(false);
+  const editableRef = useRef<HTMLDivElement>(null);
+  
+  const [content, setContent] = useState(
+    typeof initialContent === 'string' ? initialContent : PREFILL_HTML
+  );
+  const [initialStateContent, setInitialStateContent] = useState(content);
 
   const onInput = () => {
     if (editableRef.current) {
-      setContent(editableRef.current.innerHTML)
+      setContent(editableRef.current.innerHTML);
     }
-  }
+  };
 
-  const saveTerms = async () => {
-    if (content === initialContent) {
-      toast({ title: "No changes to save" })
-      return
+  const handleSaveTerms = async () => {
+    if (content === initialStateContent) {
+      toast({ title: "No changes to save" });
+      return;
     }
-    setSaving(true)
+    if (!user?.id) {
+        toast({ title: "Unauthorized", description: "User not logged in.", variant: "destructive" });
+        return;
+    }
+    setSaving(true);
     try {
-      const res = await fetch("/api/settings/terms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ terms: content }),
-      })
-      if (!res.ok) throw new Error("Failed to save terms")
-      toast({ title: "Terms & Conditions saved" })
-      setInitialContent(content) // update initial content after save
-    } catch {
-      toast({ title: "Error saving terms", variant: "destructive" })
+      const result = await saveTermsAction(content, user.id);
+      if ("error" in result) throw new Error(result.error);
+      toast({ title: "Terms & Conditions saved" });
+      setInitialStateContent(content);
+    } catch (e: any) {
+      toast({ title: "Error saving terms", description: e.message, variant: "destructive" });
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
-  const isDirty = content !== initialContent
+  const isDirty = content !== initialStateContent;
 
   return (
     <Card>
@@ -102,25 +93,21 @@ export default function TermsTab() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="text-center py-20 text-gray-500">Loading terms...</div>
-        ) : (
-          <div
-            ref={editableRef}
-            contentEditable
-            suppressContentEditableWarning
-            onInput={onInput}
-            className="w-full min-h-[350px] border rounded-md p-4 overflow-auto prose prose-sm sm:prose lg:prose-lg dark:prose-invert bg-white"
-            style={{ whiteSpace: "normal" }}
-            dangerouslySetInnerHTML={{ __html: content }}
-          />
-        )}
+        <div
+          ref={editableRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={onInput}
+          className="w-full min-h-[350px] border rounded-md p-4 overflow-auto prose prose-sm sm:prose lg:prose-lg dark:prose-invert bg-white"
+          style={{ whiteSpace: "normal" }}
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
       </CardContent>
       <CardFooter>
-        <Button onClick={saveTerms} disabled={loading || saving || !isDirty}>
+        <Button onClick={handleSaveTerms} disabled={saving || !isDirty}>
           {saving ? "Saving..." : "Save Changes"}
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }

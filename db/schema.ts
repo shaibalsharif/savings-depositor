@@ -80,10 +80,8 @@ export const fundTransactions = pgTable("fund_transactions", {
 export const personalInfo = pgTable("personal_info", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 255 }).notNull(), // always required
-
   // Only `name` is required now
   name: varchar("name", { length: 255 }),
-
   nameBn: varchar("name_bn", { length: 255 }),
   father: varchar("father", { length: 255 }),
   dob: date("dob"),
@@ -191,4 +189,25 @@ export const logs = pgTable("logs", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+});
+
+export const users = pgTable("users", {
+  id: varchar("id", { length: 255 }).primaryKey(), // Kinde User ID
+  name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }).notNull(),
+  picture: text("picture"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  isSuspended: boolean("is_suspended").default(false).notNull(),
+  permissions: jsonb("permissions").default(sql`'[]'`), // Using JSONB is flexible for storing an array of strings
+});
+
+export const notificationSettings = pgTable("notification_settings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  emailNotifications: boolean("email_notifications").default(true).notNull(),
+  smsNotifications: boolean("sms_notifications").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });

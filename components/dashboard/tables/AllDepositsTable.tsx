@@ -1,193 +1,301 @@
+// components/dashboard/tables/AllDepositsTable.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { TableFilter } from "@/components/dashboard/tables/TableFilter";
-import { TableLoadMore } from "@/components/dashboard/tables/TableLoadMore";
-import { Deposit } from "@/types";
-import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+import { useState, useMemo } from "react";
+import { AllDeposit } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, Eye } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ReceiptDialog } from "../reciept/RecieptDialog";
 
-export function AllDepositsTable({ months }: { months: string[] }) {
+const ROWS_PER_PAGE = 5;
 
-  const { user } = useKindeAuth();
-  const [deposits, setDeposits] = useState<Deposit[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [limit, setLimit] = useState(10);
-  const [userMap, setUserMap] = useState<Record<string, any>>({});
+interface AllDepositsTableProps {
+  initialDeposits: AllDeposit[];
+  months: string[];
+  users: any[];
+}
 
+export function AllDepositsTable({ initialDeposits, months, users }: AllDepositsTableProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [selectedDeposit, setSelectedDeposit] = useState<AllDeposit | null>(null);
 
-  const [filter, setFilter] = useState({
-    user: "",
-    status: "all",
-    month: "all",
-    startDate: "",
-    endDate: "",
-  });
+  const currentPage = Number(searchParams.get("page")) || 1;
+  const totalPages = Math.ceil(initialDeposits.length / ROWS_PER_PAGE);
 
-  const fetchDeposits = async (reset = false) => {
-    if (reset) setLimit(10);
-    setLoading(true);
+  const paginatedDeposits = useMemo(() => {
+    const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+    return initialDeposits.slice(startIndex, startIndex + ROWS_PER_PAGE);
+  }, [initialDeposits, currentPage]);
 
-    const params = new URLSearchParams();
+  const calendarSelected = useMemo(() => ({
+    from: searchParams.get("startDate") ? parseISO(searchParams.get("startDate")!) : undefined,
+    to: searchParams.get("endDate") ? parseISO(searchParams.get("endDate")!) : undefined,
+  }), [searchParams]);
 
-    // Updated: Use user id instead of email
-    if (filter.user) params.append("userId", filter.user);
-
-    if (filter.status && filter.status !== "all") {
-      params.append("status", filter.status);
+  const handleFilterChange = (name: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    if (value && value !== 'all') {
+      params.set(name, value);
+    } else {
+      params.delete(name);
     }
-
-    if (filter.month && filter.month !== "all") {
-
-      params.append("month", filter.month);
-    }
-
-    if (filter.startDate) {
-      params.append("startDate", filter.startDate);
-    }
-
-    if (filter.endDate) {
-      params.append("endDate", filter.endDate);
-    }
-
-    params.append("limit", limit.toString());
-
-    try {
-      const res = await fetch(`/api/deposits?${params.toString()}`);
-      const { data } = await res.json();
-      setDeposits(data || []);
-      setHasMore(data && data.length >= limit);
-    } finally {
-      setLoading(false);
-    }
+    router.push(`/dashboard/deposits/alldeposits?${params.toString()}`);
   };
 
-  const handleFilter = (filters: any) => {
-    setFilter(filters);
-    fetchDeposits(true);
-  };
-
-  const handleLoadMore = () => {
-    setLimit(prev => prev + 10);
-  };
-
-  useEffect(() => {
-    fetchDeposits();
-  }, [limit, filter]);
-
-
-  useEffect(() => {
-    const uniqueUserIds = Array.from(new Set(deposits.map(d => d.userId).filter(Boolean)));
-    let cancelled = false;
-
-    async function fetchUsersBatch() {
-
-
-      try {
-        const res = await fetch("/api/deposits/depositors", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userIds: uniqueUserIds }),
-        });
-        if (!res.ok) throw new Error("Failed to fetch users batch");
-        const data = await res.json();
-        if (!cancelled) {
-          setUserMap(data); // data is { userId: userData }
-        }
-      } catch (e) {
-        if (!cancelled) setUserMap({});
-        console.error(e);
-      }
+  const handleDateChange = (range: { from?: Date, to?: Date } | undefined) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    if (range?.from) {
+      params.set("startDate", format(range.from, 'yyyy-MM-dd'));
+    } else {
+      params.delete("startDate");
     }
+    if (range?.to) {
+      params.set("endDate", format(range.to, 'yyyy-MM-dd'));
+    } else {
+      params.delete("endDate");
+    }
+    router.push(`/dashboard/deposits/alldeposits?${params.toString()}`);
+  };
 
-    if (uniqueUserIds.length) fetchUsersBatch();
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", page.toString());
+    router.push(`/dashboard/deposits/alldeposits?${params.toString()}`);
+  };
 
-    return () => {
-      cancelled = true;
-    };
-  }, [deposits]);
-
-
+  const handleSortChange = (column: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const currentSortBy = params.get('sortBy');
+    const currentSortOrder = params.get('sortOrder') as 'asc' | 'desc' || 'desc';
+    
+    let newSortOrder = 'desc';
+    if (currentSortBy === column) {
+      newSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      newSortOrder = 'desc'; // Default to descending when changing column
+    }
+    
+    params.set('sortBy', column);
+    params.set('sortOrder', newSortOrder);
+    params.set("page", "1"); // Reset to page 1 on sort change
+    router.push(`/dashboard/deposits/alldeposits?${params.toString()}`);
+  };
+  
+  const getSortIcon = (column: string) => {
+    if (searchParams.get('sortBy') === column) {
+      return searchParams.get('sortOrder') === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
+    }
+    return <ArrowUpDown className="h-4 w-4 text-muted-foreground" />;
+  };
+  
+  const openReceiptDialog = (deposit: AllDeposit) => {
+    setSelectedDeposit(deposit);
+    setImagePreviewUrl(deposit.imageUrl);
+  };
+  
+  const closeReceiptDialog = () => {
+    setSelectedDeposit(null);
+    setImagePreviewUrl(null);
+  };
+  
   return (
     <div>
-      <TableFilter
-        filterList={['user', 'status', 'month', 'email', 'startDate', 'endDate']}
+      <div className="flex flex-wrap items-center gap-4 mb-2">
+        {/* User Filter */}
+        <Select value={searchParams.get("userId") || "all"} onValueChange={(val) => handleFilterChange("userId", val)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by User" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Users</SelectItem>
+            {users.map(u => (
+              <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {/* Status Filter */}
+        <Select value={searchParams.get("status") || "all"} onValueChange={(val) => handleFilterChange("status", val)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by Status" />
+          </SelectTrigger>
+          <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+        {/* Month Filter */}
+        <Select value={searchParams.get("month") || "all"} onValueChange={(val) => handleFilterChange("month", val)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by Month" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Months</SelectItem>
+            {months.map(m => (
+              <SelectItem key={m} value={m}>{format(parseISO(m + "-01"), "MMMM yyyy")}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {/* Date Range Picker */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-[280px] justify-start text-left font-normal",
+                !calendarSelected.from && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {calendarSelected.from ? (
+                calendarSelected.to ? (
+                  <>
+                    {format(calendarSelected.from, "LLL dd, y")} -{" "}
+                    {format(calendarSelected.to, "LLL dd, y")}
+                  </>
+                ) : (
+                  format(calendarSelected.from, "LLL dd, y")
+                )
+              ) : (
+                <span>Pick a date range</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="range"
+              selected={calendarSelected}
+              onSelect={handleDateChange}
+              numberOfMonths={2}
+            />
+          </PopoverContent>
+        </Popover>
+        {/* Clear Filters Button */}
+        {(searchParams.get("userId") || searchParams.get("status") !== 'all' || searchParams.get("month") !== 'all' || searchParams.get("startDate") || searchParams.get("endDate")) && (
+          <Button variant="outline" onClick={() => {
+            router.push(`/dashboard/deposits/alldeposits?page=1`);
+          }}>
+            Clear Filters
+          </Button>
+        )}
+      </div>
 
-        months={months}
-        onFilter={handleFilter}
-      />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
-              <TableHead>Month</TableHead>
+              <TableHead onClick={() => handleSortChange('month')} className="cursor-pointer">
+                <div className="flex items-center space-x-1">
+                  <span>Month</span>
+                  {getSortIcon('month')}
+                </div>
+              </TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Transaction ID</TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead onClick={() => handleSortChange('createdAt')} className="cursor-pointer">
+                <div className="flex items-center space-x-1">
+                  <span>Date</span>
+                  {getSortIcon('createdAt')}
+                </div>
+              </TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Type</TableHead>
+              <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {deposits.length === 0 ? (
+            {paginatedDeposits.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">No deposits found</TableCell>
               </TableRow>
             ) : (
-              deposits.map((deposit) => {
-                const user = userMap[deposit.userId];
-                const createdAt = new Date(deposit.createdAt);
-                const dateStr = createdAt.toLocaleDateString();
-                const timeStr = createdAt.toLocaleTimeString();
+              paginatedDeposits.map((deposit) => {
+                const user = deposit.user;
                 return (
                   <TableRow key={deposit.id}>
-                    <TableCell><div className="flex items-center space-x-2">
-                      {user?.picture ? (
-                        <Image src={user.picture} alt={user.name || "user image"} width={32} height={32} className="rounded-full" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
-                          {user?.name?.[0]?.toUpperCase() || "U"}
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-1">
-                        <span>{user?.username || "Loading..."}</span>
-                        <span className="text-xs text-muted-foreground">{user?.preferred_email}</span>
-                        <span className="text-xs text-muted-foreground">{user?.phone}</span>
-                      </div>
-                    </div></TableCell>
-                    <TableCell>{format(new Date(deposit.month + "-01"), "MMMM-yy")}</TableCell>
-                    <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
-                    <TableCell>{deposit.transactionId || "N/A"}</TableCell>
                     <TableCell>
-                      <div>
-                        <div>{dateStr}</div>
-                        <div className="text-xs text-muted-foreground">{timeStr}</div>
+                      <div className="flex items-center space-x-2">
+                        <Avatar>
+                          <AvatarImage src={user?.picture || ''} />
+                          <AvatarFallback>{user?.name?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span>{user?.name || "Unknown User"}</span>
+                          <span className="text-xs text-muted-foreground">{user?.email || "N/A"}</span>
+                        </div>
                       </div>
                     </TableCell>
+                    <TableCell>{format(parseISO(deposit.month + "-01"), "MMMM yyyy")}</TableCell>
+                    <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
+                    <TableCell>{deposit.transactionId || "N/A"}</TableCell>
+                    <TableCell>{format(deposit.createdAt, "MMM dd, yyyy")}</TableCell>
                     <TableCell>
                       <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
                         {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
                       </Badge>
                     </TableCell>
-                    <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
+                    <TableCell>
+                      {deposit.imageUrl && (
+                        <Button size="icon" variant="outline" onClick={() => openReceiptDialog(deposit)}>
+                          <Eye className="h-4 w-4 text-blue-600" />
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
-                )
+                );
               })
             )}
           </TableBody>
         </Table>
       </div>
-      <TableLoadMore
-        loading={loading}
-        hasMore={hasMore}
-        onClick={handleLoadMore}
-      />
+
+      {initialDeposits.length > ROWS_PER_PAGE && (
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      
+      {selectedDeposit && (
+        <ReceiptDialog
+          open={!!selectedDeposit}
+          onOpenChange={closeReceiptDialog}
+          deposit={selectedDeposit}
+          user={selectedDeposit.user}
+          totalDeposit={0}
+          managerName="alif"
+        />
+      )}
     </div>
   );
 }

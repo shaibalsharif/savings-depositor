@@ -1,41 +1,71 @@
 // components/dashboard/recent-withdrawals.tsx
-import { db } from "@/lib/db"
-import { withdrawals } from "@/db/schema" // Ensure you have a withdrawals table/schema
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { desc, sql } from "drizzle-orm"
+import Link from "next/link"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
+import { format } from "date-fns"
 
-export async function RecentWithdrawals() {
-  const recentWithdrawals = await db
-    .select()
-    .from(withdrawals)
-    .where(sql`${withdrawals.status} = 'verified'`)
-    .orderBy(desc(withdrawals.createdAt))
-    .limit(5)
+interface RecentWithdrawalsProps {
+  data: {
+    id: number;
+    amount: string;
+    createdAt: Date;
+    userId: string;
+    user: { name: string | null };
+    purpose: string;
+  }[];
+  users: any[];
+}
+
+export function RecentWithdrawals({ data, users }: RecentWithdrawalsProps) {
+  const getUserDetails = (userId: string) => {
+    return users.find(u => u.id === userId) || {
+      first_name: "Unknown",
+      last_name: "User",
+      picture: null
+    };
+  };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Recent Withdrawals</CardTitle>
-        <CardDescription>Latest verified withdrawal requests</CardDescription>
+      <CardHeader className="flex flex-row justify-between items-center">
+        <div>
+          <CardTitle>Recent Withdrawals</CardTitle>
+          <CardDescription>Latest verified withdrawal requests</CardDescription>
+        </div>
+        <Link href={"/dashboard/withdrawals"} passHref>
+          <Button variant="outline" size="sm">See All</Button>
+        </Link>
       </CardHeader>
       <CardContent className="grid gap-4">
-        {recentWithdrawals.map((withdrawal) => (
-          <div key={withdrawal.id} className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">User #{withdrawal.userId.slice(-4)}</p>
-              <p className="text-sm text-muted-foreground">
-                {new Date(withdrawal.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-medium">৳{withdrawal.amount}</p>
-            </div>
-          </div>
-        ))}
-        <Button className="mt-4 w-full" variant="outline">
-          See All Withdrawals
-        </Button>
+        {data.length === 0 ? (
+          <p className="text-muted-foreground text-center">No recent withdrawals found.</p>
+        ) : (
+          data.map((withdrawal) => {
+            const userDetails = getUserDetails(withdrawal.userId);
+            const fullName = `${userDetails.first_name} ${userDetails.last_name}`;
+
+            return (
+              <div key={withdrawal.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Avatar>
+                    <AvatarImage src={userDetails.picture || ''} />
+                    <AvatarFallback>{fullName?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <p className="font-medium">{fullName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(withdrawal.createdAt), "dd MMM yyyy")}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">৳{Number(withdrawal.amount).toLocaleString()}</p>
+                </div>
+              </div>
+            );
+          })
+        )}
       </CardContent>
     </Card>
   )

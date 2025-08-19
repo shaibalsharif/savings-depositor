@@ -7,74 +7,52 @@ import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
+import { 
+  saveNotificationSettings, 
+  sendDepositReminder as sendReminderAction // FIX: Rename the imported action
+} from "@/lib/actions/settings/notifications"
+import { format } from "date-fns"
 
-export default function NotificationsTab() {
-  const { toast } = useToast()
-  const { user } = useKindeAuth()
-  const [emailNotifications, setEmailNotifications] = useState(true)
-  const [smsNotifications, setSmsNotifications] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [sendingReminder, setSendingReminder] = useState(false)
-  const [lastReminderSent, setLastReminderSent] = useState<string | null>(null)
+export default function NotificationsTab({ initialSettings }: { initialSettings: any }) {
+  const { toast } = useToast();
+  const { user } = useKindeAuth();
+  
+  const [emailNotifications, setEmailNotifications] = useState(initialSettings.emailNotifications);
+  const [smsNotifications, setSmsNotifications] = useState(initialSettings.smsNotifications);
+  const [saving, setSaving] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [lastReminderSent, setLastReminderSent] = useState<string | null>(null);
 
-  // Load notification settings and last reminder sent date
-  useEffect(() => {
-    async function fetchSettings() {
-      try {
-        const res = await fetch("/api/settings/notifications")
-        if (!res.ok) throw new Error("Failed to load settings")
-        const data = await res.json()
-        setEmailNotifications(data.emailNotifications)
-        setSmsNotifications(data.smsNotifications)
-        setLastReminderSent(data.lastDepositReminderSent || null)
-      } catch {
-        toast({ title: "Failed to load notification settings", variant: "destructive" })
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchSettings()
-  }, [toast])
-
-  // Save settings handler
   const saveSettings = async () => {
-    try {
-      const res = await fetch("/api/settings/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emailNotifications, smsNotifications }),
-      })
-      if (!res.ok) throw new Error("Failed to save notification settings")
-      toast({ title: "Notification settings saved" })
-    } catch {
-      toast({ title: "Error saving notification settings", variant: "destructive" })
+    if (!user?.id) return;
+    setSaving(true);
+    const result = await saveNotificationSettings({ emailNotifications, smsNotifications }, user.id);
+    if ("error" in result) {
+      toast({ title: "Error saving notification settings", description: result.error, variant: "destructive" });
+    } else {
+      toast({ title: "Notification settings saved" });
     }
-  }
+    setSaving(false);
+  };
 
-  // Send deposit reminder button handler
-  const sendDepositReminder = async () => {
+  // FIX: Renamed the client-side function to handleSendReminder
+  const handleSendReminder = async () => {
     if (!user?.id) {
-      toast({ title: "User not authenticated", variant: "destructive" })
-      return
+      toast({ title: "User not authenticated", variant: "destructive" });
+      return;
     }
-    setSendingReminder(true)
-    try {
-      const month = new Date().toISOString().slice(0, 7) // current month YYYY-MM
-      const res = await fetch("/api/notifications/deposit-reminder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month, senderUserId: user.id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to send deposit reminder")
-      toast({ title: `Deposit reminders sent to ${data.notifiedCount} users.` })
-      setLastReminderSent(new Date().toISOString())
-    } catch (error: any) {
-      toast({ title: error.message || "Error sending deposit reminder", variant: "destructive" })
-    } finally {
-      setSendingReminder(false)
+    setSendingReminder(true);
+    const month = format(new Date(), 'yyyy-MM');
+    // FIX: Call the renamed server action
+    const result = await sendReminderAction(month, user.id); 
+    if ("error" in result) {
+      toast({ title: "Error sending deposit reminder", description: result.error, variant: "destructive" });
+    } else {
+      toast({ title: `Deposit reminders sent to ${result.notifiedCount || 0} users.` });
+      setLastReminderSent(new Date().toISOString());
     }
-  }
+    setSendingReminder(false);
+  };
 
   return (
     <Card>
@@ -85,14 +63,14 @@ export default function NotificationsTab() {
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
           <Label htmlFor="email-notifications">Email Notifications</Label>
-          <Switch id="email-notifications" checked={emailNotifications} onCheckedChange={setEmailNotifications} disabled={loading} />
+          <Switch id="email-notifications" checked={emailNotifications} onCheckedChange={setEmailNotifications} disabled={saving} />
         </div>
         <div className="flex items-center justify-between">
           <Label htmlFor="sms-notifications">SMS Notifications</Label>
-          <Switch id="sms-notifications" checked={smsNotifications} onCheckedChange={setSmsNotifications} disabled={loading} />
+          <Switch id="sms-notifications" checked={smsNotifications} onCheckedChange={setSmsNotifications} disabled={saving} />
         </div>
         <div>
-          <Button onClick={sendDepositReminder} disabled={sendingReminder || loading} variant="secondary">
+          <Button onClick={handleSendReminder} disabled={sendingReminder || saving} variant="secondary">
             {sendingReminder ? "Sending Deposit Reminder..." : "Send Deposit Reminder"}
           </Button>
           {lastReminderSent && (
@@ -103,10 +81,10 @@ export default function NotificationsTab() {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={saveSettings} disabled={loading}>
+        <Button onClick={saveSettings} disabled={saving}>
           Save Changes
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }

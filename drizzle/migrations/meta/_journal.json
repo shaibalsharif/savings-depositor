@@ -169,6 +169,34 @@
       "when": 1751193760755,
       "tag": "0023_pink_sue_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1755076830251,
+      "tag": "0024_rich_luminals",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1755076926026,
+      "tag": "0025_empty_valkyrie",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1755521896284,
+      "tag": "0026_low_kingpin",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1755586618969,
+      "tag": "0027_big_the_hand",
+      "breakpoints": true
     }
   ]
 }

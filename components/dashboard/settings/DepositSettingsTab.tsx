@@ -1,4 +1,15 @@
-"use client"
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { saveDepositSettings, deleteUpcomingSetting, getDepositSettings } from "@/lib/actions/settings/depositSettings";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+
 interface DepositSetting {
   id?: number;
   monthlyAmount: string;
@@ -7,102 +18,86 @@ interface DepositSetting {
   effectiveMonth: string;
 }
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+interface DepositSettingsTabProps {
+  initialSettings: {
+    currentSetting: DepositSetting | null;
+    upcomingSettings: DepositSetting[];
+  } | { error: string };
+}
 
-export default function DepositSettingsTab() {
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
+export default function DepositSettingsClientTab({ initialSettings }: DepositSettingsTabProps) {
+  const { toast } = useToast();
+  const { user } = useKindeAuth();
+  const [loading, setLoading] = useState(false);
 
-  // Current setting fields
-  const [currentSetting, setCurrentSetting] = useState(null);
-  const [monthlyAmount, setMonthlyAmount] = useState("");
-  const [dueDay, setDueDay] = useState("");
-  const [reminderDay, setReminderDay] = useState("");
-  const [effectiveMonth, setEffectiveMonth] = useState("");
+  const [currentSetting, setCurrentSetting] = useState(
+    "error" in initialSettings ? null : initialSettings.currentSetting
+  );
+  const [upcomingSettings, setUpcomingSettings] = useState(
+    "error" in initialSettings ? [] : initialSettings.upcomingSettings
+  );
 
-  // Upcoming settings list
-  const [upcomingSettings, setUpcomingSettings] = useState<DepositSetting[]>([]);
+  const [monthlyAmount, setMonthlyAmount] = useState(currentSetting?.monthlyAmount || "");
+  const [dueDay, setDueDay] = useState(currentSetting?.dueDay || "");
+  const [reminderDay, setReminderDay] = useState(currentSetting?.reminderDay || "");
+  const [effectiveMonth, setEffectiveMonth] = useState(currentSetting?.effectiveMonth || "");
 
-
-  // Track initial state for change detection
-  const [initial, setInitial] = useState<DepositSetting | null>(null);
-
-  useEffect(() => {
-    fetch("/api/settings/deposit")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.currentSetting) {
-          setCurrentSetting(data.currentSetting);
-          setMonthlyAmount(data.currentSetting.monthlyAmount);
-          setDueDay(data.currentSetting.dueDay);
-          setReminderDay(data.currentSetting.reminderDay);
-          setEffectiveMonth(data.currentSetting.effectiveMonth);
-          setInitial(data.currentSetting);
-        }
-        if (data.upcomingSettings) {
-          setUpcomingSettings(data.upcomingSettings);
-        }
-      })
-      .catch(() =>
-        toast({ title: "Failed to load deposit settings", variant: "destructive" })
-      )
-      .finally(() => setLoading(false));
-  }, [toast]);
-
+  const [initialState, setInitialState] = useState({
+    monthlyAmount: currentSetting?.monthlyAmount || "",
+    dueDay: currentSetting?.dueDay || "",
+    reminderDay: currentSetting?.reminderDay || "",
+    effectiveMonth: currentSetting?.effectiveMonth || ""
+  });
 
   const isDirty =
-    monthlyAmount !== (initial?.monthlyAmount ?? "") ||
-    dueDay !== (initial?.dueDay ?? "") ||
-    reminderDay !== (initial?.reminderDay ?? "") ||
-    effectiveMonth !== (initial?.effectiveMonth ?? "");
+    monthlyAmount !== initialState.monthlyAmount ||
+    dueDay !== initialState.dueDay ||
+    reminderDay !== initialState.reminderDay ||
+    effectiveMonth !== initialState.effectiveMonth;
 
-
-  const saveSettings = async () => {
+  const handleSaveSettings = async () => {
+    if (!user?.id) {
+      toast({ title: "Unauthorized", description: "User not logged in.", variant: "destructive" });
+      return;
+    }
     if (!monthlyAmount || !dueDay || !reminderDay || !effectiveMonth) {
       toast({ title: "Please fill all fields", variant: "destructive" });
       return;
     }
-    try {
-      const res = await fetch("/api/settings/deposit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ monthlyAmount, dueDay, reminderDay, effectiveMonth }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to save deposit settings");
-      }
+    setLoading(true);
+    const data = { monthlyAmount, dueDay, reminderDay, effectiveMonth };
+    const result = await saveDepositSettings(data, user.id);
+
+    if ("error" in result) {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    } else {
       toast({ title: "Deposit settings saved" });
-      setInitial({ monthlyAmount, dueDay, reminderDay, effectiveMonth });
-    } catch (e) {
-      toast({ title: "Error", description: "Failed to update settings!", variant: "destructive" });
+      setInitialState(data);
+      // For simplicity, you might re-fetch all settings after a successful save.
+      // A more complex solution would be to update the state optimistically.
+      const newSettingsResult = await getDepositSettings();
+      if (!("error" in newSettingsResult)) {
+        setCurrentSetting(newSettingsResult.currentSetting);
+        setUpcomingSettings(newSettingsResult.upcomingSettings);
+      }
     }
+    setLoading(false);
   };
 
-  const deleteUpcomingSetting = async (id: number | null | undefined) => {
-    if (id === null || id === undefined)
-      return
+  const handleDeleteUpcomingSetting = async (id: number | undefined) => {
+    if (typeof id !== 'number') return;
     if (!confirm("Are you sure you want to delete this upcoming setting?")) return;
 
-    try {
-      const res = await fetch(`/api/settings/deposit/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to delete setting");
-      }
+    setLoading(true);
+    const result = await deleteUpcomingSetting(id);
+
+    if ("error" in result) {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    } else {
       toast({ title: "Upcoming setting deleted" });
       setUpcomingSettings((prev) => prev.filter((s) => s.id !== id));
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
+    setLoading(false);
   };
 
   return (
@@ -158,7 +153,7 @@ export default function DepositSettingsTab() {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={saveSettings} disabled={loading || !isDirty}>
+        <Button onClick={handleSaveSettings} disabled={loading || !isDirty}>
           Save Changes
         </Button>
       </CardFooter>
@@ -189,7 +184,7 @@ export default function DepositSettingsTab() {
                   <TableCell>
                     <Button
                       variant="destructive"
-                      onClick={() => deleteUpcomingSetting(setting.id)}
+                      onClick={() => handleDeleteUpcomingSetting(setting.id)}
                       disabled={loading}
                     >
                       Delete

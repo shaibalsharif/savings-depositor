@@ -1,117 +1,104 @@
-'use client'
-import { useState, useRef, useEffect } from "react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { X } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { useUploadThing } from "@/lib/uploadthing"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
+// components/dashboard/profileTabs/UserTab.tsx
+"use client";
 
-export default function UserTab() {
+import { useState, useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useUploadThing } from "@/lib/uploadthing";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { updateUserTab ,KindeUser} from "@/lib/actions/profile/profile";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
 
-  const { user } = useKindeAuth()
-  const userId = user?.id
-  const { toast } = useToast()
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [isEditing, setIsEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const { startUpload } = useUploadThing("userImage")
+interface UserTabProps {
+  initialProfile: KindeUser | { error: string };
+}
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await fetch(`/api/users?user_id=${userId}`)
-        const data = await res.json()
+export default function UserTab({ initialProfile }: UserTabProps) {
+  const { user } = useKindeAuth();
+  const { toast } = useToast();
+  
+  // Safely get profile data or a default state
+  const isProfileAvailable = !("error" in initialProfile);
+  const initialData = isProfileAvailable ? initialProfile : null;
 
-
-        setProfile(data.users[0])
-        console.log(data.users);
-
-        setImagePreviewUrl(data.users[0].avatar || null)
-      } catch {
-        toast({ title: "Failed to load user", variant: "destructive" })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchUser()
-  }, [userId]) // ✅ This MUST NOT be empty or missing
-
-  // if (loading || !profile) return <div>Loading...</div>
+  const [profile, setProfile] = useState<KindeUser | null>(initialData);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(initialData?.picture || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { startUpload } = useUploadThing("userImage");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return
-    const file = e.target.files[0]
-    setSelectedFile(file)
-    setImagePreviewUrl(URL.createObjectURL(file))
-  }
+    if (!e.target.files?.length) return;
+    const file = e.target.files[0];
+    setSelectedFile(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
+  };
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
+    e.preventDefault();
+    if (!user?.id || !profile) return;
+    
+    setSaving(true);
     try {
-      let pictureUrl = profile.picture
+      let pictureUrl = imagePreviewUrl;
 
       if (selectedFile) {
-        setUploading(true)
-        console.log(selectedFile);
-        const file = selectedFile
-
-        const uploaded = await startUpload([file])
-        console.log(uploaded);
-
-        if (uploaded?.[0]?.ufsUrl) {
-          pictureUrl = uploaded[0].ufsUrl
-
-        } else {
-          throw new Error("Image upload failed")
+        setUploading(true);
+        const uploaded = await startUpload([selectedFile]);
+        if (!uploaded?.[0]?.ufsUrl) {
+          throw new Error("Image upload failed");
         }
+        pictureUrl = uploaded[0].ufsUrl;
       }
-
+      
       const updateData = {
         given_name: profile.first_name,
         family_name: profile.last_name,
         picture: pictureUrl,
+      };
+
+      const result = await updateUserTab(user.id, updateData);
+      
+      if ("error" in result) {
+        throw new Error(result.error);
       }
-
-
-
-      const res = await fetch("/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
-      })
-
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Failed to update profile")
-      }
-
-      const { user: updatedUser } = await res.json()
-      setProfile(updatedUser)
-      setSelectedFile(null)
-      setIsEditing(false)
-      toast({ title: "Profile updated successfully" })
+      
+      // The updateUserTab action needs to return a KindeUser object, not just a partial object
+      setProfile(result.user);
+      setSelectedFile(null);
+      setIsEditing(false);
+      toast({ title: "Profile updated successfully" });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" })
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
-      setSaving(false)
-      setUploading(false)
+      setSaving(false);
+      setUploading(false);
     }
+  };
+  
+  // Show an error message if the profile data is not available
+  if ("error" in initialProfile) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Error</CardTitle>
+          <CardDescription>{initialProfile.error}</CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
-  if (!profile || loading)
-    return <>Loading...</>
+  // Handle loading state or no profile data
+  if (!profile) return <>Loading...</>;
 
+  const fullName = `${profile.first_name} ${profile.last_name}`;
 
   return (
     <Card>
@@ -130,15 +117,15 @@ export default function UserTab() {
                   size="icon"
                   className="absolute right-2 top-2"
                   onClick={() => {
-                    setImagePreviewUrl(null)
-                    setSelectedFile(null)
+                    setImagePreviewUrl(profile.picture);
+                    setSelectedFile(null);
                   }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
                 <div className="flex flex-col items-center gap-2 text-center">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src={imagePreviewUrl || profile.avatar} />
+                    <AvatarImage src={imagePreviewUrl || profile.picture || ''} />
                     <AvatarFallback>IMG</AvatarFallback>
                   </Avatar>
                   <p className="text-sm text-muted-foreground">Image ready to upload</p>
@@ -146,9 +133,8 @@ export default function UserTab() {
               </div>
             ) : (
               <Avatar className="h-32 w-32 ">
-
-                <AvatarImage className="size-30" src={profile.avatar  || ""} />
-                <AvatarFallback>{profile.first_name?.[0] || "U"}</AvatarFallback>
+                <AvatarImage className="size-30" src={profile.picture || ''} />
+                <AvatarFallback>{fullName?.[0] || "U"}</AvatarFallback>
               </Avatar>
             )}
             {isEditing && (
@@ -214,5 +200,5 @@ export default function UserTab() {
         </CardContent>
       </form>
     </Card>
-  )
+  );
 }

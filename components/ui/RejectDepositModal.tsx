@@ -1,52 +1,55 @@
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+"use client";
 
-interface RejectWithdrawalModalProps {
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+interface RejectDepositModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (reason: string) => void;
+    onConfirm: (reason: string) => Promise<void>;
     isLoading: boolean;
 }
 
-const RejectWithdrawalModal: React.FC<RejectWithdrawalModalProps> = ({ isOpen, onClose, onConfirm, isLoading }) => {
+export default function RejectDepositModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    isLoading,
+}: RejectDepositModalProps) {
     const [reason, setReason] = useState("");
 
     const handleConfirm = () => {
         onConfirm(reason);
-        setReason(""); // Clear reason after confirming
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Reject Withdrawal</DialogTitle>
+                    <DialogTitle>Reject Deposit</DialogTitle>
                     <DialogDescription>
-                        Please provide a reason for rejecting this withdrawal request.
+                        Provide a reason for rejecting this deposit request.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="py-4">
                     <Textarea
-                        placeholder="Reason for rejection..."
+                        placeholder="Enter rejection reason..."
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
-                        rows={5}
+                        className="min-h-[100px]"
                     />
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} disabled={isLoading}>
                         Cancel
                     </Button>
-                    <Button onClick={handleConfirm} disabled={isLoading || !reason.trim()}>
-                        {isLoading ? "Confirming..." : "Confirm Rejection"}
+                    <Button variant="destructive" onClick={handleConfirm} disabled={isLoading || !reason.trim()}>
+                        {isLoading ? "Rejecting..." : "Confirm Rejection"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
-};
-
-
-export default RejectWithdrawalModal;
+}
