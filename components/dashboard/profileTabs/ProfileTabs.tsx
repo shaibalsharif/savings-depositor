@@ -4,9 +4,10 @@
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { KindeUser, PersonalInfoData, NomineeInfoData } from "@/lib/actions/profile/profile";
-import UserTab from "@/components/dashboard/profileTabs/UserTab";
-import PersonalInfoTab from "@/components/dashboard/profileTabs/PersonalInfoTab";
-import NomineeTab from "@/components/dashboard/profileTabs/NomineeTab";
+// FIX: Use relative paths for components in the same directory
+import UserTab from "./UserTab";
+import PersonalInfoTab from "./PersonalInfoTab";
+import NomineeTab from "./NomineeTab";
 
 // Corrected props interface to allow for null values in given_name and family_name
 interface ProfileTabsProps {
