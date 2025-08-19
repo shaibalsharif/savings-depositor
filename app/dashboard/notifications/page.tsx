@@ -8,7 +8,7 @@ import { Bell, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { TableLoadMore } from "@/components/dashboard/tables/TableLoadMore";
+
 import { SendDepositReminderButton } from "@/components/dashboard/settings/SendDepositReminderButton";
 
 const PAGE_LIMIT = 10;
@@ -255,7 +255,7 @@ export default function NotificationsPage() {
               {filteredNotifications.map((notification) => (
                 <NotificationCard key={notification.id} notification={notification} />
               ))}
-              {hasMore && <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />}
+              {/* {hasMore && <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />} */}
             </>
           )}
         </TabsContent>
@@ -270,7 +270,7 @@ export default function NotificationsPage() {
               {filteredNotifications.map((notification) => (
                 <NotificationCard key={notification.id} notification={notification} />
               ))}
-              {hasMore && <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />}
+              {/* {hasMore && <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />} */}
             </>
           )}
         </TabsContent>
@@ -285,7 +285,7 @@ export default function NotificationsPage() {
               {filteredNotifications.map((notification) => (
                 <NotificationCard key={notification.id} notification={notification} />
               ))}
-              {hasMore && <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />}
+              {/* {hasMore && <TableLoadMore loading={loading} hasMore={hasMore} onClick={handleLoadMore} />} */}
             </>
           )}
         </TabsContent>

@@ -1,7 +1,7 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { getDashboardData } from "@/lib/actions/dashboard/dashboard";
 import YourDashboardCard from "@/components/dashboard/YourDashboardCard";
-import { BalanceCard } from "@/components/dashboard/balance-card";
+import { BalanceCard } from "@/components/dashboard/BalanceCard";
 import { MonthlyCard } from "@/components/dashboard/monthly-card";
 import { RecentDeposits } from "@/components/dashboard/recent-deposits";
 import { RecentWithdrawals } from "@/components/dashboard/recent-withdrawals";

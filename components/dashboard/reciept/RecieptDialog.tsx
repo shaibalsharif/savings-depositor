@@ -1,10 +1,8 @@
 "use client";
 
 import React, { forwardRef, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import { format } from "date-fns";
 import { MoneyReceipt } from "./MoneyReceipt";
 
 interface ReceiptDialogProps {
