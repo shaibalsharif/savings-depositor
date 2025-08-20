@@ -8,6 +8,7 @@ import {
   funds,
   users,
   depositSettings,
+  personalInfo,
 } from "@/db/schema";
 import { and, eq, desc, sql, like } from "drizzle-orm";
 import { format, startOfMonth, subMonths } from "date-fns";
@@ -37,7 +38,6 @@ export async function getDashboardData(
       "yyyy-MM"
     );
 
-    // Fetch all data in parallel
     const [
       allFunds,
       allUsers,
@@ -126,10 +126,9 @@ export async function getDashboardData(
         .select()
         .from(depositSettings)
         .where(eq(depositSettings.effectiveMonth, currentMonthStr))
-        .limit(1), // <-- Fetch the current deposit setting
+        .limit(1),
     ]);
 
-    // Calculate total balances
     const totalBalance = allFunds.reduce(
       (acc, fund) => acc + Number(fund.balance),
       0
@@ -144,23 +143,24 @@ export async function getDashboardData(
     );
     const myCurrentBalance = myTotalDeposit - myTotalWithdrawal;
 
-    // Get current deposit setting amount
-
-    // Process monthly collection
     const monthlyDepositAmount = monthlySetting?.[0]?.monthlyAmount
       ? Number(monthlySetting[0].monthlyAmount)
       : 2100;
-    const totalActiveUsers = allUsers.length; // Assuming users is fetched
+    const totalActiveUsers = allUsers.length;
     const monthlyCollectable = monthlyDepositAmount * totalActiveUsers;
-
-    // Outstanding users
+    
+    // FIX: Use the correct variable `currentMonthDeposits`
+    const monthlyCollected = currentMonthDeposits.reduce(
+      (acc, d) => acc + Number(d.amount),
+      0
+    );
+    
     const depositedUserIds = new Set(currentMonthDeposits.map((d) => d.userId));
     const outstandingUsers = allUsers.filter(
       (u) => !depositedUserIds.has(u.id)
     );
     const totalOutstanding = outstandingUsers.length * monthlyDepositAmount;
 
-    // Monthly collection for Bar Chart
     const monthlyData: any = {};
     allVerifiedDeposits.forEach((d) => {
       const month = format(d.createdAt, "yyyy-MM");
@@ -189,26 +189,24 @@ export async function getDashboardData(
         withdrawals: monthlyData[month].withdrawals,
       }));
 
-    // Payment Patterns Heatmap
     const paymentPatternData = allVerifiedDeposits.map((d) => ({
       userId: d.userId,
       month: d.month,
       status: "paid",
     }));
 
-    
-    
     return {
       totalBalance,
       myCurrentBalance,
       myDepositsThisMonth,
       monthlyCollectable,
+      monthlyCollected,
+      monthlyDepositAmount,
       recentDeposits,
       recentWithdrawals,
       monthlyCollectionChartData,
       outstandingUsers,
       totalOutstanding,
-      monthlyDepositAmount,
       paymentPatternData,
       allUsers,
     };

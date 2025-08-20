@@ -13,6 +13,7 @@ export function MonthlyCard({ data }: MonthlyCardProps) {
   // Safely destructure the data with a fallback of 0
   const monthlyCollected = data.monthlyCollected || 0;
   const monthlyCollectable = data.monthlyCollectable || 0;
+
   
   const fillPercentage = monthlyCollectable > 0 ? (monthlyCollected / monthlyCollectable) * 100 : 0;
 
