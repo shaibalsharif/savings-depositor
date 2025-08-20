@@ -1,50 +1,53 @@
-"use client";
+// app/dashboard/layout.tsx
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { redirect } from "next/navigation";
+import { getUnreadNotifications } from "@/lib/actions/notifications/notifications";
+import DashboardLayoutClient from "@/components/dashboard/DashboardLayoutClient";
+import { db } from "@/lib/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
-import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { DashboardHeader } from "@/components/dashboard/header";
-import { useEffect, useState } from "react";
-import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
-import { useRouter } from "next/navigation";
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading } = useKindeAuth();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const router = useRouter();
+  const { isAuthenticated, getUser, getPermissions } = getKindeServerSession();
+  const [isAuth, kindeUser, permissions] = await Promise.all([
+    isAuthenticated(),
+    getUser(),
+    getPermissions(),
+  ]);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/");
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  if (isLoading || !isAuthenticated) {
-    return null; // or a loading spinner
+  if (!isAuth || !kindeUser?.id) {
+    redirect("/api/auth/login");
   }
 
+  const [localUser] = await db
+    .select({ picture: users.picture })
+    .from(users)
+    .where(eq(users.id, kindeUser.id))
+    .limit(1);
+
+  const userWithLocalPic = {
+    ...kindeUser,
+    picture: localUser?.picture || kindeUser.picture,
+  };
+
+  const unreadNotificationsResult = kindeUser?.id
+    ? await getUnreadNotifications(kindeUser.id, 5)
+    : [];
+  const unreadNotifications = Array.isArray(unreadNotificationsResult)
+    ? unreadNotificationsResult
+    : [];
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <DashboardHeader onMenuToggle={() => setIsMobileOpen(!isMobileOpen)} />
-      <div className="flex flex-1 overflow-hidden max-h-[calc(100vh-56px)]">
-        {isMobileOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/50 md:hidden"
-            onClick={() => setIsMobileOpen(false)}
-          />
-        )}
-
-        <DashboardSidebar
-          isMobileOpen={isMobileOpen}
-          onClose={() => setIsMobileOpen(false)}
-        />
-
-        <main className="flex-1 overflow-auto p-6 ">
-          {children}
-        </main>
-      </div>
-    </div>
+    <DashboardLayoutClient
+      user={userWithLocalPic}
+      permissions={permissions?.permissions || []}
+      unreadNotifications={unreadNotifications}
+    >
+      {children}
+    </DashboardLayoutClient>
   );
 }

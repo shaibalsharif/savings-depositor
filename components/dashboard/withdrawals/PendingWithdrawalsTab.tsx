@@ -15,7 +15,6 @@ import ApproveWithdrawalModal from "./ApproveWithdrawalModal";
 import RejectWithdrawalModal from "./RejectWithdrawalModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-
 interface PendingWithdrawalsTabProps {
     pendingWithdrawals: FullWithdrawal[];
     funds: Fund[];
@@ -85,7 +84,7 @@ export default function PendingWithdrawalsTab({ pendingWithdrawals, funds, onUpd
         <div>
             <div className="rounded-md border">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="hidden md:table-header-group">
                         <TableRow>
                             <TableHead>Requested By</TableHead>
                             <TableHead>Amount</TableHead>
@@ -96,97 +95,69 @@ export default function PendingWithdrawalsTab({ pendingWithdrawals, funds, onUpd
                     </TableHeader>
                     <TableBody>
                         {pendingWithdrawals.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
-                                    No pending withdrawals found.
-                                </TableCell>
-                            </TableRow>
+                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No pending withdrawals found.</TableCell></TableRow>
                         ) : (
-                            pendingWithdrawals.map((item) => {
-                                const requester = item.user;
-                                return (
-                                    <TableRow key={item.id}>
-                                        <TableCell>
-                                            <div className="flex items-center space-x-2">
-                                                {requester?.picture ? (
-                                                    <Image src={requester.picture} alt={requester.name || "user image"} width={32} height={32} className="rounded-full" />
-                                                ) : (
-                                                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
-                                                        {requester?.name?.[0]?.toUpperCase() || "U"}
+                            pendingWithdrawals.map((item) => (
+                                <TableRow key={item.id} className="border-b last:border-b-0 md:border-b">
+                                    {/* --- MOBILE CARD VIEW --- */}
+                                    <td colSpan={5} className="p-2 md:hidden">
+                                        <div className="border rounded-lg p-3 space-y-3 text-sm">
+                                            <div className="flex justify-between items-start">
+                                                <span className="font-semibold text-muted-foreground">Requester</span>
+                                                <div className="flex items-center space-x-2 text-right min-w-0">
+                                                    <div className="flex flex-col flex-shrink min-w-0">
+                                                        <span className="font-medium truncate">{item.user?.name || "Unknown"}</span>
+                                                        <span className="text-xs text-muted-foreground truncate">{item.user?.email || "N/A"}</span>
                                                     </div>
-                                                )}
-                                                <div className="flex flex-col gap-1">
-                                                    <span>{requester?.name || `User ID: ${item.userId}`}</span>
-                                                    <span className="text-xs text-muted-foreground">{requester?.mobile}</span>
+                                                    <Avatar className="h-8 w-8"><AvatarImage src={item.user?.picture || ''} /><AvatarFallback>{item.user?.name?.[0] || 'U'}</AvatarFallback></Avatar>
                                                 </div>
                                             </div>
-                                        </TableCell>
-                                        <TableCell>৳ {Number(item.amount).toLocaleString()}</TableCell>
-                                        <TableCell>{item.purpose}</TableCell>
-                                        <TableCell>
-                                            <div>
-                                                <div>{format(item.createdAt, 'MMM dd, yyyy')}</div>
-                                                <div className="text-xs text-muted-foreground">{format(item.createdAt, 'hh:mm a')}</div>
+                                            <div className="flex justify-between items-center"><span className="font-semibold text-muted-foreground">Amount</span><span>৳ {Number(item.amount).toLocaleString()}</span></div>
+                                            <div className="flex justify-between items-center"><span className="font-semibold text-muted-foreground">Purpose</span><span className="truncate">{item.purpose}</span></div>
+                                            <div className="flex justify-between items-center"><span className="font-semibold text-muted-foreground">Requested</span><span>{format(item.createdAt, 'MMM dd, yyyy')}</span></div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-semibold text-muted-foreground">Actions</span>
+                                                <div className="flex gap-2">
+                                                    {item.attachmentUrl && (<Button size="icon" variant="outline" onClick={() => setImagePreviewUrl(item.attachmentUrl)}><Eye className="h-4 w-4 text-blue-600" /></Button>)}
+                                                    <Button size="icon" variant="outline" onClick={() => handleApproveClick(item)}><CheckCircle2 className="h-4 w-4 text-green-600" /></Button>
+                                                    <Button size="icon" variant="destructive" onClick={() => handleRejectClick(item)}><XCircle className="h-4 w-4" /></Button>
+                                                </div>
                                             </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex gap-2">
-                                                {item.attachmentUrl && (
-                                                    <Button size="icon" variant="outline" onClick={() => setImagePreviewUrl(item.attachmentUrl)}>
-                                                        <Eye className="h-4 w-4 text-blue-600" />
-                                                    </Button>
-                                                )}
-                                                <Button size="icon" variant="outline" onClick={() => handleApproveClick(item)}>
-                                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                                </Button>
-                                                <Button size="icon" variant="destructive" onClick={() => handleRejectClick(item)}>
-                                                    <XCircle className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })
+                                        </div>
+                                    </td>
+                                    
+                                    {/* --- DESKTOP TABLE CELL VIEWS --- */}
+                                    <TableCell className="hidden md:table-cell">
+                                        <div className="flex items-center space-x-2">
+                                            <Avatar><AvatarImage src={item.user?.picture || ''} /><AvatarFallback>{item.user?.name?.[0] || 'U'}</AvatarFallback></Avatar>
+                                            <div className="flex flex-col"><span>{item.user?.name || `User ID: ${item.userId}`}</span><span className="text-xs text-muted-foreground">{item.user?.email}</span></div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell">৳ {Number(item.amount).toLocaleString()}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{item.purpose}</TableCell>
+                                    <TableCell className="hidden md:table-cell"><div><div>{format(item.createdAt, 'MMM dd, yyyy')}</div><div className="text-xs text-muted-foreground">{format(item.createdAt, 'hh:mm a')}</div></div></TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                        <div className="flex gap-2">
+                                            {item.attachmentUrl && (<Button size="icon" variant="outline" onClick={() => setImagePreviewUrl(item.attachmentUrl)}><Eye className="h-4 w-4 text-blue-600" /></Button>)}
+                                            <Button size="icon" variant="outline" onClick={() => handleApproveClick(item)}><CheckCircle2 className="h-4 w-4 text-green-600" /></Button>
+                                            <Button size="icon" variant="destructive" onClick={() => handleRejectClick(item)}><XCircle className="h-4 w-4" /></Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
                         )}
                     </TableBody>
                 </Table>
             </div>
-
-            {/* General Image Preview Dialog */}
             <Dialog open={!!imagePreviewUrl} onOpenChange={() => setImagePreviewUrl(null)}>
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Image Preview</DialogTitle>
-                        <DialogDescription>Preview of the attached image.</DialogDescription>
-                    </DialogHeader>
-                    {imagePreviewUrl && (
-                        <div className="w-full flex justify-center">
-                            <Image src={imagePreviewUrl} alt="Preview" width={500} height={500} className="rounded" />
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setImagePreviewUrl(null)}>Close</Button>
-                    </DialogFooter>
+                    <DialogHeader><DialogTitle>Image Preview</DialogTitle><DialogDescription>Preview of the attached image.</DialogDescription></DialogHeader>
+                    {imagePreviewUrl && (<div className="w-full flex justify-center"><Image src={imagePreviewUrl} alt="Preview" width={500} height={500} className="rounded" /></div>)}
+                    <DialogFooter><Button variant="outline" onClick={() => setImagePreviewUrl(null)}>Close</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
-
-            {/* Approve Withdrawal Modal */}
-            <ApproveWithdrawalModal
-                isOpen={showApproveModal}
-                onClose={() => setShowApproveModal(false)}
-                onConfirm={handleApproveConfirm}
-                isLoading={isActionLoading}
-                selectedWithdrawal={selectedWithdrawal}
-                funds={funds}
-            />
-
-            {/* Reject Withdrawal Modal */}
-            <RejectWithdrawalModal
-                isOpen={showRejectModal}
-                onClose={() => setShowRejectModal(false)}
-                onConfirm={handleRejectConfirm}
-                isLoading={isActionLoading}
-            />
+            <ApproveWithdrawalModal isOpen={showApproveModal} onClose={() => setShowApproveModal(false)} onConfirm={handleApproveConfirm} isLoading={isActionLoading} selectedWithdrawal={selectedWithdrawal} funds={funds} />
+            <RejectWithdrawalModal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} onConfirm={handleRejectConfirm} isLoading={isActionLoading} />
         </div>
     );
 }

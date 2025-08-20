@@ -17,13 +17,9 @@ interface RecentDepositsProps {
 }
 
 export function RecentDeposits({ data, users }: RecentDepositsProps) {
-  const getUserDetails = (userId: string) => {
-    return users.find(u => u.id === userId) || {
-      first_name: "Unknown",
-      last_name: "User",
-      picture: null
-    };
-  };
+  console.log(data);
+
+
 
   return (
     <Card>
@@ -41,8 +37,8 @@ export function RecentDeposits({ data, users }: RecentDepositsProps) {
           <p className="text-muted-foreground text-center">No recent deposits found.</p>
         ) : (
           data.map((deposit) => {
-            const userDetails = getUserDetails(deposit.userId);
-            const fullName = `${userDetails.first_name} ${userDetails.last_name}`;
+            const userDetails = deposit.user;
+            const fullName = `${userDetails.name}`;
 
             return (
               <div key={deposit.id} className="flex items-center justify-between">

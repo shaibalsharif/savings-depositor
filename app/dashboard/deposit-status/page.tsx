@@ -22,7 +22,7 @@ export default async function DepositStatusPage({
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8">
+    <div className="max-w-5xl md:mx-auto py-8">
       <DepositStatusTable
         initialDeposits={depositsResult.deposits}
         selectedMonth={selectedMonth}

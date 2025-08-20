@@ -44,6 +44,7 @@ interface LogTableProps {
   showUserFilter: boolean;
   isManagerOrAdmin: boolean;
   allUsers: KindeUser[];
+  alllogs: boolean;
 }
 
 const PAGE_SIZE = 10;
@@ -57,7 +58,7 @@ const ACTION_TYPES = [
   { value: "APPROVE_WITHDRAWAL", label: "Approve Withdrawal" },
   { value: "REJECT_WITHDRAWAL", label: "Reject Withdrawal" },
   { value: "CREATE_FUND", label: "Create Fund" },
-  { value: "DELETE_FUND", label: "Delete Fund" },
+  { value: "DELETE_FUND", label: "Remove Fund" },
   { value: "FUND_TRANSFER", label: "Fund Transfer" },
   { value: "ADD_USER", label: "Add User" },
   { value: "ASSIGN_MANAGER_ROLE", label: "Assign Manager" },
@@ -69,13 +70,12 @@ const ACTION_TYPES = [
   { value: "UPDATE_PERSONAL_INFO", label: "Update Personal Info" },
   { value: "INSERT_NOMINEE_INFO", label: "Insert Nominee Info" },
   { value: "UPDATE_NOMINEE_INFO", label: "Update Nominee Info" },
-  { value: "NEW_DEPOSIT_SETTINGS", label: "Create Deposit Setting" },
+  { value: "NEW_DEPOSIT_SETTING", label: "Create Deposit Setting" },
   { value: "UPDATE_DEPOSIT_SETTINGS", label: "Update Deposit Setting" },
   { value: "DELETE_DEPOSIT_SETTINGS", label: "Delete Deposit Setting" },
   { value: "UPDATE_TERMS", label: "Update Terms" },
 ];
 
-// Helper function to format log details into a human-readable message
 function getFormattedLogMessage(action: string, details: any) {
   try {
     const parsedDetails = JSON.parse(details);
@@ -118,7 +118,7 @@ function getFormattedLogMessage(action: string, details: any) {
         return `Nominee information was first submitted for user ID ${parsedDetails.userId}.`;
       case 'UPDATE_NOMINEE_INFO':
         return `Nominee information was updated for user ID ${parsedDetails.userId}.`;
-      case 'NEW_DEPOSIT_SETTINGS':
+      case 'NEW_DEPOSIT_SETTING':
         return `New deposit setting created for month ${parsedDetails.effectiveMonth} with amount ৳${Number(parsedDetails.monthlyAmount).toLocaleString()}.`;
       case 'UPDATE_DEPOSIT_SETTINGS':
         return `Deposit setting for ID ${parsedDetails.settingId} was terminated by month ${parsedDetails.terminatedByMonth}.`;
@@ -134,7 +134,9 @@ function getFormattedLogMessage(action: string, details: any) {
   }
 }
 
-export default function LogTable({ logs, totalCount, showUserFilter, isManagerOrAdmin, allUsers }: LogTableProps) {
+export default function LogTable({ logs, totalCount, showUserFilter, isManagerOrAdmin, allUsers, alllogs }: LogTableProps) {
+
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -272,7 +274,7 @@ export default function LogTable({ logs, totalCount, showUserFilter, isManagerOr
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
+              {alllogs && <TableHead>User</TableHead>}
               <TableHead>Action</TableHead>
               <TableHead>Details</TableHead>
               <TableHead>Date</TableHead>
@@ -286,18 +288,20 @@ export default function LogTable({ logs, totalCount, showUserFilter, isManagerOr
             ) : (
               paginatedLogs.map(log => (
                 <TableRow key={log.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar>
-                        <AvatarImage src={log.user?.picture || ''} />
-                        <AvatarFallback>{log.user?.name?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span>{log.user?.name || `ID: ${log.userId}`}</span>
-                        <span className="text-xs text-muted-foreground">{log.user?.email}</span>
+                  {alllogs && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar>
+                          <AvatarImage src={log.user?.picture || ''} />
+                          <AvatarFallback>{log.user?.name?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span>{log.user?.name || `ID: ${log.userId}`}</span>
+                          <span className="text-xs text-muted-foreground">{log.user?.email}</span>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
+                    </TableCell>
+                  )}
                   <TableCell>{log.action}</TableCell>
                   <TableCell className="max-w-[400px]">
                     {log.details ? (

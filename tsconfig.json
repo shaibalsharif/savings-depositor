@@ -22,6 +22,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "scripts/add-admin.ts", "app/api/settings/deposit/[id]/route.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "scripts/add-admin.ts", "app/api/settings/deposit/[id]/route.ts", "components/dashboard/DashboardHeaderClient"],
   "exclude": ["node_modules"]
 }

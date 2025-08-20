@@ -1,4 +1,3 @@
-// components/dashboard/tables/MyDepositsTable.tsx
 "use client";
 
 import { useState, useMemo } from "react";
@@ -29,11 +28,9 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
   const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null);
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
 
-  // Pagination state from URL
   const currentPage = Number(searchParams.get("page")) || 1;
   const totalPages = Math.ceil(initialDeposits.length / ROWS_PER_PAGE);
 
-  // Filter state for the date picker, controlled by the URL
   const startDateFromUrl = searchParams.get("startDate");
   const endDateFromUrl = searchParams.get("endDate");
   const calendarSelected = useMemo(() => ({
@@ -45,7 +42,7 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
     const dates = new Set(initialDeposits.map(d => format(parseISO(d.createdAt), 'yyyy-MM-dd')));
     return (date: Date) => !dates.has(format(date, 'yyyy-MM-dd'));
   }, [initialDeposits]);
-  
+
   const paginatedDeposits = useMemo(() => {
     const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
     return initialDeposits.slice(startIndex, startIndex + ROWS_PER_PAGE);
@@ -98,7 +95,7 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
     const params = new URLSearchParams(searchParams.toString());
     const currentSortOrder = params.get('sortOrder') as 'asc' | 'desc' || 'desc';
     const newSortOrder = currentSortOrder === 'desc' ? 'asc' : 'desc';
-    
+
     params.set('sortBy', column);
     params.set('sortOrder', newSortOrder);
     router.push(`?${params.toString()}`);
@@ -113,9 +110,9 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-4 mb-2">
+      <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4 mb-4">
         <Select value={searchParams.get("status") || "all"} onValueChange={(val) => handleFilterChange("status", val)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filter by Status" />
           </SelectTrigger>
           <SelectContent>
@@ -131,7 +128,7 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
             <Button
               variant={"outline"}
               className={cn(
-                "w-[280px] justify-start text-left font-normal",
+                "w-full sm:w-[280px] justify-start text-left font-normal",
                 !calendarSelected.from && "text-muted-foreground"
               )}
             >
@@ -172,22 +169,12 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
 
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
+          <TableHeader className="hidden md:table-header-group">
             <TableRow>
-              <TableHead onClick={() => handleSortChange('month')}>
-                <div className="flex items-center space-x-1 cursor-pointer">
-                  <span>Month</span>
-                  {getSortIcon('month')}
-                </div>
-              </TableHead>
+              <TableHead onClick={() => handleSortChange('month')}><div className="flex items-center space-x-1 cursor-pointer"><span>Month</span>{getSortIcon('month')}</div></TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Transaction ID</TableHead>
-              <TableHead onClick={() => handleSortChange('createdAt')}>
-                <div className="flex items-center space-x-1 cursor-pointer">
-                  <span>Date</span>
-                  {getSortIcon('createdAt')}
-                </div>
-              </TableHead>
+              <TableHead onClick={() => handleSortChange('createdAt')}><div className="flex items-center space-x-1 cursor-pointer"><span>Date</span>{getSortIcon('createdAt')}</div></TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Action</TableHead>
@@ -195,33 +182,50 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
           </TableHeader>
           <TableBody>
             {paginatedDeposits.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">No deposits found</TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No deposits found</TableCell></TableRow>
             ) : (
               paginatedDeposits.map((deposit) => (
-                <TableRow key={deposit.id}>
-                  <TableCell>{format(parseISO(deposit.month + "-01"), "MMMM yyyy")}</TableCell>
-                  <TableCell>৳ {Number(deposit.amount).toLocaleString()}</TableCell>
-                  <TableCell>{deposit.transactionId || "N/A"}</TableCell>
-                  <TableCell>
+                <TableRow key={deposit.id} className="border-b last:border-b-0 md:border-b">
+                  {/* --- MOBILE CARD VIEW --- */}
+                  <td colSpan={7} className="p-2 md:hidden">
+                    <div className="border rounded-lg p-3 space-y-3">
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Month</span><span>{format(parseISO(deposit.month + "-01"), "MMMM yyyy")}</span></div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Amount</span><span>৳ {Number(deposit.amount).toLocaleString()}</span></div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Status</span>
+                        <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
+                          {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Transaction ID</span><span className="truncate">{deposit.transactionId || "N/A"}</span></div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Date</span><span className="text-right">{format(parseISO(deposit.createdAt), "PP")}</span></div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Type</span><span>{deposit.depositType === "partial" ? "Partial" : "Full"}</span></div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-semibold text-muted-foreground">Action</span>
+                        <button disabled={!deposit.imageUrl} onClick={() => openReceiptDialog(deposit)} className={`rounded px-3 py-1 text-sm text-white ${deposit.imageUrl ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}>
+                          Show Receipt
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* --- DESKTOP TABLE CELL VIEWS --- */}
+                  <TableCell className="hidden md:table-cell">{format(parseISO(deposit.month + "-01"), "MMMM yyyy")}</TableCell>
+                  <TableCell className="hidden md:table-cell">৳ {Number(deposit.amount).toLocaleString()}</TableCell>
+                  <TableCell className="hidden md:table-cell">{deposit.transactionId || "N/A"}</TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div>
                       <div>{format(parseISO(deposit.createdAt), "PP")}</div>
                       <div className="text-xs text-muted-foreground">{format(parseISO(deposit.createdAt), "p")}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Badge variant={deposit.status === "verified" ? "success" : deposit.status === "pending" ? "secondary" : "destructive"}>
                       {deposit.status.charAt(0).toUpperCase() + deposit.status.slice(1)}
                     </Badge>
                   </TableCell>
-                  <TableCell>{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
-                  <TableCell>
-                    <button
-                      disabled={!deposit.imageUrl}
-                      onClick={() => openReceiptDialog(deposit)}
-                      className={`rounded px-3 py-1 text-white ${deposit.imageUrl ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
-                    >
+                  <TableCell className="hidden md:table-cell">{deposit.depositType === "partial" ? "Partial" : "Full"}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <button disabled={!deposit.imageUrl} onClick={() => openReceiptDialog(deposit)} className={`rounded px-3 py-1 text-white ${deposit.imageUrl ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}>
                       Show Receipt
                     </button>
                   </TableCell>
@@ -234,25 +238,11 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
 
       {initialDeposits.length > ROWS_PER_PAGE && (
         <div className="flex items-center justify-end space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage <= 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <Button variant="outline" size="icon" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage <= 1}><ChevronLeft className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage >= totalPages}><ChevronRight className="h-4 w-4" /></Button>
         </div>
       )}
-      
+
       {selectedDeposit && (
         <ReceiptDialog
           open={showReceiptDialog}
@@ -261,6 +251,7 @@ export function MyDepositsTable({ initialDeposits, userId }: MyDepositsTableProp
           user={{}}
           totalDeposit={0}
           managerName="alif"
+          
         />
       )}
     </div>

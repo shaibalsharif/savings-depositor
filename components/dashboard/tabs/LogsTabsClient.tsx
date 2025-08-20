@@ -24,9 +24,9 @@ export default function LogsTabsClient({ isManagerOrAdmin, tab, logEntries, tota
   };
 
   return (
-    <Tabs value={tab} onValueChange={handleTabChange}>
-      <TabsList>
-        <TabsTrigger value="my">My Logs</TabsTrigger>
+    <Tabs  value={tab} onValueChange={handleTabChange}>
+      <TabsList defaultValue={"my"}>
+        <TabsTrigger  value="my">My Logs</TabsTrigger>
         {isManagerOrAdmin && <TabsTrigger value="all">All Logs</TabsTrigger>}
       </TabsList>
       <TabsContent value="my">
@@ -36,6 +36,7 @@ export default function LogsTabsClient({ isManagerOrAdmin, tab, logEntries, tota
           showUserFilter={false}
           isManagerOrAdmin={isManagerOrAdmin}
           allUsers={allUsers}
+          alllogs={false}
         />
       </TabsContent>
       {isManagerOrAdmin && (
@@ -46,6 +47,7 @@ export default function LogsTabsClient({ isManagerOrAdmin, tab, logEntries, tota
             showUserFilter={true}
             isManagerOrAdmin={isManagerOrAdmin}
             allUsers={allUsers}
+            alllogs={true}
           />
         </TabsContent>
       )}

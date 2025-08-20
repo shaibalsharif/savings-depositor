@@ -56,7 +56,7 @@ export default function ReviewDepositsTable({ initialDeposits, funds }: ReviewDe
   const handleRejectConfirm = async (reason: string) => {
     if (!selectedDeposit) return;
     setIsActionLoading(true);
-    const result = await reviewDeposit(Number(selectedDeposit.id), { // <-- FIX: Cast the ID to a number
+    const result = await reviewDeposit(Number(selectedDeposit.id), {
       status: "rejected",
       rejectionReason: reason,
       fundId: undefined,
@@ -83,7 +83,7 @@ export default function ReviewDepositsTable({ initialDeposits, funds }: ReviewDe
       return;
     }
     setIsActionLoading(true);
-    const result = await reviewDeposit(Number(selectedDeposit.id), { // <-- FIX: Cast the ID to a number
+    const result = await reviewDeposit(Number(selectedDeposit.id), {
       status: "verified",
       fundId: fundId,
     });
@@ -101,7 +101,7 @@ export default function ReviewDepositsTable({ initialDeposits, funds }: ReviewDe
     <div>
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
+          <TableHeader className="hidden md:table-header-group">
             <TableRow>
               <TableHead>Requested By</TableHead>
               <TableHead>Amount</TableHead>
@@ -120,8 +120,37 @@ export default function ReviewDepositsTable({ initialDeposits, funds }: ReviewDe
               <TableRow><TableCell colSpan={6} className="h-24 text-center">No pending deposits found.</TableCell></TableRow>
             ) : (
               initialDeposits.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
+                <TableRow key={item.id} className="border-b last:border-b-0 md:border-b">
+                  {/* --- MOBILE CARD VIEW --- */}
+                  <td colSpan={6} className="p-2 md:hidden">
+                    <div className="border rounded-lg p-3 space-y-3">
+                      <div className="flex justify-between items-start text-sm">
+                        <span className="font-semibold text-muted-foreground">Requested By</span>
+                        <div className="flex items-center space-x-2 text-right min-w-0">
+                          <div className="flex flex-col flex-shrink min-w-0">
+                            <span className="font-medium truncate">{item.user?.name || `User ID: ${item.userId}`}</span>
+                            <span className="text-xs text-muted-foreground truncate">{item.user?.email}</span>
+                          </div>
+                          <Avatar className="h-8 w-8"><AvatarImage src={item.user?.picture || ''} /><AvatarFallback>{item.user?.name?.[0] || 'U'}</AvatarFallback></Avatar>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Amount</span><span>৳ {Number(item.amount).toLocaleString()}</span></div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Transaction ID</span><span className="truncate">{item.transactionId || "N/A"}</span></div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Month</span><span>{format(item.createdAt, 'MMM yyyy')}</span></div>
+                      <div className="flex justify-between items-center text-sm"><span className="font-semibold text-muted-foreground">Submitted</span><span>{format(item.createdAt, 'MMM dd, yyyy')}</span></div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-semibold text-muted-foreground">Actions</span>
+                        <div className="flex gap-2 justify-end">
+                          {item.imageUrl && (<Button size="icon" variant="outline" onClick={() => setImagePreviewUrl(item.imageUrl ?? null)}><Eye className="h-4 w-4 text-blue-600" /></Button>)}
+                          <Button size="icon" variant="outline" onClick={() => handleApproveClick(item)}><CheckCircle2 className="h-4 w-4 text-green-600" /></Button>
+                          <Button size="icon" variant="destructive" onClick={() => handleRejectClick(item)}><XCircle className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* --- DESKTOP TABLE CELL VIEWS --- */}
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex items-center space-x-2">
                       <Avatar><AvatarImage src={item.user?.picture || ''} /><AvatarFallback>{item.user?.name?.[0] || 'U'}</AvatarFallback></Avatar>
                       <div className="flex flex-col gap-1">
@@ -130,21 +159,14 @@ export default function ReviewDepositsTable({ initialDeposits, funds }: ReviewDe
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>৳ {Number(item.amount).toLocaleString()}</TableCell>
-                  <TableCell>{item.transactionId || "N/A"}</TableCell>
-                  <TableCell>{format(item.createdAt, 'MMM yyyy')}</TableCell>
-                  <TableCell>{format(item.createdAt, 'MMM dd, yyyy hh:mm a')}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">৳ {Number(item.amount).toLocaleString()}</TableCell>
+                  <TableCell className="hidden md:table-cell">{item.transactionId || "N/A"}</TableCell>
+                  <TableCell className="hidden md:table-cell">{format(item.createdAt, 'MMM yyyy')}</TableCell>
+                  <TableCell className="hidden md:table-cell">{format(item.createdAt, 'MMM dd, yyyy hh:mm a')}</TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex gap-2">
-                      {item.imageUrl && (
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => setImagePreviewUrl(item.imageUrl ?? null)} // FIX: Use nullish coalescing to handle undefined
-                        >
-                          <Eye className="h-4 w-4 text-blue-600" />
-                        </Button>
-                      )}                      <Button size="icon" variant="outline" onClick={() => handleApproveClick(item)}><CheckCircle2 className="h-4 w-4 text-green-600" /></Button>
+                      {item.imageUrl && (<Button size="icon" variant="outline" onClick={() => setImagePreviewUrl(item.imageUrl ?? null)}><Eye className="h-4 w-4 text-blue-600" /></Button>)}
+                      <Button size="icon" variant="outline" onClick={() => handleApproveClick(item)}><CheckCircle2 className="h-4 w-4 text-green-600" /></Button>
                       <Button size="icon" variant="destructive" onClick={() => handleRejectClick(item)}><XCircle className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
@@ -168,8 +190,3 @@ export default function ReviewDepositsTable({ initialDeposits, funds }: ReviewDe
     </div>
   );
 }
-
-
-
-
-

@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata } from "next"
 import type { Viewport } from "next"
 import { Inter } from "next/font/google"

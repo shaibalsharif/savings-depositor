@@ -11,20 +11,14 @@ interface RecentWithdrawalsProps {
     amount: string;
     createdAt: Date;
     userId: string;
-    user: { name: string | null };
+    user: any;
     purpose: string;
   }[];
   users: any[];
 }
 
 export function RecentWithdrawals({ data, users }: RecentWithdrawalsProps) {
-  const getUserDetails = (userId: string) => {
-    return users.find(u => u.id === userId) || {
-      first_name: "Unknown",
-      last_name: "User",
-      picture: null
-    };
-  };
+
 
   return (
     <Card>
@@ -42,8 +36,8 @@ export function RecentWithdrawals({ data, users }: RecentWithdrawalsProps) {
           <p className="text-muted-foreground text-center">No recent withdrawals found.</p>
         ) : (
           data.map((withdrawal) => {
-            const userDetails = getUserDetails(withdrawal.userId);
-            const fullName = `${userDetails.first_name} ${userDetails.last_name}`;
+            const userDetails =withdrawal.user;
+            const fullName = `${userDetails.name}`;
 
             return (
               <div key={withdrawal.id} className="flex items-center justify-between">

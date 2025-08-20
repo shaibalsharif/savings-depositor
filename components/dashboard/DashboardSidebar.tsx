@@ -1,7 +1,7 @@
+// components/dashboard/DashboardSidebar.tsx
 "use client"
 import Link from "next/link"
 import {
-
   CreditCard,
   Home,
   LogOut,
@@ -17,24 +17,14 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { LogoutLink, useKindeAuth } from "@kinde-oss/kinde-auth-nextjs"
+import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 
-export function DashboardSidebar({
-  isMobileOpen,
-  onClose,
-}: {
-  isMobileOpen?: boolean
-  onClose?: () => void
-}) {
-  const { user, permissions } = useKindeAuth()
-
-  const pathname = usePathname()
-
-
-  const isAdmin = permissions?.permissions?.includes('admin')
-  const isManager = permissions?.permissions?.includes('manager')
+export function DashboardSidebar({ user, permissions, isMobileOpen, onClose }: { user: any, permissions: string[], isMobileOpen?: boolean, onClose?: () => void }) {
+  const pathname = usePathname();
+  const isAdmin = permissions?.includes('admin');
+  const isManager = permissions?.includes('manager');
 
   const routes = [
     {
@@ -55,7 +45,7 @@ export function DashboardSidebar({
       href: "/dashboard/deposit-status",
       active: pathname === "/dashboard/deposit-status",
     },
-
+    
     {
       label: "Withdrawals",
       icon: CreditCard,
@@ -77,13 +67,12 @@ export function DashboardSidebar({
       active: pathname === "/dashboard/users",
       showIf: isAdmin,
     },
-
+   
     {
       label: "Activity Logs",
       icon: History,
       href: "/dashboard/logs",
       active: pathname === "/dashboard/logs",
-
     },
     {
       label: "Notifications",
@@ -91,7 +80,7 @@ export function DashboardSidebar({
       href: "/dashboard/notifications",
       active: pathname === "/dashboard/notifications",
     },
-
+   
     {
       label: "Profile",
       icon: User,
@@ -105,7 +94,7 @@ export function DashboardSidebar({
       active: pathname === "/dashboard/settings",
       showIf: isAdmin || isManager,
     },
-  ]
+  ];
 
   return (
     <div
@@ -183,7 +172,5 @@ export function DashboardSidebar({
         </div>
       </div>
     </div>
-
-
-  )
+  );
 }

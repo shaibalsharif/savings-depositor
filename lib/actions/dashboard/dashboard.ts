@@ -97,7 +97,7 @@ export async function getDashboardData(
         })
         .from(withdrawals)
         .leftJoin(users, eq(withdrawals.userId, users.id))
-        .where(eq(withdrawals.status, "verified"))
+        .where(eq(withdrawals.status, "approved"))
         .orderBy(desc(withdrawals.createdAt))
         .limit(5),
       db
@@ -119,7 +119,7 @@ export async function getDashboardData(
         .where(
           and(
             eq(withdrawals.userId, currentUserId),
-            eq(withdrawals.status, "verified")
+            eq(withdrawals.status, "approved")
           )
         ),
       db
@@ -172,7 +172,7 @@ export async function getDashboardData(
     const allVerifiedWithdrawals = await db
       .select()
       .from(withdrawals)
-      .where(eq(withdrawals.status, "verified"));
+      .where(eq(withdrawals.status, "approved"));
     allVerifiedWithdrawals.forEach((w) => {
       const month = format(w.createdAt, "yyyy-MM");
       if (!monthlyData[month])
@@ -196,6 +196,8 @@ export async function getDashboardData(
       status: "paid",
     }));
 
+    
+    
     return {
       totalBalance,
       myCurrentBalance,

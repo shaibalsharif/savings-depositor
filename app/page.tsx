@@ -1,3 +1,4 @@
+//app/page.tsx
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getKindeServerSession, LoginLink } from "@kinde-oss/kinde-auth-nextjs/server";
