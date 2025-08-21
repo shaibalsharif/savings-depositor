@@ -3,6 +3,7 @@
 
 import { db } from "@/lib/db";
 import { deposits } from "@/db/schema";
+import { sendDepositSubmittedNotification } from "../notifications/depositNotifications";
 
 interface DepositPayload {
   userId: string;
@@ -16,19 +17,24 @@ interface DepositPayload {
 export async function submitDeposit(payload: DepositPayload) {
   try {
     // 1. Create a new deposit entry
-    await db.insert(deposits).values({
-      userId: payload.userId,
-      month: payload.month,
-      amount: payload.amount.toString(),
-      transactionId: payload.transactionId || null,
-      imageUrl: payload.imageUrl || null,
-      status: "pending",
-    });
+    const [newDeposit] = await db
+      .insert(deposits)
+      .values({
+        userId: payload.userId,
+        month: payload.month,
+        amount: payload.amount.toString(),
+        transactionId: payload.transactionId || null,
+        imageUrl: payload.imageUrl || null,
+        status: "pending",
+      })
+      .returning({ id: deposits.id });
 
-    // 2. Log the action (as you had in your API route)
-    // You would create a similar Server Action for logging
-    // For now, let's just log to the console
-
+    await sendDepositSubmittedNotification(
+      newDeposit.id.toString(),
+      payload.userId,
+      payload.amount,
+      payload.month
+    );
 
     return { success: true };
   } catch (error) {

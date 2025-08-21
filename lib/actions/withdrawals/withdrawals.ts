@@ -15,6 +15,10 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { FullWithdrawal, Withdrawal, Fund } from "@/types"; // Import your base types
 
 import { parseISO } from "date-fns";
+import {
+  sendWithdrawalReviewNotification,
+  sendWithdrawalSubmittedNotification,
+} from "../notifications/withdrawalNotifications";
 
 const requestWithdrawalSchema = z.object({
   userId: z.string().min(1),
@@ -46,8 +50,6 @@ const reviewWithdrawalSchema = z.object({
 
 const filterSchema = z.object({
   status: z.string().optional(),
-
-
 
   startDate: z.string().optional(),
 
@@ -159,7 +161,6 @@ export async function getAllWithdrawals(
     if (status && status !== "all") {
       conditions.push(eq(withdrawals.status, status as any));
     }
-
 
     if (startDate && endDate) {
       const parsedStartDate = parseISO(startDate);
@@ -301,19 +302,29 @@ export async function requestWithdrawal(
   }
 
   try {
-    await db.insert(withdrawals).values({
-      userId: user.id,
+    const [newWithdrawal] = await db
+      .insert(withdrawals)
+      .values({
+        userId: user.id,
 
-      amount: parsed.data.amount.toString(),
+        amount: parsed.data.amount.toString(),
 
-      purpose: parsed.data.purpose,
+        purpose: parsed.data.purpose,
 
-      details: parsed.data.details || null,
+        details: parsed.data.details || null,
 
-      attachmentUrl: parsed.data.imageUrl || null,
+        attachmentUrl: parsed.data.imageUrl || null,
 
-      status: "pending",
-    });
+        status: "pending",
+      })
+      .returning({ id: withdrawals.id });
+    // Trigger notification to managers
+    await sendWithdrawalSubmittedNotification(
+      newWithdrawal.id.toString(),
+      user.id,
+      parsed.data.amount,
+      parsed.data.purpose
+    );
 
     return { success: true };
   } catch (error) {
@@ -349,6 +360,9 @@ export async function reviewWithdrawal(
   const { status, fundId, rejectionReason } = parsed.data;
 
   try {
+    let originalUserId = "";
+    let withdrawalAmount = "";
+
     await db.transaction(async (tx) => {
       const [withdrawalRequest] = await tx
 
@@ -366,6 +380,8 @@ export async function reviewWithdrawal(
         throw new Error(
           `Withdrawal request is already ${withdrawalRequest.status}.`
         );
+      originalUserId = withdrawalRequest.userId;
+      withdrawalAmount = withdrawalRequest.amount;
 
       if (status === "approved") {
         if (!fundId) throw new Error("Fund ID is required for approval.");
@@ -375,11 +391,8 @@ export async function reviewWithdrawal(
         const [targetFund] = await tx
 
           .select()
-
           .from(funds)
-
           .where(eq(funds.id, fundId))
-
           .for("update");
 
         if (!targetFund) throw new Error("Selected fund not found.");
@@ -390,84 +403,39 @@ export async function reviewWithdrawal(
         const newFundBalance = Number(targetFund.balance) - amountToWithdraw;
 
         await tx
-
           .update(funds)
-
           .set({ balance: newFundBalance.toFixed(2) })
-
           .where(eq(funds.id, fundId));
 
         await tx
-
           .update(withdrawals)
-
           .set({
             status: "approved",
-
             reviewedBy: user.id,
-
             reviewedAt: new Date(),
-
             fundId,
           })
-
           .where(eq(withdrawals.id, withdrawalId));
-
-        // await tx.insert(logs).values({
-
-        // userId: user.id,
-
-        // action: "APPROVE_WITHDRAWAL",
-
-        // details: JSON.stringify({
-
-        // withdrawalId,
-
-        // amount: amountToWithdraw,
-
-        // approvedFromFund: fundId,
-
-        // }),
-
-        // createdAt: new Date(),
-
-        // });
       } else if (status === "rejected") {
         await tx
-
           .update(withdrawals)
-
           .set({
             status: "rejected",
-
             rejectionReason: rejectionReason || null,
-
             reviewedBy: user.id,
-
             reviewedAt: new Date(),
           })
-
           .where(eq(withdrawals.id, withdrawalId));
-
-        // await tx.insert(logs).values({
-
-        // userId: user.id,
-
-        // action: "REJECT_WITHDRAWAL",
-
-        // details: JSON.stringify({
-
-        // withdrawalId,
-
-        // reason: rejectionReason || "No reason provided",
-
-        // }),
-
-        // createdAt: new Date(),
-
-        // });
       }
     });
+    // Trigger notification to the user who requested the withdrawal
+    await sendWithdrawalReviewNotification(
+      withdrawalId.toString(),
+      user.id,
+      originalUserId,
+      status,
+      Number(withdrawalAmount)
+    );
 
     return { success: true };
   } catch (error: any) {

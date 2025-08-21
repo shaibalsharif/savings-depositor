@@ -6,12 +6,12 @@ import { Bell, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
@@ -27,19 +27,14 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ onMenuToggle, user, permissions, unreadNotifications }: DashboardHeaderProps) {
-    console.log(user);
-    
     const hasUnread = unreadNotifications.length > 0;
     const isAdmin = permissions.includes("admin");
     const isManager = permissions.includes("manager");
 
-    const goToUnreadNotifications = () => {
-        window.location.href = "/dashboard/notifications?tab=unread";
-    };
+
 
     return (
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
-            {/* Mobile Menu Button */}
             <Button
                 variant="ghost"
                 size="icon"
@@ -86,12 +81,13 @@ export function DashboardHeader({ onMenuToggle, user, permissions, unreadNotific
                                 <DropdownMenuItem
                                     key={notif.id}
                                     className="flex flex-col space-y-1"
-                                    onClick={goToUnreadNotifications}
                                 >
-                                    <p className="text-sm font-medium truncate">{notif.message}</p>
-                                    <p className="text-xs text-muted-foreground truncate">
-                                        {new Date(notif.createdAt).toLocaleString()}
-                                    </p>
+                                    <Link href={`/dashboard/notifications?id=${notif.id}`} passHref>
+                                        <p className="text-sm font-medium truncate">{notif.message}</p>
+                                        <p className="text-xs text-muted-foreground truncate">
+                                            {new Date(notif.createdAt).toLocaleString()}
+                                        </p>
+                                    </Link>
                                 </DropdownMenuItem>
                             ))
                         ) : (

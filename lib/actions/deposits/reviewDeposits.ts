@@ -7,6 +7,7 @@ import { eq, and, desc, asc } from "drizzle-orm";
 import { z } from "zod";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { FullDeposit, Fund } from "@/types";
+import { sendDepositReviewNotification } from "../notifications/depositNotifications";
 
 export async function getPendingDeposits(
   sortBy: "createdAt" | "month" = "createdAt",
@@ -102,6 +103,8 @@ export async function reviewDeposit(
   const { status, fundId, rejectionReason } = parsed.data;
 
   try {
+    let originalUserId = "";
+    let depositAmount = "";
     await db.transaction(async (tx) => {
       const [depositRequest] = await tx
         .select()
@@ -112,6 +115,10 @@ export async function reviewDeposit(
       if (!depositRequest) throw new Error("Deposit request not found");
       if (depositRequest.status !== "pending")
         throw new Error(`Deposit request is already ${depositRequest.status}.`);
+
+      // Store necessary data for the notification before the transaction completes
+      originalUserId = depositRequest.userId;
+      depositAmount = depositRequest.amount;
 
       if (status === "verified") {
         if (!fundId) throw new Error("Fund ID is required for verification.");
@@ -138,16 +145,6 @@ export async function reviewDeposit(
             fundId,
           })
           .where(eq(deposits.id, depositId));
-
-        // await tx.insert(logs).values({
-        //   userId: user.id,
-        //   action: "VERIFY_DEPOSIT",
-        //   details: JSON.stringify({
-        //     depositId,
-        //     amount: amountToDeposit,
-        //     fundId,
-        //   }),
-        // });
       } else if (status === "rejected") {
         await tx
           .update(deposits)
@@ -158,17 +155,18 @@ export async function reviewDeposit(
             note: rejectionReason || null,
           })
           .where(eq(deposits.id, depositId));
-
-        // await tx.insert(logs).values({
-        //   userId: user.id,
-        //   action: "REJECT_DEPOSIT",
-        //   details: JSON.stringify({
-        //     depositId,
-        //     reason: rejectionReason || "No reason provided",
-        //   }),
-        // });
       }
     });
+
+    // The transaction has completed successfully. Now, trigger the notification.
+    await sendDepositReviewNotification(
+      depositId.toString(),
+      user.id,
+      originalUserId,
+      status,
+      Number(depositAmount),
+      rejectionReason
+    );
 
     return { success: true };
   } catch (error: any) {

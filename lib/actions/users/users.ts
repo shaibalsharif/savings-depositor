@@ -1,10 +1,16 @@
 "use server";
-
 import { db } from "@/lib/db";
 import { users } from "@/db/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { getKindeManagementToken } from "@/lib/kinde-management";
 import { z } from "zod";
+
+import {
+  sendNewUserNotifications,
+  sendUserSuspensionNotification,
+  sendManagerRoleNotification,
+} from "../notifications/userNotifications";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -30,11 +36,16 @@ export interface KindeUser {
 /**
  * Fetches all users from Kinde and combines them with local DB data.
  */
-export async function fetchAllUsers(emailFilter?: string | null): Promise<KindeUser[]> {
+export async function fetchAllUsers(
+  emailFilter?: string | null
+): Promise<KindeUser[]> {
   const token = await getKindeManagementToken();
-  const res = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/users?page_size=100`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await fetch(
+    `${process.env.KINDE_ISSUER_URL}/api/v1/users?page_size=100`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
 
   if (!res.ok) throw new Error("Failed to fetch Kinde users");
 
@@ -42,15 +53,24 @@ export async function fetchAllUsers(emailFilter?: string | null): Promise<KindeU
   const kindeUserIds = kindeUsers.map((u: any) => u.id);
 
   // FIX: Fetch permissions and suspension status from your local DB in a single query
-  const dbUsers = await db.select().from(users).where(inArray(users.id, kindeUserIds));
+  const dbUsers = await db
+    .select()
+    .from(users)
+    .where(inArray(users.id, kindeUserIds));
   const dbUserMap = new Map(dbUsers.map((u) => [u.id, u]));
 
   const permsPromises = kindeUsers.map((user: any) =>
-    fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/organizations/${process.env.KINDE_ORG_CODE}/users/${user.id}/permissions`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    .then((res) => (res.ok ? res.json() : { permissions: [] }))
-    .then((data) => ({ id: user.id, permissions: data.permissions?.map((p: any) => p.key) || [] }))
+    fetch(
+      `${process.env.KINDE_ISSUER_URL}/api/v1/organizations/${process.env.KINDE_ORG_CODE}/users/${user.id}/permissions`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    )
+      .then((res) => (res.ok ? res.json() : { permissions: [] }))
+      .then((data) => ({
+        id: user.id,
+        permissions: data.permissions?.map((p: any) => p.key) || [],
+      }))
   );
   const permsResult = await Promise.all(permsPromises);
   const permsMap = new Map(permsResult.map((p) => [p.id, p.permissions]));
@@ -73,7 +93,9 @@ export async function fetchAllUsers(emailFilter?: string | null): Promise<KindeU
         isSuspended: dbUser?.isSuspended || false,
       };
     })
-    .filter((user: KindeUser) => (emailFilter ? user.email.includes(emailFilter) : true));
+    .filter((user: KindeUser) =>
+      emailFilter ? user.email.includes(emailFilter) : true
+    );
 
   return combinedUsers;
 }
@@ -81,15 +103,34 @@ export async function fetchAllUsers(emailFilter?: string | null): Promise<KindeU
 /**
  * Creates a new user in Kinde and your database.
  */
-export async function addNewUser(formData: z.infer<typeof createUserSchema>): Promise<{ success: boolean, userId: string } | { error: string }> {
+export async function addNewUser(
+  formData: z.infer<typeof createUserSchema>
+): Promise<{ success: boolean; userId: string } | { error: string }> {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+  if (!user?.id) return { error: "Unauthorized" };
+
   // 1. Create user in Kinde Auth
   const token = await getKindeManagementToken();
   const res = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/user`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({
-      profile: { given_name: formData.given_name, family_name: formData.family_name, picture: formData.picture },
-      identities: [{ type: "email", is_verified: true, details: { email: formData.email } }],
+      profile: {
+        given_name: formData.given_name,
+        family_name: formData.family_name,
+        picture: formData.picture,
+      },
+      identities: [
+        {
+          type: "email",
+          is_verified: true,
+          details: { email: formData.email },
+        },
+      ],
     }),
   });
 
@@ -109,8 +150,11 @@ export async function addNewUser(formData: z.infer<typeof createUserSchema>): Pr
       email: formData.email,
       picture: formData.picture || null,
       isSuspended: false, // Default to not suspended
-      permissions: ['user'], // Default permission
+      permissions: ["user"], // Default permission
     });
+
+    // Trigger notification
+    await sendNewUserNotifications(kindeUserId, user.id);
   } catch (dbError) {
     console.error("Failed to add user to users table:", dbError);
     return { error: "Failed to create user in database" };
@@ -121,34 +165,69 @@ export async function addNewUser(formData: z.infer<typeof createUserSchema>): Pr
 /**
  * Suspends a user in Kinde and updates the local DB.
  */
-export async function suspendUser(userId: string): Promise<{ success: boolean } | { error: string }> {
+export async function suspendUser(
+  userId: string
+): Promise<{ success: boolean } | { error: string }> {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+  if (!user?.id) return { error: "Unauthorized" };
+
   const token = await getKindeManagementToken();
-  const res = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${userId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ is_suspended: true }),
-  });
+  const res = await fetch(
+    `${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${userId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ is_suspended: true }),
+    }
+  );
   if (!res.ok) return { error: "Failed to suspend user" };
 
   // FIX: Update local DB to reflect suspension
   await db.update(users).set({ isSuspended: true }).where(eq(users.id, userId));
+
+  // Trigger notification
+  await sendUserSuspensionNotification(userId, user.id, true);
+
   return { success: true };
 }
 
 /**
  * Unsuspends a user in Kinde and updates the local DB.
  */
-export async function unsuspendUser(userId: string): Promise<{ success: boolean } | { error: string }> {
+export async function unsuspendUser(
+  userId: string
+): Promise<{ success: boolean } | { error: string }> {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+  if (!user?.id) return { error: "Unauthorized" };
+
   const token = await getKindeManagementToken();
-  const res = await fetch(`${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${userId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ is_suspended: false }),
-  });
+  const res = await fetch(
+    `${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${userId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ is_suspended: false }),
+    }
+  );
   if (!res.ok) return { error: "Failed to unsuspend user" };
 
   // FIX: Update local DB to reflect unsuspension
-  await db.update(users).set({ isSuspended: false }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ isSuspended: false })
+    .where(eq(users.id, userId));
+
+  // Trigger notification
+  await sendUserSuspensionNotification(userId, user.id, false);
+
   return { success: true };
 }
 
@@ -214,14 +293,16 @@ export async function handleManagerPermission(
           }
         );
       }
-      
+
       // FIX: Correct JSONB array concatenation syntax
-      await db.update(users)
+      await db
+        .update(users)
         .set({ permissions: sql`${users.permissions} || '["manager"]'::jsonb` })
         .where(eq(users.id, userId));
-      
+
       if (oldManagerId && oldManagerId !== userId) {
-        await db.update(users)
+        await db
+          .update(users)
           .set({ permissions: sql`${users.permissions} - 'manager'` })
           .where(eq(users.id, oldManagerId));
       }
@@ -236,11 +317,15 @@ export async function handleManagerPermission(
       if (!removeRes.ok) {
         throw new Error("Failed to remove manager permission in Kinde.");
       }
-      
-      await db.update(users)
+
+      await db
+        .update(users)
         .set({ permissions: sql`${users.permissions} - 'manager'` })
         .where(eq(users.id, userId));
     }
+
+    // Trigger notification
+    await sendManagerRoleNotification(userId, type);
 
     return { success: true };
   } catch (error: any) {

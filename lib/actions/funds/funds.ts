@@ -2,9 +2,15 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { funds, fundTransactions, logs, users } from "@/db/schema";
+import { funds, fundTransactions, users } from "@/db/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { z } from "zod";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import {
+  sendFundCreationNotification,
+  sendFundDeletionNotification,
+  sendFundTransferNotification,
+} from "@/lib/actions/notifications/fundNotifications"; // Corrected import
 
 const fundSchema = z.object({
   title: z.string().min(1, "Fund title is required."),
@@ -59,7 +65,9 @@ export async function getFunds(): Promise<Fund[] | { error: string }> {
 /**
  * Fetches all fund transactions with user details.
  */
-export async function getFundTransactions(): Promise<FundTransaction[] | { error: string }> {
+export async function getFundTransactions(): Promise<
+  FundTransaction[] | { error: string }
+> {
   try {
     const data = await db
       .select({
@@ -91,12 +99,19 @@ export async function getFundTransactions(): Promise<FundTransaction[] | { error
 /**
  * Adds a new fund.
  */
-export async function addFund(data: z.infer<typeof fundSchema>, userId: string): Promise<{ fund: Fund } | { error: string }> {
+export async function addFund(
+  data: z.infer<typeof fundSchema>,
+  userId: string
+): Promise<{ fund: Fund } | { error: string }> {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+  if (!user?.id) return { error: "Unauthorized" };
+
   const parsed = fundSchema.safeParse(data);
   if (!parsed.success) {
     return { error: "Invalid fund title" };
   }
-  
+
   try {
     const [newFund] = await db
       .insert(funds)
@@ -109,12 +124,8 @@ export async function addFund(data: z.infer<typeof fundSchema>, userId: string):
       })
       .returning();
 
-    // await db.insert(logs).values({
-    //   userId: userId,
-    //   action: "create_fund",
-    //   details: JSON.stringify({ fundId: newFund.id, title: newFund.title }),
-    // });
-
+    // Trigger notification
+    await sendFundCreationNotification(newFund.id, newFund.title, user.id);
     return { fund: newFund };
   } catch (error) {
     console.error("Error adding fund:", error);
@@ -125,7 +136,14 @@ export async function addFund(data: z.infer<typeof fundSchema>, userId: string):
 /**
  * Deletes a fund if its balance is zero.
  */
-export async function deleteFund(fundId: number, userId: string): Promise<{ success: boolean } | { error: string }> {
+export async function deleteFund(
+  fundId: number,
+  userId: string
+): Promise<{ success: boolean } | { error: string }> {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+  if (!user?.id) return { error: "Unauthorized" };
+
   try {
     const [fund] = await db.select().from(funds).where(eq(funds.id, fundId));
 
@@ -137,12 +155,8 @@ export async function deleteFund(fundId: number, userId: string): Promise<{ succ
     }
 
     await db.update(funds).set({ deleted: true }).where(eq(funds.id, fundId));
-    
-    // await db.insert(logs).values({
-    //   userId: userId,
-    //   action: "remove_fund",
-    //   details: JSON.stringify({ fundId: fund.id }),
-    // });
+    // Trigger notification
+    await sendFundDeletionNotification(fund.id, fund.title, user.id);
 
     return { success: true };
   } catch (error) {
@@ -154,7 +168,13 @@ export async function deleteFund(fundId: number, userId: string): Promise<{ succ
 /**
  * Transfers funds between two accounts.
  */
-export async function transferFunds(data: z.infer<typeof transferSchema>, userId: string): Promise<{ success: boolean } | { error: string }> {
+export async function transferFunds(
+  data: z.infer<typeof transferSchema>
+): Promise<{ success: boolean } | { error: string }> {
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+  if (!user?.id) return { error: "Unauthorized" };
+
   const parsed = transferSchema.safeParse(data);
   if (!parsed.success) {
     return { error: "Invalid transfer data" };
@@ -167,13 +187,25 @@ export async function transferFunds(data: z.infer<typeof transferSchema>, userId
   }
 
   try {
+    let fromFundTitle = "";
+    let toFundTitle = "";
     await db.transaction(async (trx) => {
-      const [fromFund] = await trx.select().from(funds).where(eq(funds.id, fromFundId)).for("update");
-      const [toFund] = await trx.select().from(funds).where(eq(funds.id, toFundId)).for("update");
+      const [fromFund] = await trx
+        .select()
+        .from(funds)
+        .where(eq(funds.id, fromFundId))
+        .for("update");
+      const [toFund] = await trx
+        .select()
+        .from(funds)
+        .where(eq(funds.id, toFundId))
+        .for("update");
 
       if (!fromFund || !toFund) {
         throw new Error("One or both fund IDs are invalid.");
       }
+      fromFundTitle = fromFund.title;
+      toFundTitle = toFund.title;
 
       const fromBalance = Number(fromFund.balance);
       const transferAmount = Number(amount);
@@ -181,28 +213,36 @@ export async function transferFunds(data: z.infer<typeof transferSchema>, userId
       if (fromBalance < transferAmount) {
         throw new Error("Insufficient funds in the source fund.");
       }
-
-      await trx.update(funds).set({ balance: sql`${funds.balance} - ${transferAmount}` }).where(eq(funds.id, fromFundId));
-      await trx.update(funds).set({ balance: sql`cast(${funds.balance} as double precision) + ${transferAmount}` as any }).where(eq(funds.id, toFundId));
-
+      await trx
+        .update(funds)
+        .set({ balance: sql`${funds.balance} - ${transferAmount}` })
+        .where(eq(funds.id, fromFundId));
+      await trx
+        .update(funds)
+        .set({
+          balance:
+            sql`cast(${funds.balance} as double precision) + ${transferAmount}` as any,
+        })
+        .where(eq(funds.id, toFundId));
       await trx.insert(fundTransactions).values({
         fromFundId,
         toFundId,
         amount: transferAmount.toString(),
-        createdBy: userId,
+        createdBy: user.id,
         description,
       });
-
-      // await trx.insert(logs).values({
-      //   userId: userId,
-      //   action: "fund_transfer",
-      //   details: JSON.stringify({ fromFundId, toFundId, amount, description }),
-      // });
     });
+
+    // Trigger notification
+    await sendFundTransferNotification(
+      fromFundTitle,
+      toFundTitle,
+      amount,
+      user.id
+    );
 
     return { success: true };
   } catch (error: any) {
-
     console.error("Fund transfer error:", error);
     return { error: error.message || "Fund transfer failed." };
   }

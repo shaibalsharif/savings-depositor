@@ -17,7 +17,7 @@ interface RecentDepositsProps {
 }
 
 export function RecentDeposits({ data, users }: RecentDepositsProps) {
-  console.log(data);
+
 
 
 

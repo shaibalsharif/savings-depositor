@@ -131,18 +131,29 @@ export const depositSettings = pgTable("deposit_settings", {
 //   createdAt: timestamp("created_at").defaultNow().notNull(),
 // })
 
+// Core notification content - Stored once per notification
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
-  recipientUserId: text("recipient_user_id").notNull(),
-  senderUserId: text("sender_user_id"),
-  type: varchar("type", { length: 50 }).notNull(),
+  senderUserId: text("sender_user_id").references(() => users.id), // The user who initiated the action
+  type: varchar("type", { length: 50 }).notNull(), // e.g., 'user_suspended', 'deposit_approved'
+  title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
-  metadata: jsonb("metadata"),
-  isRead: boolean("is_read").notNull().default(false),
+  metadata: jsonb("metadata"), // Extra data like amount, fund name
   createdAt: timestamp("created_at").notNull().defaultNow(),
   relatedEntityId: text("related_entity_id"),
-  roleTarget: varchar("role_target", { length: 50 }),
-  actionRequired: boolean("action_required").default(false),
+  relatedEntityType: varchar("related_entity_type", { length: 50 }),
+});
+
+// Mapping table for each recipient and their status
+export const notificationRecipients = pgTable("notification_recipients", {
+  id: serial("id").primaryKey(),
+  notificationId: uuid("notification_id")
+    .notNull()
+    .references(() => notifications.id),
+  recipientUserId: text("recipient_user_id")
+    .notNull()
+    .references(() => users.id),
+  isRead: boolean("is_read").notNull().default(false),
 });
 
 export const terms = pgTable("terms", {
