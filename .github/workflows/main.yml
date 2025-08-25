@@ -19,7 +19,6 @@ jobs:
 
       - name: Create Service Account Key Files from Base64 Secrets
         run: |
-          # This decodes the single-line Base64 secret back into the original multi-line JSON file
           echo "${{ secrets.GDRIVE_SA_KEY_1 }}" | base64 --decode > gdrive1.json
           echo "${{ secrets.GDRIVE_SA_KEY_2 }}" | base64 --decode > gdrive2.json
         
@@ -30,16 +29,15 @@ jobs:
           FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
           echo "Creating backup file: $FILENAME"
           
-          # Use the full path to the v17 executable to ensure the correct version is used
           /usr/lib/postgresql/17/bin/pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
           
-          # Upload to the first Google Drive
           echo "Uploading to first Google Drive..."
-          rclone copy $FILENAME :drive:/Neon-Backups/ --drive-service-account-file gdrive1.json -v
+          # MODIFIED: Use the Folder ID to upload directly to the shared folder
+          rclone copy $FILENAME :drive: --drive-root-folder-id ${{ secrets.GDRIVE_FOLDER_ID_1 }} --drive-service-account-file gdrive1.json -v
           
-          # Upload to the second Google Drive
           echo "Uploading to second Google Drive..."
-          rclone copy $FILENAME :drive:/Neon-Backups-Redundant/ --drive-service-account-file gdrive2.json -v
+          # MODIFIED: Use the Folder ID to upload directly to the shared folder
+          rclone copy $FILENAME :drive: --drive-root-folder-id ${{ secrets.GDRIVE_FOLDER_ID_2 }} --drive-service-account-file gdrive2.json -v
           
           rm $FILENAME
           echo "Backup complete."
