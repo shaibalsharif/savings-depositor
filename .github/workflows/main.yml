@@ -32,11 +32,11 @@ jobs:
           /usr/lib/postgresql/17/bin/pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
           
           echo "Uploading to first Google Drive..."
-          # MODIFIED: Use the Folder ID to upload directly to the shared folder
+          # THIS IS THE CORRECTED COMMAND using the Folder ID
           rclone copy $FILENAME :drive: --drive-root-folder-id ${{ secrets.GDRIVE_FOLDER_ID_1 }} --drive-service-account-file gdrive1.json -v
           
           echo "Uploading to second Google Drive..."
-          # MODIFIED: Use the Folder ID to upload directly to the shared folder
+          # THIS IS THE CORRECTED COMMAND using the Folder ID
           rclone copy $FILENAME :drive: --drive-root-folder-id ${{ secrets.GDRIVE_FOLDER_ID_2 }} --drive-service-account-file gdrive2.json -v
           
           rm $FILENAME
