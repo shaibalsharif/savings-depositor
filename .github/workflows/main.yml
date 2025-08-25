@@ -1,7 +1,10 @@
 name: Monthly Database Backup
 
 on:
+  # Allows manual runs from the Actions tab for testing
   workflow_dispatch:
+
+  # Runs on the 1st day of every month at 2:00 AM UTC
   schedule:
     - cron: '0 2 1 * *'
 
@@ -16,43 +19,37 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           
-          # Install PostgreSQL client version 17
+          # Install PostgreSQL client version 17 to match the Neon server
           sudo apt-get install -y postgresql-client-17
           
-          # Install rclone
+          # Install rclone for Google Drive uploads
           curl https://rclone.org/install.sh | sudo bash
 
-      - name: Debug and Verify Installations
+      - name: Create Service Account Key Files from Secrets
         run: |
-          echo "--- Verifying pg_dump version ---"
-          # Check which pg_dump is found in the default PATH
-          which pg_dump
-          # Check the version of the default pg_dump
-          pg_dump --version
-          # Check the version of the specific pg_dump v17 we installed
-          /usr/lib/postgresql/17/bin/pg_dump --version
-
-      - name: Create Service Account Key Files and Debug Secret
-        run: |
-          echo "--- Verifying Google Drive Secret ---"
-          # This next line is a SAFE way to debug. It only shows the first and last characters.
-          # A valid secret should show "{" as the start and "}" as the end.
-          echo "Secret starts with: [$(echo '${{ secrets.GDRIVE_SA_KEY_1 }}' | head -c 1)] and ends with: [$(echo '${{ secrets.GDRIVE_SA_KEY_1 }}' | tail -c 1)]"
-
           echo "${{ secrets.GDRIVE_SA_KEY_1 }}" > gdrive1.json
+          # echo "${{ secrets.GDRIVE_SA_KEY_2 }}" > gdrive2.json
         
-      - name: Perform Backup and Upload
+      - name: Perform Backup and Upload to Both Drives
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
+          # Create a unique, compressed filename
           FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
           echo "Creating backup file: $FILENAME"
           
-          # FIXED: Use the full, direct path to the version 17 executable to avoid version conflicts
+          # Use the full path to the v17 executable to ensure the correct version is used
+          # Dump the database and compress it on the fly
           /usr/lib/postgresql/17/bin/pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
           
-          echo "Uploading to Google Drive..."
+          # Upload to the first Google Drive
+          echo "Uploading to first Google Drive..."
           rclone copy $FILENAME :drive:/Neon-Backups/ --drive-service-account-file gdrive1.json -v
-
+          
+          # # Upload to the second Google Drive
+          # echo "Uploading to second Google Drive..."
+          # rclone copy $FILENAME :drive:/Neon-Backups-Redundant/ --drive-service-account-file gdrive2.json -v
+          
+          # Clean up the local file on the runner
           rm $FILENAME
           echo "Backup complete."
