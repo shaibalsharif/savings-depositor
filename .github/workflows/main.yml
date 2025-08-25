@@ -32,11 +32,11 @@ jobs:
           FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
           echo "Creating backup file: $FILENAME"
           
-          # This uses the correct pg_dump command (with an underscore)
+          # This uses the correct pg_dump command
           pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
           
           echo "Uploading to Google Drive..."
-          # This uses the correct rclone command for direct user authentication
+          # This uses the correct rclone command that is now working
           rclone copy $FILENAME gdrive_backup:"Final Backups" -v
           
           rm $FILENAME
