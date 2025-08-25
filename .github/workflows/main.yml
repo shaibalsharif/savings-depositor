@@ -11,20 +11,15 @@ jobs:
     steps:
       - name: Install Required Tools
         run: |
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
+          sudo apt-get install -y postgresql-client
           curl https://rclone.org/install.sh | sudo bash
 
-      - name: Create Service Account Key File from Base64 Secret
-        run: echo "${{ secrets.GDRIVE_SA_KEY }}" | base64 --decode > gdrive-key.json
-
-      - name: Test Drive Access by Listing Files
+      - name: Configure Rclone from Secret
         run: |
-          echo "Attempting to list files in the target folder to verify permissions..."
-          rclone ls :drive: --drive-root-folder-id ${{ secrets.GDRIVE_FOLDER_ID }} --drive-service-account-file gdrive-key.json -v
-
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONF_BASE64 }}" | base64 --decode > ~/.config/rclone/rclone.conf
+        
       - name: Perform Backup and Upload
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
@@ -32,10 +27,11 @@ jobs:
           FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
           echo "Creating backup file: $FILENAME"
           
-          /usr/lib/postgresql/17/bin/pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
+          pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
           
           echo "Uploading to Google Drive..."
-          rclone copy $FILENAME :drive: --drive-root-folder-id ${{ secrets.GDRIVE_FOLDER_ID }} --drive-service-account-file gdrive-key.json -v
+          # This command now uses the named remote and uploads to the folder by name
+          rclone copy $FILENAME gdrive_backup:"Final Backups" -v
           
           rm $FILENAME
           echo "Backup complete."
