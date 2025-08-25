@@ -25,10 +25,16 @@ jobs:
           # Install rclone for Google Drive uploads
           curl https://rclone.org/install.sh | sudo bash
 
-      - name: Create Service Account Key Files from Secrets
+      - name: Create Service Account Key Files and Debug Secret
         run: |
+          echo "--- Verifying Google Drive Secret ---"
+          # This is a SAFE debugging line. It only shows the first and last characters.
+          # A VALID secret will show: Secret starts with: [{] and ends with: [}]
+          # Your current secret will likely show: Secret starts with: [t]
+          echo "Secret starts with: [$(echo '${{ secrets.GDRIVE_SA_KEY_1 }}' | head -c 1)] and ends with: [$(echo '${{ secrets.GDRIVE_SA_KEY_1 }}' | tail -c 1)]"
+
           echo "${{ secrets.GDRIVE_SA_KEY_1 }}" > gdrive1.json
-          # echo "${{ secrets.GDRIVE_SA_KEY_2 }}" > gdrive2.json
+          echo "${{ secrets.GDRIVE_SA_KEY_2 }}" > gdrive2.json
         
       - name: Perform Backup and Upload to Both Drives
         env:
