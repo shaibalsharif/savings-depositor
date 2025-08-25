@@ -9,7 +9,6 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      # This step correctly installs the newer postgresql-client-17
       - name: Install Required Tools
         run: |
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
@@ -18,28 +17,22 @@ jobs:
           sudo apt-get install -y postgresql-client-17
           curl https://rclone.org/install.sh | sudo bash
 
-      # This step correctly configures rclone using the direct user authentication
       - name: Configure Rclone from Secret
         run: |
           mkdir -p ~/.config/rclone
           echo "${{ secrets.RCLONE_CONF_BASE64 }}" | base64 --decode > ~/.config/rclone/rclone.conf
         
-      # This step correctly creates and uploads the backup
       - name: Perform Backup and Upload
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          # This line PROVES you are running the correct version of the workflow.
-          echo "--- RUNNING THE LATEST WORKFLOW VERSION ---"
-
           FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
           echo "Creating backup file: $FILENAME"
           
-          # This uses the correct pg_dump command
-          pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
+          # FINAL FIX: Use the full, direct path to the pg_dump v17 executable
+          /usr/lib/postgresql/17/bin/pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
           
           echo "Uploading to Google Drive..."
-          # This uses the correct rclone command that is now working
           rclone copy $FILENAME gdrive_backup:"Final Backups" -v
           
           rm $FILENAME
