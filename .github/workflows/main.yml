@@ -29,6 +29,9 @@ jobs:
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
+          # This line PROVES you are running the correct version of the workflow.
+          echo "--- RUNNING THE LATEST WORKFLOW VERSION ---"
+
           FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
           echo "Creating backup file: $FILENAME"
           
