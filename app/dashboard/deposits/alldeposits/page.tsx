@@ -5,7 +5,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { format, addMonths, startOfMonth } from "date-fns";
 import { Suspense } from "react";
 import { getKindeManagementToken } from "@/lib/kinde-management";
-import { AllDeposit } from "@/types";
+import { AllDeposit } from "@/types/types";
 import { db } from "@/lib/db";
 import { users } from "@/db/schema";
 

@@ -6,7 +6,7 @@ import { deposits, users, funds, logs, personalInfo } from "@/db/schema";
 import { eq, and, desc, asc } from "drizzle-orm";
 import { z } from "zod";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { FullDeposit, Fund } from "@/types";
+import { FullDeposit, Fund } from "@/types/types";
 import { sendDepositReviewNotification } from "../notifications/depositNotifications";
 
 export async function getPendingDeposits(

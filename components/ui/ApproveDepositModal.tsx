@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FullDeposit, Fund } from "@/types";
+import { FullDeposit, Fund } from "@/types/types";
 
 interface ApproveDepositModalProps {
     isOpen: boolean;

@@ -13,7 +13,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 
-import { FullWithdrawal, Fund } from "@/types";
+import { FullWithdrawal, Fund } from "@/types/types";
 
 import { format, parseISO } from "date-fns";
 

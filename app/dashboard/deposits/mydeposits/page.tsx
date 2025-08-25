@@ -2,7 +2,7 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { getMyDeposits } from "@/lib/actions/deposits/getMyDeposits";
 import { MyDepositsTable } from "@/components/dashboard/tables/MyDepositsTable";
-import { Deposit } from "@/types";
+import { Deposit } from "@/types/types";
 import { Suspense } from "react";
 
 function MyDepositsTableLoading() {

@@ -5,7 +5,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
 import { reviewWithdrawal } from "@/lib/actions/withdrawals/withdrawals";
-import { FullWithdrawal, Fund } from "@/types";
+import { FullWithdrawal, Fund } from "@/types/types";
 import { Eye, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";

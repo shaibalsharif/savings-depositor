@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { deposits, personalInfo, users } from "@/db/schema";
 import { eq, and, desc, gte, lte, asc, sql } from "drizzle-orm";
 import { z } from "zod";
-import { AllDeposit } from "@/types";
+import { AllDeposit } from "@/types/types";
 import { endOfDay, startOfMonth, endOfMonth } from "date-fns";
 
 const filterSchema = z.object({

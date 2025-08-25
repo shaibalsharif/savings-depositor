@@ -5,7 +5,7 @@ import { deposits } from "@/db/schema";
 import { eq, and, desc, gte, lte, asc } from "drizzle-orm";
 import { z } from "zod";
 import { parseISO, } from "date-fns";
-import { Deposit } from "@/types";
+import { Deposit } from "@/types/types";
 
 // Define a Zod schema for input validation
 const filterSchema = z.object({

@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 
 import AllWithdrawalsTab from "./AllWithdrawalsTab";
 
-import { FullWithdrawal, Fund } from "@/types";
+import { FullWithdrawal, Fund } from "@/types/types";
 
 import PendingWithdrawalsTab from "./PendingWithdrawalsTab";
 

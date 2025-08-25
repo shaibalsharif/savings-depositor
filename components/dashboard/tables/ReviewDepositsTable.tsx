@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { reviewDeposit } from "@/lib/actions/deposits/reviewDeposits";
 import { toast } from "sonner";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
-import { FullDeposit, Fund } from "@/types";
+import { FullDeposit, Fund } from "@/types/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface ReviewDepositsTableProps {

@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
-import { FullWithdrawal, Withdrawal, Fund } from "@/types"; // Import your base types
+import { FullWithdrawal, Withdrawal, Fund } from "@/types/types"; // Import your base types
 
 import { parseISO } from "date-fns";
 import {

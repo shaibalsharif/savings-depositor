@@ -14,7 +14,7 @@ import { requestWithdrawal } from "@/lib/actions/withdrawals/withdrawals";
 import { useRouter } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
-import { Fund } from "@/types";
+import { Fund } from "@/types/types";
 
 interface RequestWithdrawalTabProps {
   funds: Fund[];
