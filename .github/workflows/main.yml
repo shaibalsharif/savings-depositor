@@ -19,7 +19,12 @@ jobs:
 
       - name: Create Service Account Key File from Base64 Secret
         run: echo "${{ secrets.GDRIVE_SA_KEY }}" | base64 --decode > gdrive-key.json
-        
+
+      - name: Test Drive Access by Listing Files
+        run: |
+          echo "Attempting to list files in the target folder to verify permissions..."
+          rclone ls :drive: --drive-root-folder-id ${{ secrets.GDRIVE_FOLDER_ID }} --drive-service-account-file gdrive-key.json -v
+
       - name: Perform Backup and Upload
         env:
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
@@ -27,7 +32,6 @@ jobs:
           FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
           echo "Creating backup file: $FILENAME"
           
-          # TYPO FIXED HERE: Correct command is pg_dump (with an underscore)
           /usr/lib/postgresql/17/bin/pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
           
           echo "Uploading to Google Drive..."
