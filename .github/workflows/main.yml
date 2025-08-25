@@ -1,0 +1,48 @@
+name: Monthly Database Backup
+
+on:
+  # Allows you to run this workflow manually from the Actions tab for testing
+  workflow_dispatch:
+
+  # Runs on the 1st day of every month at 2:00 AM UTC
+  schedule:
+    - cron: '0 2 1 * *'
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Required Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          curl https://rclone.org/install.sh | sudo bash
+
+      - name: Create Service Account Key Files
+        run: |
+          echo "${{ secrets.GDRIVE_SA_KEY_1 }}" > gdrive1.json
+          # echo "${{ secrets.GDRIVE_SA_KEY_2 }}" > gdrive2.json
+        
+      - name: Perform Backup and Upload
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          # Create a unique, compressed filename
+          FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
+          echo "Creating backup file: $FILENAME"
+          
+          # Dump the database and compress it on the fly
+          pg_dump "$NEON_DATABASE_URL" | gzip > $FILENAME
+          
+          # Upload to the first Google Drive using its service account key
+          echo "Uploading to first Google Drive..."
+          rclone copy $FILENAME :drive:/Neon-Backups/ --drive-service-account-file gdrive1.json -v
+          
+          # # Upload to the second Google Drive using its service account key
+          # echo "Uploading to second Google Drive..."
+          # rclone copy $FILENAME :drive:/Neon-Backups-Redundant/ --drive-service-account-file gdrive2.json -v
+          
+          # Clean up the local file on the runner
+          rm $FILENAME
+          
+          echo "Backup complete."
