@@ -16,6 +16,7 @@ export interface PersonalInfoData {
   name: string | null;
   nameBn: string | null;
   father: string | null;
+  mother: string | null;
   dob: string | null;
   profession: string | null;
   religion: string | null;
@@ -63,6 +64,7 @@ const personalInfoSchema = z.object({
   name: z.string().nullable().optional(),
   nameBn: z.string().nullable().optional(),
   father: z.string().nullable().optional(),
+  mother: z.string().nullable().optional(),
   dob: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)

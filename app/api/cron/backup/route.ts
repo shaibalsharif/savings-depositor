@@ -1,8 +1,9 @@
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
+import { spawn } from 'child_process'; // Import spawn from child_process
 import stream from 'stream';
 
-// Helper function to create a Google Drive client
+// Helper function to create a Google Drive client from credentials
 const createDriveClient = (credentialsJson: string) => {
     const credentials = JSON.parse(credentialsJson);
     const auth = new google.auth.GoogleAuth({
@@ -12,7 +13,7 @@ const createDriveClient = (credentialsJson: string) => {
     return google.drive({ version: 'v3', auth });
 };
 
-// Helper function to handle the file upload
+// Helper function to handle the file upload logic
 const uploadToDrive = (driveClient: any, folderId: string, fileName: string, dataStream: stream.Readable) => {
     return driveClient.files.create({
         requestBody: {
@@ -27,6 +28,7 @@ const uploadToDrive = (driveClient: any, folderId: string, fileName: string, dat
 };
 
 export async function GET() {
+    // Check for the primary drive's environment variables.
     const requiredVars = [
         'DATABASE_URL',
         'GOOGLE_SERVICE_ACCOUNT_CREDENTIALS',
@@ -39,40 +41,40 @@ export async function GET() {
     }
 
     try {
-        console.log('Starting database backup using pg-dump package...');
+        console.log('Starting database backup to a single drive...');
 
-        // 1. Dynamically import the pg-dump package
-        // This resolves the Next.js build issue.
-        const { default: pgDump } = await import('pg-dump');
+        // 1. Create a single Google Drive client
+        const drive1 = createDriveClient(process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS!);
 
-        // 2. Create the Google Drive client
-        const driveClient = createDriveClient(process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS!);
-        
-        // 3. Create the backup stream using the library
-        const dumpStream = new stream.PassThrough();
-        const dump = new pgDump({ connectionString: process.env.DATABASE_URL! });
-        
-        // Handle potential errors from the dump process itself
-        dump.on('error', (err: any) => {
-            console.error('Error from pg-dump:', err);
-            // Close the stream on error to prevent hanging
-            dumpStream.end();
+        // 2. Execute the native pg_dump command and get its output as a stream
+        const dumpProcess = spawn('pg_dump', [
+            '--dbname',
+            process.env.DATABASE_URL!,
+            '-F', 'c', // Custom format, good for pg_restore
+            '-b',      // Include large objects (blobs)
+            '-v'       // Verbose logging
+        ]);
+
+        const dumpStream = dumpProcess.stdout;
+        console.log(dumpStream);
+
+        // Essential: Handle errors from the pg_dump command itself
+        dumpProcess.stderr.on('data', (data) => {
+            console.error(`pg_dump stderr: ${data}`);
         });
 
-        dump.dump(dumpStream);
-        
-        // 4. Start the upload
+        // 3. Start the upload using the stream from the command
         const date = new Date().toISOString().split('T')[0];
-        const fileName = `backup-${date}.sql`;
+        const fileName = `backup-${date}.sql.backup`; // Use a .backup extension for custom format
 
-        const result = await uploadToDrive(driveClient, process.env.GOOGLE_DRIVE_FOLDER_ID!, fileName, dumpStream);
+        const result = await uploadToDrive(drive1, process.env.GOOGLE_DRIVE_FOLDER_ID!, fileName, dumpStream);
 
         console.log('Upload completed successfully.');
         return NextResponse.json({
             success: true,
             result: {
                 drive: 1,
-                fileId: result.data.id,
+                fileId: result.data.id
             },
         });
 
@@ -82,4 +84,5 @@ export async function GET() {
     }
 }
 
+// Set a longer timeout for the function, as backups can take time.
 export const maxDuration = 300; // 5 minutes

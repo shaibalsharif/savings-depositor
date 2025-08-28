@@ -26,6 +26,7 @@ export default function PersonalInfoTab({ initialInfo, kindeUser }: PersonalInfo
     name: null,
     nameBn: null,
     father: null,
+    mother: null,
     dob: null,
     profession: null,
     religion: null,
@@ -150,6 +151,15 @@ export default function PersonalInfoTab({ initialInfo, kindeUser }: PersonalInfo
               onChange={e => setForm({ ...form, father: e.target.value })}
               className="w-full"
               disabled={isFieldDisabled("father") || loading}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Mother's Name</Label>
+            <Input
+              value={form.mother || ""}
+              onChange={e => setForm({ ...form, mother: e.target.value })}
+              className="w-full"
+              disabled={isFieldDisabled("mother") || loading}
             />
           </div>
           <div>

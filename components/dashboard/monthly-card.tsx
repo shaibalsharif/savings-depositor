@@ -20,7 +20,7 @@ export function MonthlyCard({ data }: MonthlyCardProps) {
   return (
     <Card className="relative overflow-hidden">
       <CardHeader className="pb-2">
-        <CardTitle>This Month</CardTitle>
+        <CardTitle className="z-10">This Month</CardTitle>
         <CardDescription>Current month's progress</CardDescription>
       </CardHeader>
       <CardContent className="relative z-10">

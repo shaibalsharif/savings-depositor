@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Project 13 সদস্য ফর্ম</title>
+
+    <style>
+      @page {
+        size: A4;
+        margin: 12px;
+        border: 1.5pt solid black;
+        padding: 12px;
+        box-sizing: border-box;
+        /* background-color: aquamarine; */
+         background-image: url("https://t4.ftcdn.net/jpg/02/90/27/39/360_F_290273933_ukYZjDv8nqgpOBcBUo5CQyFcxAzYlZRW.jpg");
+        background-size: contain; /* make it fill */
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+
+      .uppercase {
+        text-transform: uppercase;
+      }
+      .mr-2 {
+        margin-right: 16px;
+      }
+      .card-image {
+        width: 40vw;
+        margin-right: auto;
+        margin-left: auto;
+        border: 2px solid black;
+        padding: 4px;
+      }
+      body {
+        font-family: "Kalpurush", sans-serif;
+        margin: 0;
+        padding: 0;
+        position: relative;
+       
+      }
+
+      .page-container {
+        position: relative;
+
+        z-index: 10;
+      }
+
+      .header {
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        margin-bottom: 20px;
+      }
+
+      .header-logo {
+        width: 80px;
+
+        height: 80px;
+      }
+
+      .header-title {
+        font-family: "Kalpurush";
+
+        font-size: 20px;
+
+        text-align: center;
+
+        flex-grow: 1;
+
+        margin: 0 10px;
+      }
+
+      .profile-image {
+        width: 200px;
+
+        border: 1px solid black;
+
+        padding: 2px;
+
+        background-color: white;
+      }
+
+      .section {
+        margin-bottom: 15px;
+
+        page-break-inside: avoid;
+      }
+
+      .section-title {
+        font-size: 14px;
+
+        font-family: "Kalpurush";
+
+        text-decoration: underline;
+
+        margin-bottom: 5px;
+
+        display: inline-flex;
+
+        align-items: center;
+      }
+
+      .field-row {
+        display: flex;
+
+        justify-content: space-between;
+
+        margin-bottom: 8px;
+
+        font-size: 12px;
+
+        font-family: "Kalpurush";
+      }
+
+      .field-half {
+        width: 48%;
+      }
+
+      .field-full {
+        width: 100%;
+      }
+
+      .field-label {
+        font-family: "Kalpurush";
+      }
+
+      .field-value {
+        border-bottom: 1px dotted black;
+
+        padding-left: 5px;
+
+        margin-top: 2px;
+
+        font-size: 12px;
+      }
+
+      .checkbox-container {
+        display: flex;
+
+        align-items: center;
+
+        width: 100%;
+
+        margin-bottom: 5px;
+      }
+
+      .checkbox {
+        width: 12px;
+
+        height: 12px;
+
+        border: 1px solid black;
+
+        margin-right: 5px;
+      }
+
+      .signature-container {
+        display: flex;
+
+        justify-content: space-between;
+
+        margin-top: 30px;
+      }
+
+      .signature-block {
+        width: 45%;
+
+        border-top: 1px solid black;
+
+        padding-top: 5px;
+
+        text-align: center;
+
+        font-size: 10px;
+      }
+
+      .terms-text {
+        white-space: pre-line;
+        font-size: 10px;
+        line-height: 1.5;
+        font-family: "Kalpurush";
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="page-container">
+    
+
+      <div class="header">
+        <img class="header-logo" src="{{images.logoUrl}}" />
+
+        <h1 class="header-title">Project 13 সদস্য ফর্ম</h1>
+
+        <img class="profile-image" src="{{user.picture}}" />
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">🧾 ব্যক্তিগত তথ্য</h2>
+
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">১. নাম (বাংলায়):</div>
+
+            <div class="field-value">{{info.nameBn}}</div>
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">২. নাম (ইংরেজিতে):</div>
+
+            <div class="field-value uppercase">{{user.name}}</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">৩. পিতার নাম / স্বামীর নাম:</div>
+
+            <div class="field-value uppercase">{{info.father}}</div>
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">৪. মাতার নাম:</div>
+
+            <div class="field-value uppercase">{{info.mother}}</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">৫. জন্ম তারিখ:</div>
+
+            <div class="field-value">{{info.dob}}</div>
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">
+              ৬. জাতীয় পরিচয়পত্র / জন্ম সনদ নম্বর:
+            </div>
+
+            <div class="field-value">{{info.nidNumber}}</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">৭. পেশা:</div>
+
+            <div class="field-value">{{info.profession}}</div>
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">৮. ধর্ম:</div>
+
+            <div class="field-value">{{info.religion}}</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-full">
+            <div class="field-label">৯. স্থায়ী ঠিকানা:</div>
+
+            <div class="field-value">{{info.permanentAddress}}</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-full">
+            <div class="field-label">১০. বর্তমান ঠিকানা:</div>
+
+            <div class="field-value">{{info.presentAddress}}</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">১১. মোবাইল নম্বর:</div>
+
+            <div class="field-value">{{info.mobile}}</div>
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">১২. ইমেইল:</div>
+
+            <div class="field-value">{{user.email}}</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">১১. এন আই ডি সম্মুখ:</div>
+            <img class="card-image" src="{{info.nidFront}}" />
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">১২. এন আই ডি পশ্চাৎ:</div>
+
+            <img class="card-image" src="{{info.nidBack}}" />
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">👤 নমিনি (উত্তরাধিকারী) তথ্য</h2>
+
+        <div class="field-row" style="align-items: center">
+          <div class="field-half" style="display: flex; align-items: center">
+            <div class="field-label">নমিনির ছবি:</div>
+
+            <img class="profile-image" src="{{nominee.photo}}" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">১৩. নমিনির নাম:</div>
+
+            <div class="field-value uppercase">{{nominee.name}}</div>
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">১৪. সম্পর্ক:</div>
+
+            <div class="field-value uppercase">{{nominee.relation}}</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">১৫. জন্ম তারিখ:</div>
+
+            <div class="field-value">{{nominee.dob}}</div>
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">১৬. মোবাইল নম্বর:</div>
+
+            <div class="field-value">{{nominee.mobile}}</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-half">
+            <div class="field-label">১৭. জাতীয় পরিচয়পত্র নম্বর:</div>
+
+            <div class="field-value">{{nominee.nidNumber}}</div>
+          </div>
+
+          <div class="field-half">
+            <div class="field-label">১৮. ঠিকানা:</div>
+
+            <div class="field-value">{{nominee.address}}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">📌 কমিটির তথ্য</h2>
+
+        <div class="field-row">
+          <div class="field-full">
+            <div class="field-label">১৯. আপনি কোন পদে আবেদন করছেন?:</div>
+
+            <div class="checkbox-container">
+              <div class="checkbox"></div>
+
+              <div class="field-label mr-2">সভাপতি</div>
+
+              <div class="checkbox"></div>
+
+              <div class="field-label mr-2">সাধারণ সম্পাদক</div>
+
+              <div class="checkbox"></div>
+
+              <div class="field-label mr-2">সাংগঠনিক সম্পাদক</div>
+
+              <div class="checkbox"></div>
+
+              <div class="field-label mr-2">অর্থ সম্পাদক</div>
+
+              <div class="checkbox"></div>
+
+              <div class="field-label">সদস্য</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">
+          📜 সদস্যদের জন্য মাসিক জমা ও প্রকল্পের নিয়মাবলী
+        </h2>
+
+        <p class="terms-text">{{termsContent}}</p>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">✅ ঘোষণাপত্র</h2>
+
+        <p class="terms-text">
+          আমি এই মর্মে ঘোষণা করছি যে, উপরের প্রদত্ত সকল তথ্য সত্য এবং সঠিক।
+          সংগঠনের সকল নিয়মনীতি মেনে চলার অঙ্গীকার করছি।
+        </p>
+
+        <div class="signature-container">
+          <div class="signature-block">আবেদনকারীর স্বাক্ষর</div>
+
+          <div class="signature-block">তারিখ</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">☑️ কমিটির ব্যবহারের জন্য</h2>
+
+        <div class="field-row">
+          <div class="checkbox-container">
+            <div class="checkbox"></div>
+
+            <div class="field-label">গৃহীত</div>
+          </div>
+
+          <div class="checkbox-container">
+            <div class="checkbox"></div>
+
+            <div class="field-label">গৃহীত নয়</div>
+          </div>
+        </div>
+
+        <div class="signature-container">
+          <div class="signature-block">সভাপতির স্বাক্ষর</div>
+
+          <div class="signature-block">সাধারণ সম্পাদকের স্বাক্ষর</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

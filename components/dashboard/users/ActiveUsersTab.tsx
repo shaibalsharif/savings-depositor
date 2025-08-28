@@ -1,3 +1,5 @@
+// components/dashboard/users/ActiveUsersTab.tsx
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -19,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+import { FileDown } from 'lucide-react';
+import { generateUserInfoPdf } from "@/lib/actions/util/generateInfoPdf";
 
 function getUserRole(permissions: string[] = []) {
   const role = ["user"];
@@ -34,6 +38,7 @@ export default function ActiveUsersTab({ initialUsers, onUpdate }: { initialUser
   const [assigningManager, setAssigningManager] = useState<string | null>(null);
   const [confirmManagerId, setConfirmManagerId] = useState<string | null>(null);
   const [suspendingUser, setSuspendingUser] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
 
   const filteredUsers = useMemo(() => {
     return initialUsers.filter(u =>
@@ -79,6 +84,42 @@ export default function ActiveUsersTab({ initialUsers, onUpdate }: { initialUser
       toast({ title: "Failed to suspend user", description: e.message, variant: "destructive" });
     } finally {
       setSuspendingUser(null);
+    }
+  };
+
+  const handleDownloadPdf = async (userId: string, userName: string) => {
+    setDownloadingPdf(userId);
+    try {
+      const result = await generateUserInfoPdf(userId);
+
+      // Type Guard: Check if the result is an object with an 'error' property
+      if (typeof result === 'object' && result !== null && 'error' in result) {
+        // If it's an error object, throw a new Error with the error message
+        throw new Error((result as { error: string }).error);
+      }
+
+      // The result is a Buffer, which is compatible with ArrayBuffer
+      const blob = new Blob([result as unknown as ArrayBuffer], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${userName}_info.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({ title: "PDF Generated", description: "The user information PDF has been downloaded." });
+    } catch (e: unknown) { // Use 'unknown' here for safety
+      let errorMessage = "An unexpected error occurred.";
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      } else if (typeof e === "object" && e !== null && "error" in e) {
+        errorMessage = (e as { error: string }).error;
+      }
+      toast({ title: "Failed to generate PDF", description: errorMessage, variant: "destructive" });
+    } finally {
+      setDownloadingPdf(null);
     }
   };
 
@@ -143,6 +184,16 @@ export default function ActiveUsersTab({ initialUsers, onUpdate }: { initialUser
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2 ">
+                          {/* Download PDF Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadPdf(member.id, `${member.first_name} ${member.last_name}`)}
+                            disabled={downloadingPdf === member.id}
+                          >
+                            <FileDown className="h-4 w-4 mr-2" />
+                            {downloadingPdf === member.id ? "Generating..." : "PDF"}
+                          </Button>
                           {/* Manager Assignment Dialog */}
                           {member.status === "active" && !role.includes("admin") && (
                             <Dialog open={confirmManagerId === member.id} onOpenChange={open => setConfirmManagerId(open ? member.id : null)}>

@@ -1,0 +1,1 @@
+ALTER TABLE "personal_info" ADD COLUMN "mother" varchar(255);

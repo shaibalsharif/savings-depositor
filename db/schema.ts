@@ -84,6 +84,7 @@ export const personalInfo = pgTable("personal_info", {
   name: varchar("name", { length: 255 }),
   nameBn: varchar("name_bn", { length: 255 }),
   father: varchar("father", { length: 255 }),
+  mother: varchar("mother", { length: 255 }),
   dob: date("dob"),
   profession: varchar("profession", { length: 255 }),
   religion: varchar("religion", { length: 255 }),
@@ -216,7 +217,9 @@ export const users = pgTable("users", {
 
 export const notificationSettings = pgTable("notification_settings", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .references(() => users.id),
   emailNotifications: boolean("email_notifications").default(true).notNull(),
   smsNotifications: boolean("sms_notifications").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
