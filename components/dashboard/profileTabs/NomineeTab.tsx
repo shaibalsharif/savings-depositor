@@ -36,6 +36,7 @@ export default function NomineeTab({ initialInfo }: NomineeTabProps) {
     address: null,
     photo: null,
   };
+  console.log(initialInfo);
 
   const [form, setForm] = useState<NomineeInfoData>(
     "error" in initialInfo ? initialForm : initialInfo.nomineeInfo || initialForm
@@ -128,26 +129,32 @@ export default function NomineeTab({ initialInfo }: NomineeTabProps) {
 
           <div className="space-y-2 col-span-full">
             <Label>Photo</Label>
-            {(file || form.photo) && !isFieldDisabled("photo") ? (
+            {form.photo ? (
+              // Show preview if there's a photo (existing or newly selected)
               <div className="relative rounded-md border border-dashed p-4 w-48 mx-auto">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-2"
-                  onClick={handleRemovePhoto}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                {!isFieldDisabled("photo") && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-2"
+                    onClick={handleRemovePhoto}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
                 <div className="flex flex-col items-center gap-2 text-center">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src={file ? URL.createObjectURL(file) : form.photo || ""} />
+                    <AvatarImage src={file ? URL.createObjectURL(file) : form.photo} />
                     <AvatarFallback>IMG</AvatarFallback>
                   </Avatar>
-                  <p className="text-sm text-muted-foreground">Image ready to upload</p>
+                  {!isFieldDisabled("photo") && (
+                    <p className="text-sm text-muted-foreground">Image ready to upload</p>
+                  )}
                 </div>
               </div>
             ) : (
+              // No photo → show file input
               <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-8">
                 <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
                 <div className="mb-2 text-center">
@@ -172,6 +179,7 @@ export default function NomineeTab({ initialInfo }: NomineeTabProps) {
               </div>
             )}
           </div>
+
         </CardContent>
         <CardFooter className="flex justify-center">
           <Button type="submit" disabled={!isDirty || loading} className="w-full sm:w-auto px-8 py-2">

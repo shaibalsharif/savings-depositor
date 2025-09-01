@@ -229,6 +229,7 @@ export default function PersonalInfoTab({ initialInfo, kindeUser }: PersonalInfo
 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
             <NidPhotoInput
               label="NID Front Photo"
               existingImageUrl={form.nidFront ?? undefined}

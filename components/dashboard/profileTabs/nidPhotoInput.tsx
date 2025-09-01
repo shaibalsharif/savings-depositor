@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Upload, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Image from "next/image";
 
 interface NidPhotoInputProps {
   label: string;
@@ -35,7 +36,7 @@ export default function NidPhotoInput({ label, existingImageUrl, onChange, disab
     setPreviewUrl(null);
     onChange(null);
   };
-  
+
   useEffect(() => {
     setPreviewUrl(existingImageUrl || null);
   }, [existingImageUrl]);
@@ -57,10 +58,10 @@ export default function NidPhotoInput({ label, existingImageUrl, onChange, disab
             </Button>
           )}
           <div className="flex flex-col items-center gap-2 text-center">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={previewUrl} />
-              <AvatarFallback>NID</AvatarFallback>
-            </Avatar>
+            
+              <Image alt="" width={"100"} height={"65"} src={previewUrl} />
+           
+            
             <p className="text-sm text-muted-foreground">Image selected</p>
           </div>
         </div>
