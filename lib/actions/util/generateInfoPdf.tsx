@@ -41,8 +41,9 @@ export async function generateUserInfoPdf(userId: string) {
     }
 
     // ✅ Read HTML template
-    const htmlTemplatePath = path.join(process.cwd(), "lib/actions/util/pdf_template.html");
-    const templateSource = fs.readFileSync(htmlTemplatePath, "utf-8");
+
+    const htmltemplatePath = path.join(process.cwd(), "public/assets/templates/pdf_template.html");
+    const templateSource = fs.readFileSync(htmltemplatePath, "utf-8");
     const template = Handlebars.compile(templateSource);
 
     // ✅ Fonts as base64
