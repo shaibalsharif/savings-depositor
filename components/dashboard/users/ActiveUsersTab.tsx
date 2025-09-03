@@ -157,6 +157,7 @@ export default function ActiveUsersTab({ initialUsers, onUpdate }: { initialUser
                 filteredUsers.map((member) => {
                   const role = getUserRole(member.permissions);
                   const isCurrentUser = member.id === user?.id;
+                 
 
                   return (
                     <TableRow key={member.id}>

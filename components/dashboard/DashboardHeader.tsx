@@ -77,19 +77,23 @@ export function DashboardHeader({ onMenuToggle, user, permissions, unreadNotific
                         <DropdownMenuLabel>Unread Notifications</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {hasUnread ? (
-                            unreadNotifications.map((notif) => (
-                                <DropdownMenuItem
-                                    key={notif.id}
-                                    className="flex flex-col space-y-1"
-                                >
-                                    <Link href={`/dashboard/notifications?id=${notif.id}`} passHref>
-                                        <p className="text-sm font-medium truncate">{notif.message}</p>
-                                        <p className="text-xs text-muted-foreground truncate">
-                                            {new Date(notif.createdAt).toLocaleString()}
-                                        </p>
-                                    </Link>
-                                </DropdownMenuItem>
-                            ))
+                            unreadNotifications.map((notif) => {
+                                
+                                
+                                return (
+                                    <DropdownMenuItem
+                                        key={notif.id}
+                                        className="flex flex-col space-y-1 max-w-72 items-start"
+                                    >
+                                        <Link href={`/dashboard/notifications?id=${notif.id}`} passHref>
+                                            <p className="text-sm font-medium text-wrap"><span className="mr-2">📌</span>{notif.notification.message}</p>
+                                            <p className="text-xs text-muted-foreground truncate self-center">
+                                                {new Date(notif.notification.createdAt).toLocaleString()}
+                                            </p>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                )
+                            })
                         ) : (
                             <DropdownMenuItem disabled>
                                 <p className="text-sm text-muted-foreground">No unread notifications</p>

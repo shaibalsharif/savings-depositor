@@ -12,6 +12,11 @@ import {
 } from "../notifications/userNotifications";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
+function isGravatar(url?: string): boolean {
+  if (!url) return false;
+  return url.includes("gravatar.com") || url.includes("gravatar");
+}
+
 const createUserSchema = z.object({
   email: z.string().email(),
   given_name: z.string().min(1),
@@ -81,14 +86,26 @@ export async function fetchAllUsers(
       const permissions = permsMap.get(kindeUser.id) || [];
       const status = dbUser?.isSuspended ? "archived" : "active";
 
+      // 🖼 Picture logic
+      let finalPicture = dbUser?.picture || null; // prefer DB
+      if (
+        !finalPicture &&
+        kindeUser.picture &&
+        !isGravatar(kindeUser.picture)
+      ) {
+        finalPicture = kindeUser.picture;
+      }
+
+      
+
       return {
         id: kindeUser.id,
-        first_name: kindeUser.given_name,
-        last_name: kindeUser.family_name,
+        first_name: kindeUser.given_name || kindeUser.first_name,
+        last_name: kindeUser.family_name || kindeUser.last_name,
         email: kindeUser.email,
-        picture: kindeUser.picture || dbUser?.picture || null,
+        picture: finalPicture,
         username: kindeUser.username,
-        status, // Use status from local DB
+        status,
         permissions,
         isSuspended: dbUser?.isSuspended || false,
       };

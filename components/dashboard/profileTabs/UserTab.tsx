@@ -191,7 +191,7 @@ export default function UserTab({ initialProfile }: UserTabProps) {
             </div>
           </div>
 
-          <div className="flex justify-between pt-4 max-w-xl mx-auto -translate-y-32 gap-6">
+          <div className="flex justify-between pt-4 max-w-xl mx-auto lg:-translate-y-32 gap-6">
             <Button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(!isEditing) }} variant="secondary" className="w-full sm:w-auto">
               {isEditing ? "Cancel" : "Edit"}
             </Button>
