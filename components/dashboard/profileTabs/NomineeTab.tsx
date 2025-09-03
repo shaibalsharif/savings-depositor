@@ -36,7 +36,7 @@ export default function NomineeTab({ initialInfo }: NomineeTabProps) {
     address: null,
     photo: null,
   };
-  console.log(initialInfo);
+ 
 
   const [form, setForm] = useState<NomineeInfoData>(
     "error" in initialInfo ? initialForm : initialInfo.nomineeInfo || initialForm
