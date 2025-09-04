@@ -59,7 +59,7 @@ export default function NidPhotoInput({ label, existingImageUrl, onChange, disab
           )}
           <div className="flex flex-col items-center gap-2 text-center">
             
-              <Image alt="" width={"100"} height={"65"} src={previewUrl} />
+              <Image alt="" width={250} height={"130"} src={previewUrl} />
            
             
             <p className="text-sm text-muted-foreground">Image selected</p>

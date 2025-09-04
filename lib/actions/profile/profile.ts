@@ -57,6 +57,9 @@ const updateUserSchema = z.object({
   given_name: z.string().min(1, "First name is required"),
   family_name: z.string().min(1, "Last name is required"),
   picture: z.string().optional().nullable(),
+  // phone: z.string().optional().nullable(),
+  // email: z.string().optional().nullable(),
+  username: z.string().optional().nullable(),
 });
 
 // FIX: Add nullable() to the schema to correctly handle null values from the form
@@ -94,6 +97,79 @@ const nomineeSchema = z.object({
   address: z.string().nullable().optional(),
   photo: z.string().nullable().optional(),
 });
+
+export async function updateUserEmailAndPhone(
+  userId: string,
+  newEmail: string,
+  newPhone: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const token = await getKindeManagementToken();
+
+    // Fetch current user first
+    const res = await fetch(
+      `${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${userId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const current = await res.json();
+
+    // Compare changes
+    const emailChanged = newEmail && newEmail !== current.preferred_email;
+    const phoneChanged = newPhone && newPhone !== current.phone;
+
+    // Patch Kinde user
+    const updateRes = await fetch(
+      `${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${userId}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: newEmail,
+          phone: newPhone,
+        }),
+      }
+    );
+
+    if (!updateRes.ok) {
+      const errData = await updateRes.json();
+      return {
+        success: false,
+        error: errData.message || "Failed to update user in Kinde",
+      };
+    }
+
+    // Update local DB
+    await db
+      .update(users)
+      .set({
+        email: newEmail,
+      })
+      .where(eq(users.id, userId));
+
+    await db
+      .update(personalInfo)
+      .set({
+        mobile: newPhone,
+      })
+      .where(eq(personalInfo.userId, userId));
+
+    return { success: true };
+  } catch (err) {
+    console.error("Error updating email/phone:", err);
+    return { success: false, error: "Internal server error" };
+  }
+}
+
+// Helper function to detect gravatar fallback
+function isGravatar(url?: string): boolean {
+  if (!url) return false;
+  return url.includes("gravatar.com") || url.includes("gravatar");
+}
 
 // Helper function to delete old image from UploadThing
 async function deleteOldImage(url: string) {
@@ -150,20 +226,29 @@ export async function fetchUserProfile(
 
     // FIX: Access the JSON object directly, as it's a single user.
     const kindeUser = await kindeRes.json();
+    const dbUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, kindeUser.id));
 
     // Fetch user details from your personalInfo table
-    const personalDetails = await fetchUserPersonalDetails(userId);
+    // const personalDetails = await fetchUserPersonalDetails(userId);
+    // 🖼 Picture logic
+    let finalPicture = (dbUser.length && dbUser[0].picture) || null; // prefer DB
+    if (!finalPicture && kindeUser.picture && !isGravatar(kindeUser.picture)) {
+      finalPicture = kindeUser.picture;
+    }
 
     return {
       id: kindeUser.id,
       first_name: kindeUser.first_name,
       last_name: kindeUser.last_name,
-      email: kindeUser.email,
-      picture: kindeUser.picture || null,
+      email: kindeUser.preferred_email || (dbUser.length && dbUser[0].email),
+      picture: finalPicture || null,
       username: kindeUser.username,
       permissions: kindeUser.permissions,
       status: kindeUser.is_suspended ? "archived" : "active",
-      phone: personalDetails.phone || "", // Merged phone from your DB
+      phone: kindeUser.phone || "", // Merged phone from your DB
     };
   } catch (error) {
     console.error("Error fetching user profile:", error);
@@ -212,6 +297,7 @@ export async function updateUserTab(
       .set({
         name: `${formData.given_name} ${formData.family_name}`,
         picture: formData.picture,
+        // email: formData.email,
       })
       .where(eq(users.id, userId));
 
@@ -229,6 +315,23 @@ export async function updateUserTab(
     console.error("[UPDATE_USER_ERROR]", error);
     return { error: "Internal server error" };
   }
+}
+
+export async function updateUsername(userId: string, username: string) {
+  const token = await getKindeManagementToken();
+  const res = await fetch(
+    `${process.env.KINDE_ISSUER_URL}/api/v1/user?id=${userId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username }),
+    }
+  );
+  if (!res.ok) throw new Error("Failed to update username");
+  return { success: true };
 }
 
 // Personal Info Tab Actions

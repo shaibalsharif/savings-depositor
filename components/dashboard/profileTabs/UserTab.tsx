@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef } from "react";
@@ -9,9 +8,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUploadThing } from "@/lib/uploadthing";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { updateUserTab ,KindeUser} from "@/lib/actions/profile/profile";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  updateUserTab,
+  KindeUser,
+} from "@/lib/actions/profile/profile";
 import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface UserTabProps {
   initialProfile: KindeUser | { error: string };
@@ -20,8 +36,7 @@ interface UserTabProps {
 export default function UserTab({ initialProfile }: UserTabProps) {
   const { user } = useKindeAuth();
   const { toast } = useToast();
-  
-  // Safely get profile data or a default state
+
   const isProfileAvailable = !("error" in initialProfile);
   const initialData = isProfileAvailable ? initialProfile : null;
 
@@ -30,9 +45,14 @@ export default function UserTab({ initialProfile }: UserTabProps) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(initialData?.picture || null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(
+    initialData?.picture || null
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { startUpload } = useUploadThing("userImage");
+
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingSave, setPendingSave] = useState<any | null>(null); // holds formData when modal needed
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
@@ -41,10 +61,21 @@ export default function UserTab({ initialProfile }: UserTabProps) {
     setImagePreviewUrl(URL.createObjectURL(file));
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent, confirmed = false) => {
+    if (e) e.preventDefault();
     if (!user?.id || !profile) return;
-    
+
+    // If not confirmed yet, check sensitive fields
+    if (!confirmed) {
+      const userNameChanged = profile.username !== initialData?.username;
+
+      if (userNameChanged) {
+        setPendingSave({ ...profile });
+        setShowConfirmModal(true);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       let pictureUrl = imagePreviewUrl;
@@ -57,7 +88,7 @@ export default function UserTab({ initialProfile }: UserTabProps) {
         }
         pictureUrl = uploaded[0].ufsUrl;
       }
-      
+
       const updateData = {
         given_name: profile.first_name,
         family_name: profile.last_name,
@@ -65,25 +96,29 @@ export default function UserTab({ initialProfile }: UserTabProps) {
       };
 
       const result = await updateUserTab(user.id, updateData);
-      
+
       if ("error" in result) {
         throw new Error(result.error);
       }
-      
-      // The updateUserTab action needs to return a KindeUser object, not just a partial object
+
       setProfile(result.user);
       setSelectedFile(null);
       setIsEditing(false);
       toast({ title: "Profile updated successfully" });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
       setUploading(false);
+      setShowConfirmModal(false);
+      setPendingSave(null);
     }
   };
-  
-  // Show an error message if the profile data is not available
+
   if ("error" in initialProfile) {
     return (
       <Card>
@@ -95,7 +130,6 @@ export default function UserTab({ initialProfile }: UserTabProps) {
     );
   }
 
-  // Handle loading state or no profile data
   if (!profile) return <>Loading...</>;
 
   const fullName = `${profile.first_name} ${profile.last_name}`;
@@ -107,7 +141,8 @@ export default function UserTab({ initialProfile }: UserTabProps) {
         <CardDescription>user account additional information</CardDescription>
       </CardHeader>
       <form onSubmit={handleSave}>
-        <CardContent className="space-y-4 md:space-y-2 md:grid md:grid-cols-2 gap-6" >
+        <CardContent className="space-y-4 md:space-y-2 md:grid md:grid-cols-2 gap-6">
+          {/* Avatar */}
           <div className="flex flex-col items-center w-full">
             {isEditing ? (
               <div className="relative border border-dashed rounded-md p-4 w-48 mx-auto">
@@ -125,15 +160,19 @@ export default function UserTab({ initialProfile }: UserTabProps) {
                 </Button>
                 <div className="flex flex-col items-center gap-2 text-center">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src={imagePreviewUrl || profile.picture || ''} />
+                    <AvatarImage
+                      src={imagePreviewUrl || profile.picture || ""}
+                    />
                     <AvatarFallback>IMG</AvatarFallback>
                   </Avatar>
-                  <p className="text-sm text-muted-foreground">Image ready to upload</p>
+                  <p className="text-sm text-muted-foreground">
+                    Image ready to upload
+                  </p>
                 </div>
               </div>
             ) : (
               <Avatar className="h-32 w-32 ">
-                <AvatarImage className="size-30" src={profile.picture || ''} />
+                <AvatarImage src={profile.picture || ""} />
                 <AvatarFallback>{fullName?.[0] || "U"}</AvatarFallback>
               </Avatar>
             )}
@@ -160,39 +199,71 @@ export default function UserTab({ initialProfile }: UserTabProps) {
             )}
           </div>
 
+          {/* Fields */}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>First Name</Label>
               <Input
                 value={profile.first_name || ""}
-                onChange={e => setProfile({ ...profile, first_name: e.target.value })}
+                onChange={(e) =>
+                  setProfile({ ...profile, first_name: e.target.value })
+                }
                 disabled={!isEditing}
-                className="w-full"
               />
             </div>
-
             <div className="space-y-2">
               <Label>Last Name</Label>
               <Input
                 value={profile.last_name || ""}
-                onChange={e => setProfile({ ...profile, last_name: e.target.value })}
+                onChange={(e) =>
+                  setProfile({ ...profile, last_name: e.target.value })
+                }
                 disabled={!isEditing}
-                className="w-full"
               />
             </div>
-
             <div className="space-y-2">
               <Label>Email</Label>
-              <Input value={profile.email} disabled className="w-full" />
+              <Input
+                value={profile.email || ""}
+                // onChange={(e) =>
+                //   setProfile({ ...profile, email: e.target.value })
+                // }
+                disabled={true}
+              />
             </div>
             <div className="space-y-2">
               <Label>Mobile</Label>
-              <Input value={profile.phone} disabled className="w-full" />
+              <Input
+                value={profile.phone || ""}
+
+                // onChange={(e) =>
+                //   setProfile({ ...profile, phone: e.target.value })
+                // }
+                disabled={true}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <Input
+                value={profile.username || ""}
+                // onChange={(e) =>
+                //   setProfile({ ...profile, username: e.target.value })
+                // }
+                disabled={true}
+              />
             </div>
           </div>
 
+          {/* Actions */}
           <div className="flex justify-between pt-4 max-w-xl mx-auto lg:-translate-y-32 gap-6">
-            <Button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(!isEditing) }} variant="secondary" className="w-full sm:w-auto">
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                setIsEditing(!isEditing);
+              }}
+              variant="secondary"
+              className="w-full sm:w-auto"
+            >
               {isEditing ? "Cancel" : "Edit"}
             </Button>
             {isEditing && (
@@ -203,6 +274,33 @@ export default function UserTab({ initialProfile }: UserTabProps) {
           </div>
         </CardContent>
       </form>
+
+      {/* Confirmation Modal */}
+      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Changes</DialogTitle>
+            <DialogDescription className="space-y-2">
+              <p>You are about to update sensitive fields </p>
+              {pendingSave?.username !== initialData?.username && (
+                <p>Username: <b className="text-red-500  border-[1px] px-[1px] bg-gray-400 bg-opacity-35">{initialData?.username}</b> →
+                  <b className="text-green-500 border-[1px] px-[1px] bg-gray-400 bg-opacity-35">{pendingSave?.username}</b><br /></p>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={(e) => handleSave(e, true)}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Proceed"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

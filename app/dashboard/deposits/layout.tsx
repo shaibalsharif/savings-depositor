@@ -3,7 +3,7 @@ import { DepositsTabsNav } from "@/components/dashboard/DepositsTabsNav";
 
 export default function DepositsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="container px-0 mx-0">
+    <div className="container px-2 mx-0">
       <h1 className="text-2xl font-bold mb-2">Deposit Management</h1>
       <p className="mb-6 text-muted-foreground">Upload and track your deposit receipts</p>
       

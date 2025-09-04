@@ -17,9 +17,10 @@ export default async function ProfilePage() {
     fetchPersonalInfo(kindeUser.id),
     fetchNomineeInfo(kindeUser.id),
   ]);
+  
 
   return (
-    <div className="container py-8">
+    <div className=" py-8 !px-2 lg:px-8">
       <h1 className="text-2xl font-bold mb-2">Profile</h1>
       <ProfileTabs
         user={{ ...kindeUser, phone: kindeUser.phone_number || null }}

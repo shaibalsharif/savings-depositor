@@ -228,7 +228,7 @@ export default function PersonalInfoTab({ initialInfo, kindeUser }: PersonalInfo
           </div>
 
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 col-span-full gap-4">
             
             <NidPhotoInput
               label="NID Front Photo"
@@ -250,7 +250,7 @@ export default function PersonalInfoTab({ initialInfo, kindeUser }: PersonalInfo
             />
           </div>
 
-          <div>
+          {/* <div>
             <Label>Signature</Label>
             <div className="border rounded p-2 max-w-full overflow-auto">
               <SignatureCanvas
@@ -263,7 +263,7 @@ export default function PersonalInfoTab({ initialInfo, kindeUser }: PersonalInfo
                 <Button type="button" onClick={handleSignatureSave}>Save Signature</Button>
               </div>
             </div>
-          </div>
+          </div> */}
 
         </CardContent>
         <CardFooter className="flex justify-center pt-4">

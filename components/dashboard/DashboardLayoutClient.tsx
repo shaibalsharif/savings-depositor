@@ -43,7 +43,7 @@ export default function DashboardLayoutClient({
           onClose={() => setIsMobileOpen(false)}
         />
 
-        <main className="flex-1 overflow-auto p-6 ">
+        <main className="flex-1 overflow-auto py-6 px-2 lg:px-6 ">
           {children}
         </main>
       </div>

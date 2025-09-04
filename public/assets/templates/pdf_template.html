@@ -76,7 +76,7 @@
       }
 
       .profile-image {
-        width: 200px;
+        width: 140px;
 
         border: 1px solid black;
 
@@ -101,7 +101,7 @@
       .field-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 12px; /* আগে 8px ছিল */
+        margin-bottom: 8px; /* আগে 8px ছিল */
         font-size: 13px; /* আগে 12px ছিল */
         font-family: "Kalpurush";
       }
@@ -122,9 +122,9 @@
       .field-value {
         border-bottom: 1px dotted black;
         padding-left: 5px;
-        margin-top: 4px;
+        margin-top: 2px;
         font-size: 13px; /* আগে 12px ছিল */
-        min-height: 18px; /* যেনো value ছোট না লাগে */
+        min-height: 12px; /* যেনো value ছোট না লাগে */
       }
 
       .checkbox-container {
@@ -176,7 +176,7 @@
         padding: 10px;
         border: 1px solid #555; /* বক্সের মতো */
         border-radius: 6px;
-        background-color: #fafafa; /* হালকা ব্যাকগ্রাউন্ড */
+        background-color: #fafafa76; /* হালকা ব্যাকগ্রাউন্ড */
       }
     </style>
   </head>
@@ -317,78 +317,23 @@
         </div>
         <div class="field-row">
           <div class="field-half">
-            <div class="field-label">১১. এন আই ডি সম্মুখ:</div>
+            <div class="field-label">১৩. এন আই ডি সম্মুখ:</div>
             <img class="card-image" src="{{info.nidFront}}" />
           </div>
 
           <div class="field-half">
-            <div class="field-label">১২. এন আই ডি পশ্চাৎ:</div>
+            <div class="field-label">১৪. এন আই ডি পশ্চাৎ:</div>
 
             <img class="card-image" src="{{info.nidBack}}" />
           </div>
         </div>
       </div>
-
-      <div class="section">
-        <h2 class="section-title">👤 নমিনি (উত্তরাধিকারী) তথ্য</h2>
-
-        <div class="field-row" style="align-items: center">
-          <div class="field-half" style="display: flex; align-items: center">
-            <div class="field-label">নমিনির ছবি:</div>
-
-            <img class="profile-image" src="{{nominee.photo}}" />
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field-half">
-            <div class="field-label">১৩. নমিনির নাম:</div>
-
-            <div class="field-value uppercase">{{nominee.name}}</div>
-          </div>
-
-          <div class="field-half">
-            <div class="field-label">১৪. সম্পর্ক:</div>
-
-            <div class="field-value uppercase">{{nominee.relation}}</div>
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field-half">
-            <div class="field-label">১৫. জন্ম তারিখ:</div>
-
-            <div class="field-value">{{nominee.dob}}</div>
-          </div>
-
-          <div class="field-half">
-            <div class="field-label">১৬. মোবাইল নম্বর:</div>
-
-            <div class="field-value">{{nominee.mobile}}</div>
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field-half">
-            <div class="field-label">১৭. জাতীয় পরিচয়পত্র নম্বর:</div>
-
-            <div class="field-value">{{nominee.nidNumber}}</div>
-          </div>
-
-          <div class="field-half">
-            <div class="field-label">১৮. ঠিকানা:</div>
-
-            <div class="field-value">{{nominee.address}}</div>
-          </div>
-        </div>
-      </div>
-
       <div class="section">
         <h2 class="section-title">📌 কমিটির তথ্য</h2>
 
         <div class="field-row">
           <div class="field-full">
-            <div class="field-label">১৯. আপনি কোন পদে আবেদন করছেন?:</div>
+            <div class="field-label">১৫. আপনি কোন পদে আবেদন করছেন?:</div>
 
             <div class="checkbox-container">
               <div class="checkbox"></div>
@@ -415,19 +360,82 @@
         </div>
       </div>
 
+      
       <div class="section">
-        <h2 class="section-title">
-          📜 সদস্যদের জন্য মাসিক জমা ও প্রকল্পের নিয়মাবলী
-        </h2>
+        <h2 class="section-title">👤 নমিনি (উত্তরাধিকারী) তথ্য</h2>
 
-        <p class="terms-text">{{termsContent}}</p>
+        <div
+          class="field-row"
+          style="display: flex; align-items: center; gap: 20px"
+        >
+          <!-- Left: Nominee Photo -->
+          <div class="field-half" style="max-width: 150px; text-align: center">
+            <div class="field-label">১৬. নমিনির ছবি:</div>
+            <img
+              class="profile-image"
+              src="{{nominee.photo}}"
+              style="width: 100%; height: auto"
+            />
+          </div>
+
+          <!-- Right: All Details -->
+          <div
+            class="field-half"
+            style="flex: 1; display: flex; align-items: center"
+          >
+            <div style="width: 100%">
+              <div class="field-row">
+                <div class="field-half">
+                  <div class="field-label">১৭. নমিনির নাম:</div>
+                  <div class="field-value uppercase">{{nominee.name}}</div>
+                </div>
+
+                <div class="field-half">
+                  <div class="field-label">১৮. সম্পর্ক:</div>
+                  <div class="field-value uppercase">{{nominee.relation}}</div>
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field-half">
+                  <div class="field-label">১৯. জন্ম তারিখ:</div>
+                  <div class="field-value">{{nominee.dob}}</div>
+                </div>
+
+                <div class="field-half">
+                  <div class="field-label">২০. মোবাইল নম্বর:</div>
+                  <div class="field-value">{{nominee.mobile}}</div>
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field-half">
+                  <div class="field-label">২১. জাতীয় পরিচয়পত্র নম্বর:</div>
+                  <div class="field-value">{{nominee.nidNumber}}</div>
+                </div>
+
+                <div class="field-half">
+                  <div class="field-label">২২. ঠিকানা:</div>
+                  <div class="field-value">{{nominee.address}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="section">
-        <h2 class="section-title">✅ ঘোষণাপত্র</h2>
+        <h2 class="section-title">
+          📜 ২৩. সদস্যদের জন্য মাসিক জমা ও প্রকল্পের নিয়মাবলী
+        </h2>
 
-        <p class="terms-text">
-          আমি এই মর্মে ঘোষণা করছি যে, উপরের প্রদত্ত সকল তথ্য সত্য এবং সঠিক।
+        <p class="terms-text ">{{termsContent}}</p>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">✅ ২৪. ঘোষণাপত্র</h2>
+
+        <p class="terms-text">আমি এই মর্মে ঘোষণা করছি যে, উপরের প্রদত্ত সকল তথ্য সত্য এবং সঠিক।
           সংগঠনের সকল নিয়মনীতি মেনে চলার অঙ্গীকার করছি।
         </p>
 
@@ -439,7 +447,7 @@
       </div>
 
       <div class="section">
-        <h2 class="section-title">☑️ কমিটির ব্যবহারের জন্য</h2>
+        <h2 class="section-title">✅ ২৫. কমিটির ব্যবহারের জন্য</h2>
 
         <div>
           <div class="checkbox-container">
