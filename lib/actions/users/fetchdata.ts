@@ -1,3 +1,5 @@
+// /lib/actions/data.ts
+
 "use server";
 
 import { db } from "@/lib/db";
@@ -6,7 +8,8 @@ import { eq } from "drizzle-orm";
 
 export async function getUserDataCompleteness(userId: string) {
   try {
-    // Fetch user data from the database by joining the three relevant tables
+    // Fetch user data by performing left joins on personalInfo and nomineeInfo tables.
+    // This query will return a single combined object for the user.
     const [userData] = await db
       .select()
       .from(users)
@@ -20,7 +23,7 @@ export async function getUserDataCompleteness(userId: string) {
 
     const missingFields: string[] = [];
 
-    // Check for missing fields in personalInfo and nomineeInfo tables
+    // Define the required fields for each information type
     const personalInfoFields = [
       "name",
       "nameBn",
@@ -47,24 +50,19 @@ export async function getUserDataCompleteness(userId: string) {
       "photo",
     ];
 
-    // Use a dynamic check on the combined joined data
-    const combinedData = {
-      ...userData.users,
-      ...(userData.personal_info || {}),
-      ...(userData.nominee_info || {}),
-    } as any; // Type assertion here
-
+    // Check for missing fields in personalInfo
+    // We check the personal_info object directly to avoid conflicts with nominee_info
     personalInfoFields.forEach((field) => {
-      // Now this line is valid because `combinedData` is treated as if it can be indexed by any string
-      const value = combinedData[field];
+      const value = userData.personal_info?.[field as keyof typeof userData.personal_info];
       if (!value) {
         missingFields.push(`personalInfo.${field}`);
       }
     });
 
+    // Check for missing fields in nomineeInfo
+    // We check the nominee_info object directly to avoid conflicts with personal_info
     nomineeInfoFields.forEach((field) => {
-      // This line is also now valid
-      const value = combinedData[field];
+      const value = userData.nominee_info?.[field as keyof typeof userData.nominee_info];
       if (!value) {
         missingFields.push(`nomineeInfo.${field}`);
       }
