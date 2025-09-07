@@ -123,7 +123,7 @@ export default function PersonalInfoTab({ initialInfo, kindeUser }: PersonalInfo
       <CardHeader>
         <CardTitle>Personal Information</CardTitle>
       </CardHeader>
-      <form className="p-4 sm:p-6" onSubmit={handleSave}>
+      <form  className="p-4 sm:p-6"  onSubmit={()=>{}}/* onSubmit={handleSave} */>
         <CardContent className="space-y-2 md:grid md:grid-cols-2 gap-6">
           <div className="">
             <Label>Full Name (English)</Label>
