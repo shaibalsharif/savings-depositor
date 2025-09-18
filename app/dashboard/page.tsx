@@ -53,7 +53,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 w-full">
         <MonthlyCollectionChart data={dashboardDataResult.monthlyCollectionChartData} />
         <PaymentPatternHeatmap data={dashboardDataResult.paymentPatternData} users={dashboardDataResult.allUsers} />
       </div>

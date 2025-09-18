@@ -1,4 +1,3 @@
-// lib/actions/dashboard.ts
 "use server";
 
 import { db } from "@/lib/db";
@@ -8,23 +7,19 @@ import {
   funds,
   users,
   depositSettings,
-  personalInfo,
 } from "@/db/schema";
-import { and, eq, desc, sql, like } from "drizzle-orm";
-import { format, startOfMonth, subMonths } from "date-fns";
+import { and, eq, desc, sql } from "drizzle-orm";
+import { format, startOfMonth, subMonths,differenceInDays,addDays } from "date-fns";
+// import { format, startOfMonth, subMonths,  } from "date-fns";
 
-interface DashboardData {
-  totalBalance: number;
-  monthlyCollected: number;
-  monthlyCollectable: number;
-  recentDeposits: any[];
-  recentWithdrawals: any[];
-}
-export interface User {
+
+// Define a type for a user with their outstanding months
+export interface OutstandingUser {
   id: string;
   name: string | null;
   email: string;
   picture: string | null;
+  outstandingMonths: string[];
 }
 
 export async function getDashboardData(
@@ -38,6 +33,7 @@ export async function getDashboardData(
       "yyyy-MM"
     );
 
+    // Fetch all necessary data in parallel
     const [
       allFunds,
       allUsers,
@@ -148,18 +144,46 @@ export async function getDashboardData(
       : 2100;
     const totalActiveUsers = allUsers.length;
     const monthlyCollectable = monthlyDepositAmount * totalActiveUsers;
-    
-    // FIX: Use the correct variable `currentMonthDeposits`
     const monthlyCollected = currentMonthDeposits.reduce(
       (acc, d) => acc + Number(d.amount),
       0
     );
-    
-    const depositedUserIds = new Set(currentMonthDeposits.map((d) => d.userId));
-    const outstandingUsers = allUsers.filter(
-      (u) => !depositedUserIds.has(u.id)
+
+    // --- NEW LOGIC FOR OUTSTANDING PAYMENTS ---
+    // 1. Get all distinct past months with verified deposits
+    const pastMonths = [...new Set(allVerifiedDeposits.map((d) => d.month))]
+      .filter((m) => m !== currentMonthStr)
+      .sort();
+
+    // 2. Create a map of user payments for quick lookup
+    const userPaymentsMap = new Map();
+    allVerifiedDeposits.forEach((d) => {
+      if (!userPaymentsMap.has(d.userId)) {
+        userPaymentsMap.set(d.userId, new Set());
+      }
+      userPaymentsMap.get(d.userId).add(d.month);
+    });
+
+    // 3. Find outstanding months for each user
+    const outstandingUsers: OutstandingUser[] = allUsers
+      .map((user) => {
+        const paidMonths = userPaymentsMap.get(user.id) || new Set();
+        const outstandingMonths = pastMonths.filter(
+          (month) => !paidMonths.has(month)
+        );
+        return {
+          ...user,
+          outstandingMonths,
+        };
+      })
+      .filter((user) => user.outstandingMonths.length > 0);
+
+    // 4. Calculate total outstanding amount based on the count of outstanding months
+    const totalOutstanding = outstandingUsers.reduce(
+      (acc, user) => acc + user.outstandingMonths.length * monthlyDepositAmount,
+      0
     );
-    const totalOutstanding = outstandingUsers.length * monthlyDepositAmount;
+    // --- END OF NEW LOGIC ---
 
     const monthlyData: any = {};
     allVerifiedDeposits.forEach((d) => {
@@ -189,11 +213,18 @@ export async function getDashboardData(
         withdrawals: monthlyData[month].withdrawals,
       }));
 
-    const paymentPatternData = allVerifiedDeposits.map((d) => ({
-      userId: d.userId,
-      month: d.month,
-      status: "paid",
-    }));
+    const paymentPatternData = allVerifiedDeposits.map((d) => {
+      const depositDate = d.createdAt;
+      const monthDueDate = addDays(startOfMonth(d.createdAt), 10); // Assuming deposits are due on the 10th
+      const daysDelayed = differenceInDays(depositDate, monthDueDate);
+
+      return {
+        userId: d.userId,
+        month: d.month,
+        status: "paid",
+        daysDelayed: daysDelayed > 0 ? daysDelayed : undefined,
+      };
+    });
 
     return {
       totalBalance,
@@ -205,8 +236,8 @@ export async function getDashboardData(
       recentDeposits,
       recentWithdrawals,
       monthlyCollectionChartData,
-      outstandingUsers,
-      totalOutstanding,
+      outstandingUsers, // This is now a more detailed list
+      totalOutstanding, // This is now a more accurate total
       paymentPatternData,
       allUsers,
     };

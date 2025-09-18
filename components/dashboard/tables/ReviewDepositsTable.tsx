@@ -161,7 +161,8 @@ export default function ReviewDepositsTable({ initialDeposits, funds }: ReviewDe
                   </TableCell>
                   <TableCell className="hidden md:table-cell">৳ {Number(item.amount).toLocaleString()}</TableCell>
                   <TableCell className="hidden md:table-cell">{item.transactionId || "N/A"}</TableCell>
-                  <TableCell className="hidden md:table-cell">{format(item.createdAt, 'MMM yyyy')}</TableCell>
+                  <TableCell className="hidden md:table-cell">{format(item.month, 'MMM yyyy')}<span className="text-xs text-muted-foreground px-1">
+                    {item.month > item.createdAt ? "[Adv]" : item.month < item.createdAt?"[Old]":""} </span></TableCell>
                   <TableCell className="hidden md:table-cell">{format(item.createdAt, 'MMM dd, yyyy hh:mm a')}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="flex gap-2">
