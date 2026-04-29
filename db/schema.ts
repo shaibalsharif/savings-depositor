@@ -6,7 +6,6 @@ import {
   timestamp,
   boolean,
   text,
-  uuid,
   jsonb,
   date,
 } from "drizzle-orm/pg-core";
@@ -127,9 +126,7 @@ export const syncLogs = pgTable("sync_logs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-// --- EXISTING TABLES (Modified/Kept) ---
-
-// DEPRECATED: deposits table removed.
+// --- EXISTING TABLES ---
 
 export const funds = pgTable("funds", {
   id: integer("id")
@@ -142,20 +139,6 @@ export const funds = pgTable("funds", {
   currency: varchar("currency", { length: 10 }).default("BDT").notNull(),
   createdBy: varchar("created_by", { length: 255 }).notNull(),
   deleted: boolean("deleted").default(false).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const fundTransactions = pgTable("fund_transactions", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  fromFundId: integer("from_fund_id")
-    .references(() => funds.id)
-    .notNull(),
-  toFundId: integer("to_fund_id")
-    .references(() => funds.id)
-    .notNull(),
-  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  createdBy: varchar("created_by", { length: 255 }).notNull(),
-  description: varchar("description", { length: 255 }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -180,18 +163,7 @@ export const personalInfo = pgTable("personal_info", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const nomineeInfo = pgTable("nominee_info", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  userId: varchar("user_id", { length: 255 }).notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  relation: varchar("relation", { length: 255 }).notNull(),
-  dob: date("dob").notNull(),
-  mobile: varchar("mobile", { length: 20 }).notNull(),
-  nidNumber: varchar("nid_number", { length: 17 }).notNull(),
-  address: text("address").notNull(),
-  photo: text("photo").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+
 
 export const depositSettings = pgTable("deposit_settings", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -230,18 +202,3 @@ export const logs = pgTable("logs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const notifications = pgTable("notifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  recipientUserId: text("recipient_user_id").notNull(),
-  senderUserId: text("sender_user_id").notNull(),
-  type: varchar("type", { length: 50 }).notNull(),
-  message: text("message").notNull(),
-  metadata: jsonb("metadata").notNull(),
-  isRead: boolean("is_read").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  relatedEntityId: text("related_entity_id").notNull(),
-  roleTarget: varchar("role_target", { length: 50 }).notNull(),
-  actionRequired: boolean("action_required").default(false),
-});
