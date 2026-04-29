@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --background: 222 47% 7%;
+  --foreground: 210 40% 96%;
+  --card: 222 47% 10%;
+  --card-foreground: 210 40% 96%;
+  --popover: 222 47% 10%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 172 66% 50%;
+  --primary-foreground: 222 47% 7%;
+  --secondary: 222 47% 15%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 222 47% 14%;
+  --muted-foreground: 215 20% 55%;
+  --accent: 222 47% 18%;
+  --accent-foreground: 210 40% 96%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 210 40% 96%;
+  --border: 222 47% 18%;
+  --input: 222 47% 14%;
+  --ring: 172 66% 50%;
+  --radius: 0.75rem;
+  --sidebar-width: 260px;
+  --teal: #2dd4bf;
+  --teal-dim: rgba(45, 212, 191, 0.1);
+  --teal-border: rgba(45, 212, 191, 0.25);
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --green: #22c55e;
+  --purple: #a78bfa;
+}
+
+* {
+  box-sizing: border-box;
+  border-color: hsl(var(--border));
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* Glass cards */
+.glass {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+/* Stat card glow on hover */
+.stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(45, 212, 191, 0.08);
+}
+
+/* Table */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table thead th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+  border-bottom: 1px solid hsl(var(--border));
+}
+.data-table tbody tr {
+  border-bottom: 1px solid hsl(var(--border));
+  transition: background 0.15s;
+}
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: hsl(var(--accent)); }
+.data-table td { padding: 12px 16px; vertical-align: middle; }
+
+/* Progress bar */
+.progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: hsl(var(--border));
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--teal), #38bdf8);
+  transition: width 0.4s ease;
+}
+
+/* Badge overrides */
+.badge-teal { background: var(--teal-dim); color: var(--teal); border: 1px solid var(--teal-border); }
+.badge-red { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+.badge-amber { background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+.badge-green { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+.badge-purple { background: rgba(167,139,250,0.1); color: var(--purple); border: 1px solid rgba(167,139,250,0.25); }
+
+/* Nav link active */
+.nav-link-active {
+  background: var(--teal-dim) !important;
+  color: var(--teal) !important;
+  border-left: 2px solid var(--teal);
+}

@@ -1,0 +1,217 @@
+import {
+  pgTable,
+  integer,
+  varchar,
+  numeric,
+  timestamp,
+  boolean,
+  text,
+  uuid,
+  jsonb,
+  date,
+} from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+// Reusable timestamp columns with updatedAt auto-update
+export const timestamps = {
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdateFn(() => new Date()),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }).notNull(),
+};
+
+// --- NEW TABLES FOR REDESIGN ---
+
+export const payments = pgTable("payments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  paymentId: varchar("payment_id", { length: 64 }).notNull().unique(), // PAY-{padded number}
+  memberId: varchar("member_id", { length: 255 }).notNull(), // FK to users (Kinde)
+  amountReceived: numeric("amount_received", { precision: 10, scale: 2 }).notNull(),
+  paymentDate: date("payment_date").notNull(),
+  note: varchar("note", { length: 200 }),
+  voided: boolean("voided").default(false).notNull(),
+  createdBy: varchar("created_by", { length: 255 }).notNull(), // always the manager
+  updatedBy: varchar("updated_by", { length: 255 }),
+  sheetsRowIndex: integer("sheets_row_index"), // stores row number in Google Sheet
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
+});
+
+export const depositAllocations = pgTable("deposit_allocations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  allocId: varchar("alloc_id", { length: 64 }).notNull().unique(), // ALLOC-{padded number}
+  paymentId: varchar("payment_id", { length: 64 }).notNull(), // FK to payments.payment_id (handled in app logic or standard FK)
+  memberId: varchar("member_id", { length: 255 }).notNull(),
+  forMonth: varchar("for_month", { length: 7 }).notNull(), // YYYY-MM
+  amountAllocated: numeric("amount_allocated", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const expenses = pgTable("expenses", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  entryId: varchar("entry_id", { length: 64 }).notNull().unique(), // EXP-{number}
+  expenseDate: date("expense_date").notNull(),
+  category: varchar("category", { length: 32 }).notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  linkedInvestmentId: varchar("linked_investment_id", { length: 64 }),
+  recordedBy: varchar("recorded_by", { length: 255 }).notNull(),
+  voided: boolean("voided").default(false).notNull(),
+  sheetsRowIndex: integer("sheets_row_index"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
+});
+
+export const investments = pgTable("investments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  entryId: varchar("entry_id", { length: 64 }).notNull().unique(), // INV-{number}
+  investDate: date("invest_date").notNull(),
+  recipient: varchar("recipient", { length: 255 }).notNull(),
+  principal: numeric("principal", { precision: 12, scale: 2 }).notNull(),
+  expectedReturnDate: date("expected_return_date").notNull(),
+  actualReturnDate: date("actual_return_date"),
+  status: varchar("status", { length: 16 }).default("active").notNull(), // active / matured / defaulted
+  note: varchar("note", { length: 255 }),
+  recordedBy: varchar("recorded_by", { length: 255 }).notNull(),
+  sheetsRowIndex: integer("sheets_row_index"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
+});
+
+export const revenueLosses = pgTable("revenue_losses", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  entryId: varchar("entry_id", { length: 64 }).notNull().unique(), // REV-{number}
+  eventDate: date("event_date").notNull(),
+  sourceType: varchar("source_type", { length: 32 }).notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // negative for losses
+  linkedInvestmentId: varchar("linked_investment_id", { length: 64 }),
+  recordedBy: varchar("recorded_by", { length: 255 }).notNull(),
+  voided: boolean("voided").default(false).notNull(),
+  sheetsRowIndex: integer("sheets_row_index"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
+});
+
+// --- EXISTING TABLES (Modified/Kept) ---
+
+// DEPRECATED: deposits table removed.
+
+export const funds = pgTable("funds", {
+  id: integer("id")
+    .primaryKey()
+    .generatedAlwaysAsIdentity({ startWith: 1, increment: 1 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  balance: numeric("balance", { precision: 12, scale: 2 })
+    .default("0")
+    .notNull(),
+  currency: varchar("currency", { length: 10 }).default("BDT").notNull(),
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  deleted: boolean("deleted").default(false).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const fundTransactions = pgTable("fund_transactions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  fromFundId: integer("from_fund_id")
+    .references(() => funds.id)
+    .notNull(),
+  toFundId: integer("to_fund_id")
+    .references(() => funds.id)
+    .notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const personalInfo = pgTable("personal_info", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  nameBn: varchar("name_bn", { length: 255 }).notNull(),
+  father: varchar("father", { length: 255 }).notNull(),
+  mother: varchar("mother", { length: 255 }),
+  dob: date("dob").notNull(),
+  profession: varchar("profession", { length: 255 }).notNull(),
+  religion: varchar("religion", { length: 255 }).notNull(),
+  presentAddress: text("present_address").notNull(),
+  permanentAddress: text("permanent_address").notNull(),
+  mobile: varchar("mobile", { length: 20 }).notNull(),
+  nidNumber: varchar("nid_number", { length: 17 }).notNull(),
+  nidFront: text("nid_front").notNull(),
+  nidBack: text("nid_back").notNull(),
+  signature: text("signature").notNull(),
+  position: varchar("position", { length: 50 }).notNull().default("member"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const nomineeInfo = pgTable("nominee_info", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  relation: varchar("relation", { length: 255 }).notNull(),
+  dob: date("dob").notNull(),
+  mobile: varchar("mobile", { length: 20 }).notNull(),
+  nidNumber: varchar("nid_number", { length: 17 }).notNull(),
+  address: text("address").notNull(),
+  photo: text("photo").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const depositSettings = pgTable("deposit_settings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  monthlyAmount: varchar("monthly_amount", { length: 50 }).notNull(),
+  dueDay: varchar("due_day", { length: 2 }).notNull(),
+  reminderDay: varchar("reminder_day", { length: 2 }).notNull(),
+  effectiveMonth: varchar("effective_month", { length: 7 }).notNull(), // e.g. "2025-06"
+  terminatedAt: varchar("terminated_at", { length: 7 }),
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  updatedBy: varchar("updated_by", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const withdrawals = pgTable("withdrawals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  fundId: integer("fund_id")
+    .references(() => funds.id)
+    .notNull(),
+  purpose: varchar("purpose", { length: 128 }).notNull(),
+  details: text("details").notNull(),
+  status: varchar("status", { length: 32 }).notNull().default("pending"),
+  reviewedBy: varchar("reviewed_by", { length: 255 }).notNull(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull(),
+  attachmentUrl: text("attachment_url").notNull(),
+  rejectionReason: text("rejection_reason").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const logs = pgTable("logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  action: varchar("action", { length: 255 }).notNull(),
+  details: varchar("details", { length: 2048 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  recipientUserId: text("recipient_user_id").notNull(),
+  senderUserId: text("sender_user_id").notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  relatedEntityId: text("related_entity_id").notNull(),
+  roleTarget: varchar("role_target", { length: 50 }).notNull(),
+  actionRequired: boolean("action_required").default(false),
+});
