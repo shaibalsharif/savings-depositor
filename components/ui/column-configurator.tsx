@@ -37,11 +37,14 @@ export function ColumnConfigurator({ tableId, columns }: ColumnConfiguratorProps
 
   return (
     <>
-      <style suppressHydrationWarning>
-        {Array.from(hiddenCols)
-          .map(colId => `#${tableId} .col-${colId} { display: none !important; }`)
-          .join("\\n")}
-      </style>
+      <style 
+        suppressHydrationWarning 
+        dangerouslySetInnerHTML={{ 
+          __html: Array.from(hiddenCols)
+            .map(colId => `#${tableId} .col-${colId} { display: none !important; }`)
+            .join("\\n")
+        }} 
+      />
       <Popover>
         <PopoverTrigger render={<Button variant="outline" size="sm" className="ml-auto flex items-center gap-2" />}>
           <Settings2 size={16} />
@@ -53,16 +56,20 @@ export function ColumnConfigurator({ tableId, columns }: ColumnConfiguratorProps
             <div className="space-y-2">
               {columns.map(col => {
                 const isChecked = !hiddenCols.has(col.id);
+                const inputId = `${tableId}-col-${col.id}`;
                 return (
-                  <label key={col.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
+                  <div key={col.id} className="flex items-center gap-2 hover:bg-muted/50 p-1 rounded">
                     <input 
+                      id={inputId}
                       type="checkbox" 
-                      className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                      className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
                       checked={isChecked}
                       onChange={() => toggleCol(col.id)}
                     />
-                    {col.label}
-                  </label>
+                    <label htmlFor={inputId} className="text-sm cursor-pointer select-none flex-1">
+                      {col.label}
+                    </label>
+                  </div>
                 );
               })}
             </div>
