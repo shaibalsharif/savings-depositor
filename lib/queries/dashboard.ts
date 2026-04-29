@@ -73,10 +73,20 @@ export async function getManagerDashboardStats() {
   const totalInvested = activeInvestments.reduce((s, i) => s + Number(i.principal), 0);
 
   const validRevenue = allRevenue.filter((r) => !r.voided);
-  const totalIncome = validRevenue.filter((r) => Number(r.amount) > 0).reduce((s, r) => s + Number(r.amount), 0);
-  const totalLoss = validRevenue.filter((r) => Number(r.amount) < 0).reduce((s, r) => s + Number(r.amount), 0);
-  const netRevenue = totalIncome + totalLoss;
 
+  // amount is always positive; sourceType drives direction:
+  // profit / bank_profit / other / principal_return → add to balance
+  // loss → subtract from balance
+  const totalIncome = validRevenue
+    .filter((r) => r.sourceType !== "loss")
+    .reduce((s, r) => s + Number(r.amount), 0);
+  const totalLoss = validRevenue
+    .filter((r) => r.sourceType === "loss")
+    .reduce((s, r) => s + Number(r.amount), 0);
+  const netRevenue = totalIncome - totalLoss;
+
+  // Available liquid balance:
+  // Collected − Expenses − Active Invested + Net Revenue (profit − loss + principal returns)
   const balance = totalCollected - totalExpenses - totalInvested + netRevenue;
 
   // Settings map

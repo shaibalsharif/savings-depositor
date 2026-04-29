@@ -74,8 +74,14 @@ export default async function InvestmentsPage() {
               );
               return (
                 <tr key={inv.id}>
-                  <td className="font-mono text-xs text-muted-foreground">{inv.entryId}</td>
-                  <td className="font-medium">{inv.recipient}</td>
+                  <td className="font-mono text-xs">
+                    <Link href={`/investments/${inv.entryId}`} style={{ color: "var(--teal)" }} className="hover:underline">
+                      {inv.entryId}
+                    </Link>
+                  </td>
+                  <td className="font-medium">
+                    <Link href={`/investments/${inv.entryId}`} className="hover:underline">{inv.recipient}</Link>
+                  </td>
                   <td className="font-semibold" style={{ color: "var(--purple)" }}>
                     ৳{Number(inv.principal).toLocaleString()}
                   </td>

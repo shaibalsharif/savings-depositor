@@ -8,6 +8,7 @@ import { requireManager } from "@/lib/auth";
 import { ExpenseSchema, InvestmentSchema, RevenueLossSchema } from "../validators/finance";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { calculateAndSaveShares } from "@/lib/queries/investment";
 
 export async function createExpense(data: any) {
   const user = await requireManager();
@@ -34,9 +35,10 @@ export async function createExpense(data: any) {
   try {
     const row = [entryId, parsed.expenseDate, parsed.category, parsed.description, parsed.amount, parsed.linkedInvestmentId || "", "FALSE"];
     const rowIndex = await appendRow("Expenses", row);
-    await db.update(expenses).set({ sheetsRowIndex: rowIndex }).where(eq(expenses.entryId, entryId));
+    await db.update(expenses).set({ sheetsRowIndex: rowIndex, syncStatus: "synced" }).where(eq(expenses.entryId, entryId));
   } catch (e) {
     console.error("Failed to sync expense to sheets", e);
+    await db.update(expenses).set({ syncStatus: "pending" }).where(eq(expenses.entryId, entryId));
   }
 
   revalidatePath("/expenses");
@@ -66,12 +68,20 @@ export async function createInvestment(data: any) {
     });
   });
 
+  // Snapshot each member's proportional stake at this investment's date
+  try {
+    await calculateAndSaveShares(entryId, parsed.investDate);
+  } catch (e) {
+    console.error("Failed to calculate investment shares", e);
+  }
+
   try {
     const row = [entryId, parsed.investDate, parsed.recipient, parsed.principal, parsed.expectedReturnDate, "", "active", parsed.note || ""];
     const rowIndex = await appendRow("Investments", row);
-    await db.update(investments).set({ sheetsRowIndex: rowIndex }).where(eq(investments.entryId, entryId));
+    await db.update(investments).set({ sheetsRowIndex: rowIndex, syncStatus: "synced" }).where(eq(investments.entryId, entryId));
   } catch (e) {
     console.error("Failed to sync investment to sheets", e);
+    await db.update(investments).set({ syncStatus: "pending" }).where(eq(investments.entryId, entryId));
   }
 
   revalidatePath("/investments");
@@ -132,12 +142,24 @@ export async function createRevenue(data: any) {
     });
   });
 
+  // If this is a principal_return, mark the linked investment as matured
+  if (parsed.sourceType === "principal_return" && parsed.linkedInvestmentId) {
+    try {
+      await db.update(investments)
+        .set({ status: "matured", actualReturnDate: parsed.eventDate })
+        .where(eq(investments.entryId, parsed.linkedInvestmentId));
+    } catch (e) {
+      console.error("Failed to auto-mature investment on principal_return", e);
+    }
+  }
+
   try {
     const row = [entryId, parsed.eventDate, parsed.sourceType, parsed.description, parsed.amount, parsed.linkedInvestmentId || "", "FALSE"];
     const rowIndex = await appendRow("Revenue_Losses", row);
-    await db.update(revenueLosses).set({ sheetsRowIndex: rowIndex }).where(eq(revenueLosses.entryId, entryId));
+    await db.update(revenueLosses).set({ sheetsRowIndex: rowIndex, syncStatus: "synced" }).where(eq(revenueLosses.entryId, entryId));
   } catch (e) {
     console.error("Failed to sync revenue to sheets", e);
+    await db.update(revenueLosses).set({ syncStatus: "pending" }).where(eq(revenueLosses.entryId, entryId));
   }
 
   revalidatePath("/revenue");

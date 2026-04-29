@@ -80,12 +80,13 @@ export async function createBatchPayments(
     try {
       const pRow = [paymentId, parsed.memberId, parsed.amountReceived, parsed.paymentDate, parsed.note || "", "FALSE"];
       const rowIndex = await appendRow("Payments", pRow);
-      await db.update(payments).set({ sheetsRowIndex: rowIndex }).where(eq(payments.paymentId, paymentId));
+      await db.update(payments).set({ sheetsRowIndex: rowIndex, syncStatus: "synced" }).where(eq(payments.paymentId, paymentId));
       for (const alloc of allocations) {
         await appendRow("Deposit_Allocations", [paymentId, parsed.memberId, alloc.forMonth, alloc.amountAllocated]);
       }
     } catch (e) {
       console.error("Failed to sync to sheets", e);
+      await db.update(payments).set({ syncStatus: "pending" }).where(eq(payments.paymentId, paymentId));
     }
 
     results.push(paymentId);
@@ -134,14 +135,13 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
   try {
     const pRow = [paymentId, parsed.memberId, parsed.amountReceived, parsed.paymentDate, parsed.note || "", "FALSE"];
     const rowIndex = await appendRow("Payments", pRow);
-    
-    await db.update(payments).set({ sheetsRowIndex: rowIndex }).where(eq(payments.paymentId, paymentId));
-
+    await db.update(payments).set({ sheetsRowIndex: rowIndex, syncStatus: "synced" }).where(eq(payments.paymentId, paymentId));
     for (const alloc of allocations) {
       await appendRow("Deposit_Allocations", [paymentId, parsed.memberId, alloc.forMonth, alloc.amountAllocated]);
     }
   } catch (e) {
     console.error("Failed to sync to sheets", e);
+    await db.update(payments).set({ syncStatus: "pending" }).where(eq(payments.paymentId, paymentId));
   }
 
   revalidatePath("/deposits");

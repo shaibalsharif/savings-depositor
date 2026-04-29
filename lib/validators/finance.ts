@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ExpenseSchema = z.object({
   expenseDate: z.string().min(1, "Date is required"),
-  category: z.enum(["Food", "Event", "Materials", "Bank Charge", "Conveyance", "Other"]),
+  category: z.enum(["Food", "Event", "Materials", "Bank Charge", "Conveyance", "Other", "withdrawal"]),
   description: z.string().min(1, "Description is required").max(255),
   amount: z.coerce.number().positive("Amount must be positive"),
   linkedInvestmentId: z.string().optional(),
@@ -18,8 +18,11 @@ export const InvestmentSchema = z.object({
 
 export const RevenueLossSchema = z.object({
   eventDate: z.string().min(1, "Date is required"),
-  sourceType: z.enum(["bank_profit", "investment_return", "business", "loss", "other"]),
+  // sourceType semantics: amount is ALWAYS positive; sourceType determines direction
+  // profit / principal_return / bank_profit / investment_return / business / other → ADD to balance
+  // loss → SUBTRACT from balance
+  sourceType: z.enum(["bank_profit", "investment_return", "business", "loss", "other", "profit", "principal_return"]),
   description: z.string().min(1, "Description is required").max(255),
-  amount: z.coerce.number(), 
+  amount: z.coerce.number().positive("Amount must be a positive number"),
   linkedInvestmentId: z.string().optional(),
 });

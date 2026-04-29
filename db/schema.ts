@@ -37,6 +37,7 @@ export const payments = pgTable("payments", {
   createdBy: varchar("created_by", { length: 255 }).notNull(), // always the manager
   updatedBy: varchar("updated_by", { length: 255 }),
   sheetsRowIndex: integer("sheets_row_index"), // stores row number in Google Sheet
+  syncStatus: varchar("sync_status", { length: 20 }).default("pending").notNull(), // synced | pending | failed
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
 });
@@ -55,13 +56,14 @@ export const expenses = pgTable("expenses", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   entryId: varchar("entry_id", { length: 64 }).notNull().unique(), // EXP-{number}
   expenseDate: date("expense_date").notNull(),
-  category: varchar("category", { length: 32 }).notNull(),
+  category: varchar("category", { length: 32 }).notNull(), // "expense" | "withdrawal"
   description: varchar("description", { length: 255 }).notNull(),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   linkedInvestmentId: varchar("linked_investment_id", { length: 64 }),
   recordedBy: varchar("recorded_by", { length: 255 }).notNull(),
   voided: boolean("voided").default(false).notNull(),
   sheetsRowIndex: integer("sheets_row_index"),
+  syncStatus: varchar("sync_status", { length: 20 }).default("pending").notNull(), // synced | pending | failed
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
 });
@@ -78,6 +80,7 @@ export const investments = pgTable("investments", {
   note: varchar("note", { length: 255 }),
   recordedBy: varchar("recorded_by", { length: 255 }).notNull(),
   sheetsRowIndex: integer("sheets_row_index"),
+  syncStatus: varchar("sync_status", { length: 20 }).default("pending").notNull(), // synced | pending | failed
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
 });
@@ -86,15 +89,42 @@ export const revenueLosses = pgTable("revenue_losses", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   entryId: varchar("entry_id", { length: 64 }).notNull().unique(), // REV-{number}
   eventDate: date("event_date").notNull(),
+  // sourceType: "profit" | "loss" | "principal_return" | "bank_profit" | "other"
+  // "principal_return" means the invested principal came back — adds to available balance
   sourceType: varchar("source_type", { length: 32 }).notNull(),
   description: varchar("description", { length: 255 }).notNull(),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // negative for losses
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // always positive; sourceType drives sign logic
   linkedInvestmentId: varchar("linked_investment_id", { length: 64 }),
   recordedBy: varchar("recorded_by", { length: 255 }).notNull(),
   voided: boolean("voided").default(false).notNull(),
   sheetsRowIndex: integer("sheets_row_index"),
+  syncStatus: varchar("sync_status", { length: 20 }).default("pending").notNull(), // synced | pending | failed
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
+});
+
+// Snapshot of each member's proportional stake at the moment an investment was recorded.
+// Immutable once created — represents financial exposure at investment time.
+export const investmentShares = pgTable("investment_shares", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  investmentId: varchar("investment_id", { length: 64 }).notNull(), // FK to investments.entryId
+  memberId: varchar("member_id", { length: 255 }).notNull(),
+  balanceAtInvestment: numeric("balance_at_investment", { precision: 12, scale: 2 }).notNull(),
+  sharePercentage: numeric("share_percentage", { precision: 8, scale: 4 }).notNull(), // e.g. 33.3333
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Audit log for every App→Sheet and Sheet→App sync event.
+export const syncLogs = pgTable("sync_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  direction: varchar("direction", { length: 16 }).notNull(), // app_to_sheet | sheet_to_app | cron_retry
+  sheetName: varchar("sheet_name", { length: 64 }),
+  rowIndex: integer("row_index"),
+  entryId: varchar("entry_id", { length: 64 }),
+  status: varchar("status", { length: 16 }).notNull(), // success | error
+  errorMessage: text("error_message"),
+  payload: jsonb("payload"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // --- EXISTING TABLES (Modified/Kept) ---
