@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format, differenceInDays, isPast } from "date-fns";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { InvestmentShareDonut } from "@/components/charts/investment-share-donut";
+import { InvestmentShareBreakdown } from "@/components/investment-share-breakdown";
 
 export default async function InvestmentDetailPage({
   params,
@@ -100,49 +100,12 @@ export default async function InvestmentDetailPage({
 
       {/* Member Share Breakdown */}
       {shares.length > 0 && (
-        <div className="glass p-5 space-y-4">
-          <div>
-            <h2 className="text-lg font-bold">Member Share Breakdown</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Based on each member&apos;s available balance at the time of investment ({format(new Date(inv.investDate), "dd MMM yyyy")})
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            {/* Donut chart */}
-            <InvestmentShareDonut shares={shares} />
-
-            {/* Table */}
-            <div className="overflow-hidden rounded-lg border border-border/40">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted/30">
-                    <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Member</th>
-                    <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Balance at T</th>
-                    <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Share</th>
-                    <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Proj. Profit Share</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {shares.map((s, i) => (
-                    <tr key={s.memberId} className="hover:bg-muted/10 transition-colors">
-                      <td className="px-4 py-3 font-medium">{s.memberName}</td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">
-                        ৳{s.balanceAtInvestment.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold" style={{ color: "var(--teal)" }}>
-                        {s.sharePercentage.toFixed(2)}%
-                      </td>
-                      <td className="px-4 py-3 text-right" style={{ color: summary.netRevenue >= 0 ? "var(--green)" : "var(--red)" }}>
-                        ৳{((summary.netRevenue * s.sharePercentage) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <InvestmentShareBreakdown
+          shares={shares}
+          principal={Number(inv.principal)}
+          summary={summary}
+          investDate={format(new Date(inv.investDate), "dd MMM yyyy")}
+        />
       )}
 
       {/* Revenue / Return events */}

@@ -63,6 +63,7 @@ export default async function InvestmentsPage() {
               <th>Actual Return</th>
               <th>Days</th>
               <th>Status</th>
+              <th className="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -108,12 +109,21 @@ export default async function InvestmentsPage() {
                       {inv.status}
                     </span>
                   </td>
+                  <td className="text-right">
+                    <Link
+                      href={`/investments/${inv.entryId}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all border border-teal/20 hover:bg-teal/10"
+                      style={{ color: "var(--teal)" }}
+                    >
+                      View Analysis
+                    </Link>
+                  </td>
                 </tr>
               );
             })}
             {allInvestments.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                <td colSpan={9} className="py-12 text-center text-muted-foreground">
                   No investments recorded yet.{" "}
                   <Link href="/investments/new" style={{ color: "var(--teal)" }}>Add the first one →</Link>
                 </td>

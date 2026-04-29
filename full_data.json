@@ -1,0 +1,1488 @@
+{
+  "deposits": [
+    {
+      "Payment ID": "pay_bftz4kl7o",
+      "Date": "2025-05-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_2kkj2mr9g",
+      "Date": "2025-06-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_axc4rh8wf",
+      "Date": "2025-07-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_4gwfudo9h",
+      "Date": "2025-08-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ccrgq65co",
+      "Date": "2025-09-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ydu7bxwj2",
+      "Date": "2025-10-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_68h9u90dd",
+      "Date": "2025-11-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ljmu0nhay",
+      "Date": "2025-12-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_s1tze23gz",
+      "Date": "2025-05-05",
+      "Member Name": "Arman",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_f2i3flhfv",
+      "Date": "2025-06-05",
+      "Member Name": "Arman",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_jtics6x74",
+      "Date": "2025-07-05",
+      "Member Name": "Arman",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_alhnyxvtc",
+      "Date": "2025-08-05",
+      "Member Name": "Arman",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ka91p3yg8",
+      "Date": "2025-09-05",
+      "Member Name": "Arman",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_vxyxzlel9",
+      "Date": "2025-10-05",
+      "Member Name": "Arman",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_77mhcmkgx",
+      "Date": "2025-11-05",
+      "Member Name": "Arman",
+      "Amount Received": 1000,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_jm6eier8h",
+      "Date": "2025-12-05",
+      "Member Name": "Arman",
+      "Amount Received": 1500,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_9s11rowyi",
+      "Date": "2025-05-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_69oqgx8bv",
+      "Date": "2025-06-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_6kf4frljy",
+      "Date": "2025-07-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_y54i19l9q",
+      "Date": "2025-08-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_5gl0jq2va",
+      "Date": "2025-09-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_8zn9gtfu0",
+      "Date": "2025-10-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_c8glhu6s0",
+      "Date": "2025-11-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_85pm6vy6q",
+      "Date": "2025-12-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_dh6o1r5c2",
+      "Date": "2025-05-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_smjci2j91",
+      "Date": "2025-06-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_45mi7vtqn",
+      "Date": "2025-07-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_iaavxatsr",
+      "Date": "2025-08-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_uxzl795k1",
+      "Date": "2025-09-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_15yst7ggb",
+      "Date": "2025-10-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_lk4ljqdwp",
+      "Date": "2025-11-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_febr2l90a",
+      "Date": "2025-12-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_giabl4i2p",
+      "Date": "2025-05-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_l048qz4g3",
+      "Date": "2025-06-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_nnw2hmjuq",
+      "Date": "2025-07-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_m80mxp2fc",
+      "Date": "2025-08-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_gzw5hdxim",
+      "Date": "2025-09-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ywu5kulxb",
+      "Date": "2025-10-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ufbkj54fb",
+      "Date": "2025-11-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_0s6dterco",
+      "Date": "2025-12-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_sx9k9deiy",
+      "Date": "2025-05-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_lxsiq6vtx",
+      "Date": "2025-06-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_2ansh95uy",
+      "Date": "2025-07-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_nh22h7c8v",
+      "Date": "2025-08-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_nfpkacpd4",
+      "Date": "2025-09-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_fdva3a54t",
+      "Date": "2025-10-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_rewbl0lp6",
+      "Date": "2025-11-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_6tm2cddk1",
+      "Date": "2025-12-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_8w92a4pst",
+      "Date": "2025-05-05",
+      "Member Name": "Md. Ezaz",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_4w9xpax5c",
+      "Date": "2025-06-05",
+      "Member Name": "Md. Ezaz",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_gm4tskp2h",
+      "Date": "2025-07-05",
+      "Member Name": "Md. Ezaz",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_1xq3zlx5l",
+      "Date": "2025-08-05",
+      "Member Name": "Md. Ezaz",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_am3gyj2eh",
+      "Date": "2025-09-05",
+      "Member Name": "Md. Ezaz",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_o4z6sldjm",
+      "Date": "2025-05-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_uil933c9g",
+      "Date": "2025-06-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_zra0k7aaz",
+      "Date": "2025-07-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_w6nxt0yvb",
+      "Date": "2025-08-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ruhocb4ld",
+      "Date": "2025-09-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_i1wjb5p86",
+      "Date": "2025-10-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_22a1tzecv",
+      "Date": "2025-11-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_3id0tnspp",
+      "Date": "2025-12-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_crlsoewpu",
+      "Date": "2025-05-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_x6k7nnjuq",
+      "Date": "2025-06-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_hjbvzs4cm",
+      "Date": "2025-07-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_0cy7j2vgq",
+      "Date": "2025-08-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_1ato2tw0s",
+      "Date": "2025-09-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_3cpnvdm5c",
+      "Date": "2025-10-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_hjw2q9qpu",
+      "Date": "2025-11-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_el7h4cnpe",
+      "Date": "2025-12-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_yd5xsajl7",
+      "Date": "2025-05-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_iiry240b8",
+      "Date": "2025-06-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_482xdu1hv",
+      "Date": "2025-07-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_e4taxxln4",
+      "Date": "2025-08-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_101j6km5k",
+      "Date": "2025-09-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_reiw5nvk3",
+      "Date": "2025-10-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_24ep1oara",
+      "Date": "2025-11-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ot9l7liag",
+      "Date": "2025-12-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_hbjgeejxt",
+      "Date": "2025-05-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_bohwz07se",
+      "Date": "2025-06-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_3amb1ephx",
+      "Date": "2025-07-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_j2mieusxi",
+      "Date": "2025-08-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_iowp0w32w",
+      "Date": "2025-09-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_7ckdkee82",
+      "Date": "2025-10-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_f8qlh9jel",
+      "Date": "2025-11-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ob43yxxmk",
+      "Date": "2025-12-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_1l8cf01et",
+      "Date": "2025-05-05",
+      "Member Name": "Nazmul Hasan Rabbi",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_fus7hy91z",
+      "Date": "2025-06-05",
+      "Member Name": "Nazmul Hasan Rabbi",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_vb3f8hxio",
+      "Date": "2025-07-05",
+      "Member Name": "Nazmul Hasan Rabbi",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_wbigsrovo",
+      "Date": "2025-08-05",
+      "Member Name": "Nazmul Hasan Rabbi",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_kgbw8xbmw",
+      "Date": "2025-09-05",
+      "Member Name": "Nazmul Hasan Rabbi",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_x6sqsfxkz",
+      "Date": "2025-10-05",
+      "Member Name": "Nazmul Hasan Rabbi",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_8g609dj2m",
+      "Date": "2025-11-05",
+      "Member Name": "Nazmul Hasan Rabbi",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_tp7qwkgsp",
+      "Date": "2025-12-05",
+      "Member Name": "Nazmul Hasan Rabbi",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_gdm0ruhbo",
+      "Date": "2025-05-05",
+      "Member Name": "Sadman Sakib",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_2o9g1t6x5",
+      "Date": "2025-06-05",
+      "Member Name": "Sadman Sakib",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_x7mgdwbup",
+      "Date": "2025-07-05",
+      "Member Name": "Sadman Sakib",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_6uh7g1yfq",
+      "Date": "2025-08-05",
+      "Member Name": "Sadman Sakib",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_k92sdfdje",
+      "Date": "2025-09-05",
+      "Member Name": "Sadman Sakib",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_8lwk4ahvr",
+      "Date": "2025-10-05",
+      "Member Name": "Sadman Sakib",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_o6hrfhjcm",
+      "Date": "2025-11-05",
+      "Member Name": "Sadman Sakib",
+      "Amount Received": 800,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_qkjj8l2z8",
+      "Date": "2025-05-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_27amq6t6d",
+      "Date": "2025-06-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_0qxsx3x4t",
+      "Date": "2025-07-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_dp33fwnpp",
+      "Date": "2025-08-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_l7gaclhzs",
+      "Date": "2025-09-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_bm9g458fy",
+      "Date": "2025-10-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ha7indijk",
+      "Date": "2025-11-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_0wfq8zy32",
+      "Date": "2025-12-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_pyj3ds3tk",
+      "Date": "2025-05-05",
+      "Member Name": "Shariful Islam Nadim",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_4z3hwx6wc",
+      "Date": "2025-05-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-05",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_e42e1z0n4",
+      "Date": "2025-06-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-06",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_vmb286hf5",
+      "Date": "2025-07-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-07",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_hj04ckt7d",
+      "Date": "2025-08-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-08",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_p6ic3vbfj",
+      "Date": "2025-09-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-09",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_h8fq1uwoi",
+      "Date": "2025-10-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-10",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_l1mtxe0i3",
+      "Date": "2025-11-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-11",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_2yo2bd9l6",
+      "Date": "2025-12-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2100,
+      "Month Allocated": "2025-12",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_vd6cto7bg",
+      "Date": "2026-01-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_rsiavtfuw",
+      "Date": "2026-02-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_68lr5is6i",
+      "Date": "2026-03-05",
+      "Member Name": "Ariful Hridoy",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_zh2syhlab",
+      "Date": "2026-01-05",
+      "Member Name": "Arman",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_tsyayvki3",
+      "Date": "2026-02-05",
+      "Member Name": "Arman",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_7o77js57v",
+      "Date": "2026-01-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_dp07xzruk",
+      "Date": "2026-02-05",
+      "Member Name": "Arman (Josh)",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_3we32nauz",
+      "Date": "2026-01-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_2ojdzul5q",
+      "Date": "2026-02-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ff9tc4d1q",
+      "Date": "2026-03-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_k0w4xqzio",
+      "Date": "2026-04-05",
+      "Member Name": "Lokman Limon",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-04",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ufhpf550e",
+      "Date": "2026-01-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_cqjc4bqyw",
+      "Date": "2026-02-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_v0dmwzm8b",
+      "Date": "2026-03-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 1000,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_2vgqcnz34",
+      "Date": "2026-04-05",
+      "Member Name": "M.A Sharif Shaibal",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-04",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_wrq39hnqv",
+      "Date": "2026-01-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_aupj8y6rs",
+      "Date": "2026-02-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_do757py9z",
+      "Date": "2026-03-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_9ke73bnkz",
+      "Date": "2026-04-05",
+      "Member Name": "Md. Ashraful Islam",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-04",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_rf8knjhdx",
+      "Date": "2026-01-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_zwkf2qq9b",
+      "Date": "2026-02-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_eyyu3arog",
+      "Date": "2026-03-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_y8ysqqb8k",
+      "Date": "2026-04-05",
+      "Member Name": "Md. Nahid Hasan",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-04",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_mbmnhree3",
+      "Date": "2026-01-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_2ahd2bxca",
+      "Date": "2026-02-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_f3r3ljcn1",
+      "Date": "2026-03-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_y0atwjfdx",
+      "Date": "2026-04-05",
+      "Member Name": "Md. Salahuddin Shakil",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-04",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_70ez3ic9a",
+      "Date": "2026-01-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_cdzpmyttt",
+      "Date": "2026-02-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_nrggeadrp",
+      "Date": "2026-03-05",
+      "Member Name": "Mehedi Hasan Nayeem",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_5gucp5494",
+      "Date": "2026-01-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_duw4moloi",
+      "Date": "2026-02-05",
+      "Member Name": "Muhaiminul Mohsin Himel",
+      "Amount Received": 1000,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_qfxv9tqmf",
+      "Date": "2026-01-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_fv2swacy3",
+      "Date": "2026-02-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_cvwh0m2o9",
+      "Date": "2026-03-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_qsc4ije8c",
+      "Date": "2026-04-05",
+      "Member Name": "Shahanul Ahmed Chy.",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-04",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_beabo36au",
+      "Date": "2026-01-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-01",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_ad2zvk53s",
+      "Date": "2026-02-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-02",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_e0wm4qf4c",
+      "Date": "2026-03-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-03",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    },
+    {
+      "Payment ID": "pay_e9mi8qfey",
+      "Date": "2026-04-05",
+      "Member Name": "Zamil Hasan Sourov",
+      "Amount Received": 2500,
+      "Month Allocated": "2026-04",
+      "Note": "Imported from legacy Excel",
+      "Sync Status": "synced"
+    }
+  ],
+  "totalDeposits": 157,
+  "expenses": [
+    {
+      "Expense ID": "exp_vxjdvdxln",
+      "Date": "2025-06-03",
+      "Category": "Other",
+      "Description": "Seal",
+      "Amount": 1000,
+      "Sync Status": "synced"
+    },
+    {
+      "Expense ID": "exp_wv4ex7b57",
+      "Date": "2025-09-05",
+      "Category": "Other",
+      "Description": "Print",
+      "Amount": 210,
+      "Sync Status": "synced"
+    },
+    {
+      "Expense ID": "exp_02umuvxra",
+      "Date": "2025-06-30",
+      "Category": "Other",
+      "Description": "Bank Charge",
+      "Amount": 287,
+      "Sync Status": "synced"
+    },
+    {
+      "Expense ID": "exp_bxsmsiv6n",
+      "Date": "2025-11-14",
+      "Category": "Other",
+      "Description": "Meetinf Food",
+      "Amount": 4300,
+      "Sync Status": "synced"
+    },
+    {
+      "Expense ID": "exp_evpppt5ph",
+      "Date": "2026-01-13",
+      "Category": "Other",
+      "Description": "Conveyance & Entertainment Bill within Investment Process in One Ummah BD",
+      "Amount": 1600,
+      "Sync Status": "synced"
+    },
+    {
+      "Expense ID": "exp_88woek1s1",
+      "Date": "206-03-047",
+      "Category": "Other",
+      "Description": "Iftar",
+      "Amount": 4040,
+      "Sync Status": "synced"
+    }
+  ],
+  "investments": [
+    {
+      "Investment ID": "inv_auq9edytl",
+      "Date": "2026-01-15",
+      "Recipient": "One Ummah BD",
+      "Principal": 200000,
+      "Expected Return": "2026-06-01",
+      "Sync Status": "synced"
+    }
+  ],
+  "revenue": [
+    {
+      "Entry ID": "rev_m3kexy0xd",
+      "Date": "2025-12-30",
+      "Type (Income/Loss)": "bank_profit",
+      "Description": "Bank Profit",
+      "Amount": 517,
+      "Sync Status": "synced"
+    }
+  ]
+}
