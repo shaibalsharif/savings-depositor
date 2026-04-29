@@ -29,7 +29,7 @@ type NavItem = {
 const managerNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={17} /> },
   { href: "/deposits", label: "Deposits", icon: <Wallet size={17} /> },
-  { href: "/withdrawals", label: "Withdrawals", icon: <ArrowDownUp size={17} /> },
+
   { href: "/expenses", label: "Expenses", icon: <Receipt size={17} /> },
   { href: "/investments", label: "Investments", icon: <TrendingUp size={17} /> },
   { href: "/revenue", label: "Revenue & Losses", icon: <ArrowDownUp size={17} /> },

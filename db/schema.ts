@@ -55,7 +55,7 @@ export const expenses = pgTable("expenses", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   entryId: varchar("entry_id", { length: 64 }).notNull().unique(), // EXP-{number}
   expenseDate: date("expense_date").notNull(),
-  category: varchar("category", { length: 32 }).notNull(), // "expense" | "withdrawal"
+  category: varchar("category", { length: 32 }).notNull(), // "expense"
   description: varchar("description", { length: 255 }).notNull(),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   linkedInvestmentId: varchar("linked_investment_id", { length: 64 }),
@@ -177,22 +177,7 @@ export const depositSettings = pgTable("deposit_settings", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const withdrawals = pgTable("withdrawals", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  userId: varchar("user_id", { length: 255 }).notNull(),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
-  fundId: integer("fund_id")
-    .references(() => funds.id)
-    .notNull(),
-  purpose: varchar("purpose", { length: 128 }).notNull(),
-  details: text("details").notNull(),
-  status: varchar("status", { length: 32 }).notNull().default("pending"),
-  reviewedBy: varchar("reviewed_by", { length: 255 }).notNull(),
-  reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull(),
-  attachmentUrl: text("attachment_url").notNull(),
-  rejectionReason: text("rejection_reason").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+
 
 export const logs = pgTable("logs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

@@ -11,6 +11,7 @@ const REDUNDANT_TABLES = [
   "notifications",
   "terms",
   "users",
+  "withdrawals"
 ];
 
 async function dropRedundantTables() {

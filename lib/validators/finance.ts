@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ExpenseSchema = z.object({
   expenseDate: z.string().min(1, "Date is required"),
-  category: z.enum(["Food", "Event", "Materials", "Bank Charge", "Conveyance", "Other", "withdrawal"]),
+  category: z.enum(["Food", "Event", "Materials", "Bank Charge", "Conveyance", "Other"]),
   description: z.string().min(1, "Description is required").max(255),
   amount: z.coerce.number().positive("Amount must be positive"),
   linkedInvestmentId: z.string().optional(),
