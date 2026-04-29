@@ -7,6 +7,7 @@ import { eq, desc } from "drizzle-orm";
 import { DepositsFilter } from "./deposits-filter";
 import { Suspense } from "react";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { ColumnConfigurator } from "@/components/ui/column-configurator";
 
 type SearchParams = Promise<{ member?: string; month?: string; status?: string }>;
 
@@ -73,15 +74,30 @@ export default async function DepositsPage(props: { searchParams: SearchParams }
             {(memberFilter || monthFilter || statusFilter) && " (filtered)"}
           </p>
         </div>
-        {manager && (
-          <Link
-            href="/deposits/new"
-            className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "var(--teal)", color: "hsl(222 47% 7%)" }}
-          >
-            + Record Deposit
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          <ColumnConfigurator 
+            tableId="deposits-table" 
+            columns={[
+              { id: "id", label: "Payment ID", defaultHidden: true },
+              ...(manager ? [{ id: "member", label: "Member" }] : []),
+              { id: "amount", label: "Amount" },
+              { id: "date", label: "Date" },
+              { id: "months", label: "Months Covered" },
+              { id: "note", label: "Note" },
+              { id: "status", label: "Status" },
+              ...(manager ? [{ id: "actions", label: "Actions" }] : [])
+            ]} 
+          />
+          {manager && (
+            <Link
+              href="/deposits/new"
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
+              style={{ background: "var(--teal)", color: "hsl(222 47% 7%)" }}
+            >
+              + Record Deposit
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -96,17 +112,17 @@ export default async function DepositsPage(props: { searchParams: SearchParams }
 
       {/* Table */}
       <div className="glass overflow-hidden">
-        <table className="data-table">
+        <table id="deposits-table" className="data-table">
           <thead>
             <tr>
-              <th>Payment ID</th>
-              {manager && <th>Member</th>}
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Months Covered</th>
-              <th>Note</th>
-              <th>Status</th>
-              {manager && <th className="text-right">Actions</th>}
+              <th className="col-id">Payment ID</th>
+              {manager && <th className="col-member">Member</th>}
+              <th className="col-amount">Amount</th>
+              <th className="col-date">Date</th>
+              <th className="col-months">Months Covered</th>
+              <th className="col-note">Note</th>
+              <th className="col-status">Status</th>
+              {manager && <th className="col-actions text-right">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -118,23 +134,23 @@ export default async function DepositsPage(props: { searchParams: SearchParams }
 
               return (
                 <tr key={row.payment.id} style={{ opacity: row.payment.voided ? 0.55 : 1 }}>
-                  <td className="font-mono text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <td className="col-id font-mono text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {row.payment.paymentId}
                   </td>
                   {manager && (
-                    <td className="font-medium">
+                    <td className="col-member font-medium">
                       {row.member?.name ?? <span className="italic" style={{ color: "hsl(var(--muted-foreground))" }}>Unknown</span>}
                     </td>
                   )}
-                  <td>
+                  <td className="col-amount">
                     <span className="font-semibold" style={{ color: row.payment.voided ? "hsl(var(--muted-foreground))" : "var(--teal)" }}>
                       ৳{Number(row.payment.amountReceived).toLocaleString()}
                     </span>
                   </td>
-                  <td style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <td className="col-date" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {format(new Date(row.payment.paymentDate), "dd MMM yyyy")}
                   </td>
-                  <td>
+                  <td className="col-months">
                     <div className="flex flex-wrap gap-1">
                       {allocs.length > 0
                         ? allocs.map((a) => (
@@ -148,10 +164,10 @@ export default async function DepositsPage(props: { searchParams: SearchParams }
                         : <span style={{ color: "hsl(var(--muted-foreground))", fontSize: 12 }}>—</span>}
                     </div>
                   </td>
-                  <td style={{ color: "hsl(var(--muted-foreground))", maxWidth: 140 }} className="truncate">
+                  <td className="col-note truncate" style={{ color: "hsl(var(--muted-foreground))", maxWidth: 140 }}>
                     {row.payment.note || "—"}
                   </td>
-                  <td>
+                  <td className="col-status">
                     {row.payment.voided ? (
                       <span className="badge-red inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">Voided</span>
                     ) : (
@@ -159,7 +175,7 @@ export default async function DepositsPage(props: { searchParams: SearchParams }
                     )}
                   </td>
                   {manager && (
-                    <td className="text-right">
+                    <td className="col-actions text-right">
                       {!row.payment.voided && (
                         <Link
                           href={`/deposits/${row.payment.paymentId}/edit`}

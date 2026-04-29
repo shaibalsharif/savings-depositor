@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { desc } from "drizzle-orm";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { ColumnConfigurator } from "@/components/ui/column-configurator";
 
 const sourceTypeLabels: Record<string, string> = {
   bank_profit: "Bank Profit",
@@ -36,13 +37,27 @@ export default async function RevenuePage() {
             </span>
           </p>
         </div>
-        <Link
-          href="/revenue/new"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
-          style={{ background: "var(--teal)", color: "hsl(var(--primary-foreground))" }}
-        >
-          + Record Entry
-        </Link>
+        <div className="flex items-center gap-3">
+          <ColumnConfigurator 
+            tableId="revenue-table" 
+            columns={[
+              { id: "id", label: "ID", defaultHidden: true },
+              { id: "date", label: "Date" },
+              { id: "source", label: "Source" },
+              { id: "description", label: "Description" },
+              { id: "linked-inv", label: "Linked Inv." },
+              { id: "amount", label: "Amount" },
+              { id: "status", label: "Status" }
+            ]} 
+          />
+          <Link
+            href="/revenue/new"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
+            style={{ background: "var(--teal)", color: "hsl(var(--primary-foreground))" }}
+          >
+            + Record Entry
+          </Link>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -65,16 +80,16 @@ export default async function RevenuePage() {
 
       {/* Table */}
       <div className="glass overflow-hidden">
-        <table className="data-table">
+        <table id="revenue-table" className="data-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Date</th>
-              <th>Source</th>
-              <th>Description</th>
-              <th>Linked Inv.</th>
-              <th>Amount</th>
-              <th>Status</th>
+              <th className="col-id">ID</th>
+              <th className="col-date">Date</th>
+              <th className="col-source">Source</th>
+              <th className="col-description">Description</th>
+              <th className="col-linked-inv">Linked Inv.</th>
+              <th className="col-amount">Amount</th>
+              <th className="col-status">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -82,19 +97,19 @@ export default async function RevenuePage() {
               const amount = Number(row.amount);
               return (
                 <tr key={row.id} style={{ opacity: row.voided ? 0.5 : 1 }}>
-                  <td className="font-mono text-xs text-muted-foreground">{row.entryId}</td>
-                  <td className="text-muted-foreground">{format(new Date(row.eventDate), "dd MMM yyyy")}</td>
-                  <td>
+                  <td className="col-id font-mono text-xs text-muted-foreground">{row.entryId}</td>
+                  <td className="col-date text-muted-foreground">{format(new Date(row.eventDate), "dd MMM yyyy")}</td>
+                  <td className="col-source">
                     <span className={`${amount >= 0 ? "badge-green" : "badge-red"} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}>
                       {sourceTypeLabels[row.sourceType] ?? row.sourceType}
                     </span>
                   </td>
-                  <td className="font-medium max-w-[180px] truncate">{row.description}</td>
-                  <td className="text-muted-foreground font-mono text-xs">{row.linkedInvestmentId || "—"}</td>
-                  <td className="font-semibold" style={{ color: amount >= 0 ? "var(--green)" : "var(--red)" }}>
+                  <td className="col-description font-medium max-w-[180px] truncate">{row.description}</td>
+                  <td className="col-linked-inv text-muted-foreground font-mono text-xs">{row.linkedInvestmentId || "—"}</td>
+                  <td className="col-amount font-semibold" style={{ color: amount >= 0 ? "var(--green)" : "var(--red)" }}>
                     {amount >= 0 ? "+" : ""}৳{amount.toLocaleString()}
                   </td>
-                  <td>
+                  <td className="col-status">
                     {row.voided ? (
                       <span className="badge-red inline-flex items-center px-2 py-0.5 rounded-full text-xs">Voided</span>
                     ) : (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format, differenceInDays, isPast } from "date-fns";
 import { desc } from "drizzle-orm";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { ColumnConfigurator } from "@/components/ui/column-configurator";
 
 export default async function InvestmentsPage() {
   await requireManager();
@@ -27,13 +28,29 @@ export default async function InvestmentsPage() {
             {activeCount} active · {maturedCount} matured · ৳{totalDeployed.toLocaleString()} deployed
           </p>
         </div>
-        <Link
-          href="/investments/new"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
-          style={{ background: "var(--teal)", color: "hsl(var(--primary-foreground))" }}
-        >
-          + New Investment
-        </Link>
+        <div className="flex items-center gap-3">
+          <ColumnConfigurator 
+            tableId="investments-table" 
+            columns={[
+              { id: "id", label: "ID", defaultHidden: true },
+              { id: "recipient", label: "Recipient" },
+              { id: "principal", label: "Principal" },
+              { id: "invest-date", label: "Invest Date" },
+              { id: "expected-return", label: "Expected Return" },
+              { id: "actual-return", label: "Actual Return" },
+              { id: "days", label: "Days" },
+              { id: "status", label: "Status" },
+              { id: "actions", label: "Actions" }
+            ]} 
+          />
+          <Link
+            href="/investments/new"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
+            style={{ background: "var(--teal)", color: "hsl(var(--primary-foreground))" }}
+          >
+            + New Investment
+          </Link>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -52,18 +69,18 @@ export default async function InvestmentsPage() {
 
       {/* Table */}
       <div className="glass overflow-hidden">
-        <table className="data-table">
+        <table id="investments-table" className="data-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Recipient</th>
-              <th>Principal</th>
-              <th>Invest Date</th>
-              <th>Expected Return</th>
-              <th>Actual Return</th>
-              <th>Days</th>
-              <th>Status</th>
-              <th className="text-right">Actions</th>
+              <th className="col-id">ID</th>
+              <th className="col-recipient">Recipient</th>
+              <th className="col-principal">Principal</th>
+              <th className="col-invest-date">Invest Date</th>
+              <th className="col-expected-return">Expected Return</th>
+              <th className="col-actual-return">Actual Return</th>
+              <th className="col-days">Days</th>
+              <th className="col-status">Status</th>
+              <th className="col-actions text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -75,27 +92,27 @@ export default async function InvestmentsPage() {
               );
               return (
                 <tr key={inv.id}>
-                  <td className="font-mono text-xs">
+                  <td className="col-id font-mono text-xs">
                     <Link href={`/investments/${inv.entryId}`} style={{ color: "var(--teal)" }} className="hover:underline">
                       {inv.entryId}
                     </Link>
                   </td>
-                  <td className="font-medium">
+                  <td className="col-recipient font-medium">
                     <Link href={`/investments/${inv.entryId}`} className="hover:underline">{inv.recipient}</Link>
                   </td>
-                  <td className="font-semibold" style={{ color: "var(--purple)" }}>
+                  <td className="col-principal font-semibold" style={{ color: "var(--purple)" }}>
                     ৳{Number(inv.principal).toLocaleString()}
                   </td>
-                  <td className="text-muted-foreground">{format(new Date(inv.investDate), "dd MMM yyyy")}</td>
-                  <td className={isOverdue ? "" : "text-muted-foreground"} style={isOverdue ? { color: "var(--red)" } : {}}>
+                  <td className="col-invest-date text-muted-foreground">{format(new Date(inv.investDate), "dd MMM yyyy")}</td>
+                  <td className={`col-expected-return ${isOverdue ? "" : "text-muted-foreground"}`} style={isOverdue ? { color: "var(--red)" } : {}}>
                     {format(new Date(inv.expectedReturnDate), "dd MMM yyyy")}
                     {isOverdue && <span className="ml-2 text-xs font-medium" style={{ color: "var(--red)" }}>OVERDUE</span>}
                   </td>
-                  <td className="text-muted-foreground">
+                  <td className="col-actual-return text-muted-foreground">
                     {inv.actualReturnDate ? format(new Date(inv.actualReturnDate), "dd MMM yyyy") : "—"}
                   </td>
-                  <td className="text-muted-foreground">{daysActive}d</td>
-                  <td>
+                  <td className="col-days text-muted-foreground">{daysActive}d</td>
+                  <td className="col-status">
                     <span
                       className={
                         inv.status === "active"
@@ -109,7 +126,7 @@ export default async function InvestmentsPage() {
                       {inv.status}
                     </span>
                   </td>
-                  <td className="text-right">
+                  <td className="col-actions text-right">
                     <Link
                       href={`/investments/${inv.entryId}`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all border border-teal/20 hover:bg-teal/10"

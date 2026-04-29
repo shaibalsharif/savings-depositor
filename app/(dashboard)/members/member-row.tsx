@@ -5,6 +5,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 
 type Member = {
+  id: number;
   userId: string;
   name: string;
   profession: string;
@@ -33,10 +34,11 @@ export function MemberRow({ member, isAdmin }: { member: Member; isAdmin: boolea
 
   return (
     <tr>
-      <td className="font-medium">{member.name}</td>
-      <td className="text-muted-foreground">{member.profession}</td>
-      <td className="font-mono text-sm">{member.mobile}</td>
-      <td>
+      <td className="col-id font-mono text-xs text-muted-foreground">#{member.id}</td>
+      <td className="col-name font-medium">{member.name}</td>
+      <td className="col-profession text-muted-foreground">{member.profession}</td>
+      <td className="col-mobile font-mono text-sm">{member.mobile}</td>
+      <td className="col-position">
         <div className="flex items-center gap-3">
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -61,7 +63,7 @@ export function MemberRow({ member, isAdmin }: { member: Member; isAdmin: boolea
           )}
         </div>
       </td>
-      <td className="text-muted-foreground">
+      <td className="col-joined text-muted-foreground">
         {format(new Date(member.createdAt), "dd MMM yyyy")}
       </td>
     </tr>

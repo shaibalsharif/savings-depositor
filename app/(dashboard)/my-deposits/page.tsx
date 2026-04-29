@@ -4,6 +4,8 @@ import { requireMember } from "@/lib/auth";
 import { format } from "date-fns";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { ColumnConfigurator } from "@/components/ui/column-configurator";
 
 export default async function MyDepositsPage() {
   const user = await requireMember();
@@ -31,12 +33,26 @@ export default async function MyDepositsPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs crumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "My Deposits" }]} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">My Deposits</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {myPayments.filter((p) => !p.voided).length} valid payments — ৳{totalPaid.toLocaleString()} total contributed
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <ColumnConfigurator 
+            tableId="my-deposits-table" 
+            columns={[
+              { id: "id", label: "Payment ID", defaultHidden: true },
+              { id: "date", label: "Date" },
+              { id: "amount", label: "Amount" },
+              { id: "months", label: "Months Covered" },
+              { id: "note", label: "Note" },
+              { id: "status", label: "Status" }
+            ]} 
+          />
         </div>
       </div>
 
@@ -60,15 +76,15 @@ export default async function MyDepositsPage() {
 
       {/* Table */}
       <div className="glass overflow-hidden">
-        <table className="data-table">
+        <table id="my-deposits-table" className="data-table">
           <thead>
             <tr>
-              <th>Payment ID</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Months Covered</th>
-              <th>Note</th>
-              <th>Status</th>
+              <th className="col-id">Payment ID</th>
+              <th className="col-date">Date</th>
+              <th className="col-amount">Amount</th>
+              <th className="col-months">Months Covered</th>
+              <th className="col-note">Note</th>
+              <th className="col-status">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -76,12 +92,12 @@ export default async function MyDepositsPage() {
               const allocs = allocationsByPayment[p.paymentId] ?? [];
               return (
                 <tr key={p.id} style={{ opacity: p.voided ? 0.5 : 1 }}>
-                  <td className="font-mono text-xs text-muted-foreground">{p.paymentId}</td>
-                  <td className="text-muted-foreground">{format(new Date(p.paymentDate), "dd MMM yyyy")}</td>
-                  <td className="font-semibold" style={{ color: p.voided ? "hsl(var(--muted-foreground))" : "var(--teal)" }}>
+                  <td className="col-id font-mono text-xs text-muted-foreground">{p.paymentId}</td>
+                  <td className="col-date text-muted-foreground">{format(new Date(p.paymentDate), "dd MMM yyyy")}</td>
+                  <td className="col-amount font-semibold" style={{ color: p.voided ? "hsl(var(--muted-foreground))" : "var(--teal)" }}>
                     ৳{Number(p.amountReceived).toLocaleString()}
                   </td>
-                  <td>
+                  <td className="col-months">
                     <div className="flex flex-wrap gap-1">
                       {allocs.length > 0
                         ? allocs.map((a) => (
@@ -95,8 +111,8 @@ export default async function MyDepositsPage() {
                         : <span className="text-muted-foreground text-xs">—</span>}
                     </div>
                   </td>
-                  <td className="text-muted-foreground">{p.note || "—"}</td>
-                  <td>
+                  <td className="col-note text-muted-foreground">{p.note || "—"}</td>
+                  <td className="col-status">
                     {p.voided ? (
                       <span className="badge-red inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
                         Voided

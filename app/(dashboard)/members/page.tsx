@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { MemberRow } from "./member-row";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { ColumnConfigurator } from "@/components/ui/column-configurator";
 
 export default async function MembersPage() {
   await requireManager();
@@ -25,17 +26,31 @@ export default async function MembersPage() {
             {allMembers.length} active members {isAdmin && "(Admin Mode)"}
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          <ColumnConfigurator 
+            tableId="members-table" 
+            columns={[
+              { id: "id", label: "ID", defaultHidden: true },
+              { id: "name", label: "Name" },
+              { id: "profession", label: "Profession" },
+              { id: "mobile", label: "Mobile" },
+              { id: "position", label: "Position" },
+              { id: "joined", label: "Joined Date" }
+            ]} 
+          />
+        </div>
       </div>
 
       <div className="glass overflow-hidden">
-        <table className="data-table">
+        <table id="members-table" className="data-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Profession</th>
-              <th>Mobile</th>
-              <th>Position</th>
-              <th>Joined Date</th>
+              <th className="col-id">ID</th>
+              <th className="col-name">Name</th>
+              <th className="col-profession">Profession</th>
+              <th className="col-mobile">Mobile</th>
+              <th className="col-position">Position</th>
+              <th className="col-joined">Joined Date</th>
             </tr>
           </thead>
           <tbody>
