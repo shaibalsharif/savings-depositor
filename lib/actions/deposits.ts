@@ -38,9 +38,8 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
   const paymentId = await generatePaymentId();
   const allocId = await generateAllocId();
 
-  await db.transaction(async (tx) => {
     // One payment row — manager explicitly chose forMonth and amount
-    await tx.insert(payments).values({
+    await db.insert(payments).values({
       paymentId,
       memberId: parsed.memberId,
       amountReceived: parsed.amountReceived.toString(),
@@ -52,7 +51,7 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
     });
 
     // One allocation row — derived 1:1 from payment, never auto-FIFO
-    await tx.insert(depositAllocations).values({
+    await db.insert(depositAllocations).values({
       allocId,
       paymentId,
       memberId: parsed.memberId,
@@ -60,7 +59,7 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
       amountAllocated: parsed.amountReceived.toString(),
     });
 
-    await tx.insert(logs).values({
+    await db.insert(logs).values({
       userId: user.id,
       action: "CREATE_PAYMENT",
       details: JSON.stringify({
@@ -70,7 +69,6 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
         forMonth: parsed.forMonth,
       }),
     });
-  });
 
   // Sync to Google Sheets (single Payments tab — no separate Allocations tab)
   try {
@@ -127,8 +125,7 @@ export async function createBatchPayments(
     const paymentId = await generatePaymentId();
     const allocId = await generateAllocId();
 
-    await db.transaction(async (tx) => {
-      await tx.insert(payments).values({
+      await db.insert(payments).values({
         paymentId,
         memberId: parsed.memberId,
         amountReceived: parsed.amountReceived.toString(),
@@ -139,7 +136,7 @@ export async function createBatchPayments(
         createdBy: user.id,
       });
 
-      await tx.insert(depositAllocations).values({
+      await db.insert(depositAllocations).values({
         allocId,
         paymentId,
         memberId: parsed.memberId,
@@ -147,12 +144,11 @@ export async function createBatchPayments(
         amountAllocated: parsed.amountReceived.toString(),
       });
 
-      await tx.insert(logs).values({
+      await db.insert(logs).values({
         userId: user.id,
         action: "CREATE_PAYMENT",
         details: JSON.stringify({ paymentId, memberId: parsed.memberId, forMonth: parsed.forMonth }),
       });
-    });
 
     try {
       const pRow = toSheetRow(
@@ -206,8 +202,7 @@ export async function updatePayment(
 
   const allocId = await generateAllocId();
 
-  await db.transaction(async (tx) => {
-    await tx
+    await db
       .update(payments)
       .set({
         memberId: parsed.memberId,
@@ -220,7 +215,7 @@ export async function updatePayment(
       })
       .where(eq(payments.paymentId, paymentId));
 
-    await tx.insert(depositAllocations).values({
+    await db.insert(depositAllocations).values({
       allocId,
       paymentId,
       memberId: parsed.memberId,
@@ -228,12 +223,11 @@ export async function updatePayment(
       amountAllocated: parsed.amountReceived.toString(),
     });
 
-    await tx.insert(logs).values({
+    await db.insert(logs).values({
       userId: user.id,
       action: "UPDATE_PAYMENT",
       details: JSON.stringify({ paymentId, before: existing, after: parsed }),
     });
-  });
 
   if (existing.sheetsRowIndex) {
     try {
