@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/client";
-import { payments, expenses, investments, revenueLosses, syncLogs } from "@/db/schema";
+import { payments, expenses, investments, revenueLosses, syncLogs, depositAllocations } from "@/db/schema";
 import { readSheet, SheetName } from "@/lib/sheets";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
@@ -10,9 +10,9 @@ import { z } from "zod";
 
 const PaymentSchema = z.object({
   "Payment ID": z.string().min(1),
-  "Member ID": z.string().min(1),
   "Amount": z.coerce.number().positive("Amount must be a positive number"),
   "Date": z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+  "For Month": z.string().regex(/^\d{4}-\d{2}$/, "For Month must be YYYY-MM"),
   "Note": z.string().optional(),
   "Voided": z.string().transform((v) => v.toUpperCase() === "TRUE"),
 });
@@ -108,13 +108,33 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Validation failed", details: msg }, { status: 422 });
         }
         const d = parsed.data;
+        // Look up existing payment to get member_id (not in sheet anymore)
+        const existingPayment = await db.query.payments.findFirst({
+          where: eq(payments.paymentId, d["Payment ID"]),
+        });
+        if (!existingPayment) {
+          await log({ direction, sheetName: sheet, rowIndex: row, status: "error", errorMessage: `Payment ${d["Payment ID"]} not found in DB`, payload: data });
+          return NextResponse.json({ error: `Payment ${d["Payment ID"]} not found` }, { status: 404 });
+        }
         await db.update(payments).set({
           amountReceived: d["Amount"].toString(),
           paymentDate: d["Date"],
+          forMonth: d["For Month"],
+          amountForMonth: d["Amount"].toString(),
           note: d["Note"] ?? "",
           voided: d["Voided"],
           syncStatus: "synced",
         }).where(eq(payments.paymentId, d["Payment ID"]));
+        // Keep deposit_allocations in sync (1:1 mirror) using member_id from DB record
+        await db.delete(depositAllocations).where(eq(depositAllocations.paymentId, d["Payment ID"]));
+        const allocId = `alloc_sheet_${Date.now()}`;
+        await db.insert(depositAllocations).values({
+          allocId,
+          paymentId: d["Payment ID"],
+          memberId: existingPayment.memberId,   // from DB — not from sheet
+          forMonth: d["For Month"],
+          amountAllocated: d["Amount"].toString(),
+        });
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Payment ID"], status: "success", payload: data });
         break;
       }

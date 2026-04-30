@@ -31,6 +31,8 @@ export const payments = pgTable("payments", {
   memberId: varchar("member_id", { length: 255 }).notNull(), // FK to users (Kinde)
   amountReceived: numeric("amount_received", { precision: 10, scale: 2 }).notNull(),
   paymentDate: date("payment_date").notNull(),
+  forMonth: varchar("for_month", { length: 7 }), // YYYY-MM — which month this payment covers
+  amountForMonth: numeric("amount_for_month", { precision: 10, scale: 2 }), // amount credited to forMonth
   note: varchar("note", { length: 200 }),
   voided: boolean("voided").default(false).notNull(),
   createdBy: varchar("created_by", { length: 255 }).notNull(), // always the manager

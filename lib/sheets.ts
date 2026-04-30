@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 
-export type SheetName = "Payments" | "Deposit_Allocations" | "Expenses" | "Investments" | "Revenue_Losses" | "Config";
+export type SheetName = "Payments" | "Expenses" | "Investments" | "Revenue_Losses" | "Config" | "Members";
 
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
