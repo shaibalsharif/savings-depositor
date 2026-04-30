@@ -1,6 +1,7 @@
 import { requireMember, isManager } from "@/lib/auth";
 import { getManagerDashboardStats, getMemberDashboardStats } from "@/lib/queries/dashboard";
 import { MonthlyCollectionChart, MemberCollectionChart } from "@/components/charts/CollectionCharts";
+import { BalanceTrendChart } from "@/components/charts/TrendChart";
 import { PaymentHeatmap } from "@/components/charts/PaymentHeatmap";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -151,6 +152,13 @@ async function ManagerDash() {
       >
         <div className="px-5 pb-5">
           <MonthlyCollectionChart data={stats.monthlyChart} />
+        </div>
+      </SectionBox>
+
+      {/* ── Row 3.5: Balance Trend Chart ── */}
+      <SectionBox title="Total Fund Balance Trend (All Time)">
+        <div className="px-5 pb-5">
+          <BalanceTrendChart data={stats.trendChart} />
         </div>
       </SectionBox>
 

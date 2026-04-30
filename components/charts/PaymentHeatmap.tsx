@@ -23,70 +23,118 @@ function getLabel(pct: number): string {
 }
 
 export function PaymentHeatmap({ data, months }: { data: HeatmapMember[]; months: string[] }) {
+  // Reverse so latest month is on the LEFT (index 0)
+  const reversedMonths = [...months].reverse();
+
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: "left", padding: "4px 8px", color: "hsl(215 20% 55%)", fontWeight: 600, fontSize: 11, minWidth: 140 }}>
-              Member
-            </th>
-            {months.map((m) => (
-              <th
+    <div>
+      {/* Outer container: sticky name col + scrollable month grid */}
+      <div style={{ display: "flex", overflow: "hidden" }}>
+        {/* Sticky left column — member names */}
+        <div style={{ flexShrink: 0, minWidth: 130, zIndex: 2 }}>
+          {/* header spacer */}
+          <div
+            style={{
+              height: 30,
+              padding: "4px 8px",
+              color: "hsl(215 20% 55%)",
+              fontWeight: 600,
+              fontSize: 11,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            Member
+          </div>
+          {data.map((member) => (
+            <div
+              key={member.memberId}
+              style={{
+                height: 36,
+                display: "flex",
+                alignItems: "center",
+                padding: "0 8px",
+                fontWeight: 500,
+                fontSize: 12,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: 130,
+                background: "transparent",
+              }}
+            >
+              {member.name}
+            </div>
+          ))}
+        </div>
+
+        {/* Scrollable month columns */}
+        <div style={{ overflowX: "auto", flex: 1 }}>
+          {/* Month headers */}
+          <div style={{ display: "flex", minWidth: "max-content" }}>
+            {reversedMonths.map((m) => (
+              <div
                 key={m}
                 style={{
-                  padding: "4px 2px",
+                  width: 44,
+                  flexShrink: 0,
+                  height: 30,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   color: "hsl(215 20% 55%)",
                   fontWeight: 500,
                   fontSize: 10,
-                  textAlign: "center",
-                  minWidth: 48,
                 }}
               >
                 {m.slice(5, 7)}/{m.slice(2, 4)}
-              </th>
+              </div>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((member) => (
-            <tr key={member.memberId} className="hover:bg-accent/20">
-              <td
-                style={{
-                  padding: "4px 8px",
-                  fontWeight: 500,
-                  fontSize: 12,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: 140,
-                }}
+          </div>
+
+          {/* Member rows */}
+          {data.map((member) => {
+            // Build a lookup for this member's month data, then reorder by reversedMonths
+            const lookup = Object.fromEntries(member.months.map((m) => [m.month, m]));
+            return (
+              <div
+                key={member.memberId}
+                style={{ display: "flex", minWidth: "max-content", height: 36, alignItems: "center" }}
+                className="hover:bg-accent/10"
               >
-                {member.name}
-              </td>
-              {member.months.map((m) => (
-                <td key={m.month} style={{ padding: "3px 2px", textAlign: "center" }}>
-                  <div
-                    title={`${member.name} — ${m.month}: ৳${m.paid.toLocaleString()} paid of ৳${m.expected.toLocaleString()} (${getLabel(m.pct)})`}
-                    style={{
-                      width: 32,
-                      height: 28,
-                      borderRadius: 5,
-                      background: getColor(m.pct),
-                      border: "1px solid hsl(222 47% 18%)",
-                      margin: "0 auto",
-                      cursor: "default",
-                      transition: "transform 0.1s",
-                    }}
-                    onMouseOver={(e) => ((e.currentTarget as HTMLElement).style.transform = "scale(1.2)")}
-                    onMouseOut={(e) => ((e.currentTarget as HTMLElement).style.transform = "scale(1)")}
-                  />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                {reversedMonths.map((mKey) => {
+                  const cell = lookup[mKey];
+                  return (
+                    <div
+                      key={mKey}
+                      style={{ width: 44, flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center" }}
+                    >
+                      <div
+                        title={
+                          cell
+                            ? `${member.name} — ${mKey}: ৳${cell.paid.toLocaleString()} paid of ৳${cell.expected.toLocaleString()} (${getLabel(cell.pct)})`
+                            : `${member.name} — ${mKey}: No data`
+                        }
+                        style={{
+                          width: 30,
+                          height: 26,
+                          borderRadius: 5,
+                          background: cell ? getColor(cell.pct) : "hsl(222 47% 12%)",
+                          border: "1px solid hsl(222 47% 18%)",
+                          cursor: "default",
+                          transition: "transform 0.1s",
+                        }}
+                        onMouseOver={(e) => ((e.currentTarget as HTMLElement).style.transform = "scale(1.2)")}
+                        onMouseOut={(e) => ((e.currentTarget as HTMLElement).style.transform = "scale(1)")}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Legend */}
       <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">

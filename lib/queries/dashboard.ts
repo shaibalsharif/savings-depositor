@@ -158,6 +158,26 @@ export async function getManagerDashboardStats() {
     return { memberId: member.userId, name: member.name, months };
   });
 
+  // ── Trend Chart Data (Start to Current) ────────────────────────────────────
+  let runningBalance = 0;
+  const trendChart = allMonths.map((m) => {
+    const monthPayments = validPayments.filter(p => p.paymentDate.startsWith(m)).reduce((s, p) => s + Number(p.amountReceived), 0);
+    const monthExpenses = validExpenses.filter(e => e.expenseDate.startsWith(m)).reduce((s, e) => s + Number(e.amount), 0);
+    const monthRevenue = validRevenue.filter(r => r.eventDate.startsWith(m)).reduce((s, r) => {
+      return r.sourceType === "loss" ? s - Number(r.amount) : s + Number(r.amount);
+    }, 0);
+    const monthInvestmentsOut = allInvestments.filter(i => i.investDate.startsWith(m)).reduce((s, i) => s + Number(i.principal), 0);
+    const monthInvestmentsIn = allInvestments.filter(i => i.status === "matured" && i.actualReturnDate?.startsWith(m)).reduce((s, i) => s + Number(i.principal), 0);
+
+    const netFlow = monthPayments - monthExpenses + monthRevenue - monthInvestmentsOut + monthInvestmentsIn;
+    runningBalance += netFlow;
+
+    return {
+      month: format(new Date(m + "-01"), "MMM yy"),
+      balance: runningBalance,
+    };
+  });
+
   return {
     totalCollected,
     totalOutstanding,
@@ -176,6 +196,7 @@ export async function getManagerDashboardStats() {
     memberPendings,
     monthlyChart,
     heatmapData,
+    trendChart,
   };
 }
 
