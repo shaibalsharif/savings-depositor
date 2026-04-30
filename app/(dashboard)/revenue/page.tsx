@@ -3,6 +3,7 @@ import { revenueLosses } from "@/db/schema";
 import { requireManager } from "@/lib/auth";
 import Link from "next/link";
 import { format } from "date-fns";
+import { formatLocalDate } from "@/lib/format-date";
 import { desc } from "drizzle-orm";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ColumnConfigurator } from "@/components/ui/column-configurator";
@@ -98,7 +99,7 @@ export default async function RevenuePage() {
               return (
                 <tr key={row.id} style={{ opacity: row.voided ? 0.5 : 1 }}>
                   <td className="col-id font-mono text-xs text-muted-foreground">{row.entryId}</td>
-                  <td className="col-date text-muted-foreground">{format(new Date(row.eventDate), "dd MMM yyyy")}</td>
+                  <td className="col-date text-muted-foreground">{formatLocalDate(row.eventDate)}</td>
                   <td className="col-source">
                     <span className={`${amount >= 0 ? "badge-green" : "badge-red"} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}>
                       {sourceTypeLabels[row.sourceType] ?? row.sourceType}

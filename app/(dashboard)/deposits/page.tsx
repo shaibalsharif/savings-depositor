@@ -2,12 +2,14 @@ import { db } from "@/db/client";
 import { payments, personalInfo, depositAllocations } from "@/db/schema";
 import { requireMember, isManager } from "@/lib/auth";
 import Link from "next/link";
-import { format } from "date-fns";
+import { formatLocalDate } from "@/lib/format-date";
 import { eq, desc } from "drizzle-orm";
 import { DepositsFilter } from "./deposits-filter";
 import { Suspense } from "react";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ColumnConfigurator } from "@/components/ui/column-configurator";
+
+export const dynamic = "force-dynamic"; // always fetch fresh — webhook updates must be visible immediately
 
 type SearchParams = Promise<{ member?: string; month?: string; status?: string }>;
 
@@ -148,7 +150,7 @@ export default async function DepositsPage(props: { searchParams: SearchParams }
                     </span>
                   </td>
                   <td className="col-date" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    {format(new Date(row.payment.paymentDate), "dd MMM yyyy")}
+                    {formatLocalDate(row.payment.paymentDate)}
                   </td>
                   <td className="col-months">
                     <div className="flex flex-wrap gap-1">

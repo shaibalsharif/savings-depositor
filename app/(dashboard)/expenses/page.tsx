@@ -3,6 +3,7 @@ import { expenses } from "@/db/schema";
 import { requireManager } from "@/lib/auth";
 import Link from "next/link";
 import { format } from "date-fns";
+import { formatLocalDate } from "@/lib/format-date";
 import { desc } from "drizzle-orm";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ColumnConfigurator } from "@/components/ui/column-configurator";
@@ -74,7 +75,7 @@ export default async function ExpensesPage() {
             {allExpenses.map((exp) => (
               <tr key={exp.id} style={{ opacity: exp.voided ? 0.5 : 1 }}>
                 <td className="col-id font-mono text-xs text-muted-foreground">{exp.entryId}</td>
-                <td className="col-date text-muted-foreground">{format(new Date(exp.expenseDate), "dd MMM yyyy")}</td>
+                <td className="col-date text-muted-foreground">{formatLocalDate(exp.expenseDate)}</td>
                 <td className="col-category">
                   <span className={`${categoryColors[exp.category] ?? ""} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}>
                     {exp.category}

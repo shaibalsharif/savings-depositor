@@ -4,6 +4,7 @@ import { MonthlyCollectionChart, MemberCollectionChart } from "@/components/char
 import { BalanceTrendChart } from "@/components/charts/TrendChart";
 import { PaymentHeatmap } from "@/components/charts/PaymentHeatmap";
 import { format } from "date-fns";
+import { formatLocalDate } from "@/lib/format-date";
 import Link from "next/link";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -139,7 +140,7 @@ async function ManagerDash() {
               Next Investment Return
             </div>
             <div className="font-semibold mt-1" style={{ color: "var(--amber)" }}>
-              {stats.nextReturn ? format(new Date(stats.nextReturn), "dd MMM yyyy") : "—"}
+              {stats.nextReturn ? formatLocalDate(stats.nextReturn) : "—"}
             </div>
           </div>
         </div>
@@ -341,7 +342,7 @@ async function MemberDash({ userId }: { userId: string }) {
               <tbody>
                 {stats.recentPayments.map((p) => (
                   <tr key={p.id}>
-                    <td className="text-muted-foreground">{format(new Date(p.paymentDate), "dd MMM yyyy")}</td>
+                    <td className="text-muted-foreground">{formatLocalDate(p.paymentDate)}</td>
                     <td className="font-semibold" style={{ color: "var(--teal)" }}>
                       +৳{Number(p.amountReceived).toLocaleString()}
                     </td>

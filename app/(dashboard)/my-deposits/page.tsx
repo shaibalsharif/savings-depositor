@@ -2,6 +2,7 @@ import { db } from "@/db/client";
 import { payments, depositAllocations } from "@/db/schema";
 import { requireMember } from "@/lib/auth";
 import { format } from "date-fns";
+import { formatLocalDate } from "@/lib/format-date";
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -93,7 +94,7 @@ export default async function MyDepositsPage() {
               return (
                 <tr key={p.id} style={{ opacity: p.voided ? 0.5 : 1 }}>
                   <td className="col-id font-mono text-xs text-muted-foreground">{p.paymentId}</td>
-                  <td className="col-date text-muted-foreground">{format(new Date(p.paymentDate), "dd MMM yyyy")}</td>
+                  <td className="col-date text-muted-foreground">{formatLocalDate(p.paymentDate)}</td>
                   <td className="col-amount font-semibold" style={{ color: p.voided ? "hsl(var(--muted-foreground))" : "var(--teal)" }}>
                     ৳{Number(p.amountReceived).toLocaleString()}
                   </td>

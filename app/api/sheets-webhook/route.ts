@@ -6,6 +6,39 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+// ─── Date normalizer ─────────────────────────────────────────────────────────
+// Google Sheets sends Date cell values as locale strings from Apps Script (e.g.
+// "Sat Apr 04 2026 00:00:00 GMT+0600"). This converts any parseable date string
+// to YYYY-MM-DD or YYYY-MM. If the value is already in the target format, it's
+// returned unchanged.
+function normalizeDate(value: string | undefined, type: "date" | "month"): string {
+  if (!value) return "";
+  // Already correct
+  if (type === "date" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (type === "month" && /^\d{4}-\d{2}$/.test(value)) return value;
+  // Try to parse as a date. Use UTC methods to extract the date portion that
+  // corresponds to the calendar date in any timezone.
+  const ts = Date.parse(value);
+  if (!isNaN(ts)) {
+    const d = new Date(ts);
+    // We use the date string that was visible to the user in the sheet:
+    // Apps Script formats dates in the spreadsheet's timezone, so we parse the
+    // timezone offset from the string directly.
+    const match = value.match(/GMT([+-]\d{4})/);
+    const offsetMin = match
+      ? (parseInt(match[1].slice(0, 3)) * 60 + parseInt(match[1].slice(3))) 
+      : 0;
+    const localMs = ts + offsetMin * 60000;
+    const local = new Date(localMs);
+    const y = local.getUTCFullYear();
+    const m = String(local.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(local.getUTCDate()).padStart(2, "0");
+    if (type === "date") return `${y}-${m}-${day}`;
+    if (type === "month") return `${y}-${m}`;
+  }
+  return value;
+}
+
 // ─── Zod validation schemas per sheet type ───────────────────────────────────
 
 const PaymentSchema = z.object({
@@ -101,6 +134,10 @@ export async function POST(req: Request) {
   try {
     switch (sheet as SheetName) {
       case "Payments": {
+        // Normalize date fields before validation (Google Sheets may send Date objects as locale strings)
+        if (data["Date"]) data["Date"] = normalizeDate(data["Date"], "date");
+        if (data["For Month"]) data["For Month"] = normalizeDate(data["For Month"], "month");
+        console.log("[webhook] Payments payload after normalize:", JSON.stringify(data));
         const parsed = PaymentSchema.safeParse(data);
         if (!parsed.success) {
           const msg = parsed.error.issues.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ");

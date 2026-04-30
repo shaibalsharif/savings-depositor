@@ -3,6 +3,8 @@ import { getInvestmentWithShares } from "@/lib/queries/investment";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format, differenceInDays, isPast } from "date-fns";
+import { formatLocalDate } from "@/lib/format-date";
+
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { InvestmentShareBreakdown } from "@/components/investment-share-breakdown";
 
@@ -75,19 +77,19 @@ export default async function InvestmentDetailPage({
       <div className="glass p-5 grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
         <div>
           <span className="text-muted-foreground">Invest Date:</span>{" "}
-          <span className="font-medium">{format(new Date(inv.investDate), "dd MMM yyyy")}</span>
+          <span className="font-medium">{formatLocalDate(inv.investDate)}</span>
         </div>
         <div>
           <span className="text-muted-foreground">Expected Return:</span>{" "}
           <span className="font-medium" style={isOverdue ? { color: "var(--red)" } : {}}>
-            {format(new Date(inv.expectedReturnDate), "dd MMM yyyy")}
+            {formatLocalDate(inv.expectedReturnDate)}
             {isOverdue && <span className="ml-2 text-xs font-bold">OVERDUE</span>}
           </span>
         </div>
         {inv.actualReturnDate && (
           <div>
             <span className="text-muted-foreground">Actual Return:</span>{" "}
-            <span className="font-medium">{format(new Date(inv.actualReturnDate), "dd MMM yyyy")}</span>
+            <span className="font-medium">{formatLocalDate(inv.actualReturnDate)}</span>
           </div>
         )}
         {inv.note && (
@@ -104,7 +106,7 @@ export default async function InvestmentDetailPage({
           shares={shares}
           principal={Number(inv.principal)}
           summary={summary}
-          investDate={format(new Date(inv.investDate), "dd MMM yyyy")}
+          investDate={formatLocalDate(inv.investDate)}
         />
       )}
 
@@ -128,7 +130,7 @@ export default async function InvestmentDetailPage({
               {linkedRevenue.map((r) => (
                 <tr key={r.id}>
                   <td className="font-mono text-xs text-muted-foreground">{r.entryId}</td>
-                  <td>{format(new Date(r.eventDate), "dd MMM yyyy")}</td>
+                  <td>{formatLocalDate(r.eventDate)}</td>
                   <td>
                     <span
                       className="text-xs font-semibold px-2 py-0.5 rounded-full"

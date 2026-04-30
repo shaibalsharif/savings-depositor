@@ -3,6 +3,7 @@ import { investments } from "@/db/schema";
 import { requireManager } from "@/lib/auth";
 import Link from "next/link";
 import { format, differenceInDays, isPast } from "date-fns";
+import { formatLocalDate } from "@/lib/format-date";
 import { desc } from "drizzle-orm";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ColumnConfigurator } from "@/components/ui/column-configurator";
@@ -103,13 +104,13 @@ export default async function InvestmentsPage() {
                   <td className="col-principal font-semibold" style={{ color: "var(--purple)" }}>
                     ৳{Number(inv.principal).toLocaleString()}
                   </td>
-                  <td className="col-invest-date text-muted-foreground">{format(new Date(inv.investDate), "dd MMM yyyy")}</td>
+                  <td className="col-invest-date text-muted-foreground">{formatLocalDate(inv.investDate)}</td>
                   <td className={`col-expected-return ${isOverdue ? "" : "text-muted-foreground"}`} style={isOverdue ? { color: "var(--red)" } : {}}>
-                    {format(new Date(inv.expectedReturnDate), "dd MMM yyyy")}
+                    {formatLocalDate(inv.expectedReturnDate)}
                     {isOverdue && <span className="ml-2 text-xs font-medium" style={{ color: "var(--red)" }}>OVERDUE</span>}
                   </td>
                   <td className="col-actual-return text-muted-foreground">
-                    {inv.actualReturnDate ? format(new Date(inv.actualReturnDate), "dd MMM yyyy") : "—"}
+                    {inv.actualReturnDate ? formatLocalDate(inv.actualReturnDate) : "—"}
                   </td>
                   <td className="col-days text-muted-foreground">{daysActive}d</td>
                   <td className="col-status">
