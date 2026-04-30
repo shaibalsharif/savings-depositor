@@ -160,6 +160,7 @@ export async function POST(req: Request) {
           amountForMonth: d["Amount"].toString(),
           note: d["Note"] ?? "",
           voided: d["Voided"],
+          sheetsRowIndex: row,
           syncStatus: "synced",
         }).where(eq(payments.paymentId, d["Payment ID"]));
         // Keep deposit_allocations in sync (1:1 mirror) using member_id from DB record
@@ -191,6 +192,7 @@ export async function POST(req: Request) {
           amount: d["Amount"].toString(),
           linkedInvestmentId: d["Linked Inv"] || null,
           voided: d["Voided"],
+          sheetsRowIndex: row,
           syncStatus: "synced",
         }).where(eq(expenses.entryId, d["Entry ID"]));
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });
@@ -213,6 +215,7 @@ export async function POST(req: Request) {
           actualReturnDate: d["Act Return"] || null,
           status: d["Status"],
           note: d["Note"] ?? "",
+          sheetsRowIndex: row,
           syncStatus: "synced",
         }).where(eq(investments.entryId, d["Entry ID"]));
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });
@@ -234,6 +237,7 @@ export async function POST(req: Request) {
           amount: d["Amount"].toString(),
           linkedInvestmentId: d["Linked Inv"] || null,
           voided: d["Voided"],
+          sheetsRowIndex: row,
           syncStatus: "synced",
         }).where(eq(revenueLosses.entryId, d["Entry ID"]));
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });
