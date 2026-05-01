@@ -1,26 +1,21 @@
 import { db } from "@/db/client";
 import { payments, depositAllocations, expenses, investments, revenueLosses } from "@/db/schema";
-import { sql } from "drizzle-orm";
 
 async function generateId(table: any, column: any, prefix: string): Promise<string> {
-  const result = await db
-    .select({
-      maxId: sql<string>`MAX(${column})`
-    })
-    .from(table);
-
-  const maxId = result[0]?.maxId;
+  const records = await db.select({ id: column }).from(table);
   let nextNum = 1;
 
-  if (maxId) {
-    // Expected format: PREFIX-000001
-    const parts = maxId.split("-");
-    if (parts.length === 2) {
-      const numPart = parseInt(parts[1], 10);
-      if (!isNaN(numPart)) {
-        nextNum = numPart + 1;
-      }
-    }
+  const validNums = records
+    .map((r: any) => r.id)
+    .filter((id) => id && id.startsWith(`${prefix}-`))
+    .map((id) => {
+      const parts = id.split("-");
+      return parts.length === 2 ? parseInt(parts[1], 10) : 0;
+    })
+    .filter((num) => !isNaN(num) && num > 0);
+
+  if (validNums.length > 0) {
+    nextNum = Math.max(...validNums) + 1;
   }
 
   const paddedNum = nextNum.toString().padStart(6, "0");
