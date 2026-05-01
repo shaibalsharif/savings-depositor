@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { X, Sparkles, Save, Trash2, TrendingUp } from "lucide-react";
 
@@ -99,7 +100,12 @@ export function ProjectionSimulatorModal({
     }
   }, []);
 
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   function saveSimulation() {
     if (!simName.trim()) return;
@@ -193,7 +199,7 @@ export function ProjectionSimulatorModal({
     });
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 bg-background text-foreground p-5 overflow-y-auto flex flex-col gap-5 backdrop-blur-md" style={{ background: "hsl(222 47% 7% / 95%)" }}>
       {/* Simulation Modal Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3" style={{ borderColor: "hsl(var(--border))" }}>
@@ -437,6 +443,7 @@ export function ProjectionSimulatorModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
