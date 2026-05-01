@@ -108,6 +108,18 @@ export function SidebarClient({
           borderColor: "hsl(var(--border))",
         }}
       >
+        {/* Collapse toggle button on desktop, positioned directly over the border/separator */}
+        <button
+          onClick={toggleCollapse}
+          className="hidden md:flex absolute top-6 -right-3 h-6 w-6 items-center justify-center rounded-full border bg-card hover:bg-accent text-muted-foreground hover:text-foreground z-50 shadow-md transition-all duration-200 select-none"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          style={{
+            borderColor: "hsl(var(--border))",
+          }}
+        >
+          <ChevronRight size={14} className={`transition-transform duration-300 ${isCollapsed ? "" : "rotate-180"}`} />
+        </button>
+
         {/* Logo Area */}
         <div
           className={`flex items-center justify-between py-5 border-b transition-all duration-300 ${
@@ -133,14 +145,6 @@ export function SidebarClient({
               </div>
             )}
           </div>
-          {/* Collapse toggle button on desktop */}
-          <button
-            onClick={toggleCollapse}
-            className="hidden md:flex p-1.5 text-muted-foreground rounded-md hover:bg-accent transition-all duration-200"
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <ChevronRight size={18} className={`transition-transform duration-300 ${isCollapsed ? "" : "rotate-180"}`} />
-          </button>
 
           {/* Close button inside sidebar on mobile */}
           <button
