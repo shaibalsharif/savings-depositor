@@ -3,18 +3,20 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
-type Member = { userId: string; name: string };
+type Member = { userId: string; name: string | null };
 
 export function DepositsFilter({
   members,
   currentMember,
   currentMonth,
   currentStatus,
+  showMemberFilter,
 }: {
   members: Member[];
   currentMember: string;
   currentMonth: string;
   currentStatus: string;
+  showMemberFilter: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -30,24 +32,42 @@ export function DepositsFilter({
     [router, pathname, searchParams]
   );
 
+  const clearAll = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("member");
+    params.delete("month");
+    params.delete("status");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const setAllTime = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("month");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const hasFilters = currentMember || currentMonth || currentStatus;
+
   return (
-    <div className="flex flex-wrap gap-3 items-center">
-      {/* Member filter */}
-      <select
-        value={currentMember}
-        onChange={(e) => update("member", e.target.value)}
-        className="rounded-md px-3 py-2 text-sm outline-none"
-        style={{
-          background: "hsl(var(--muted))",
-          border: "1px solid hsl(var(--border))",
-          color: "hsl(var(--foreground))",
-        }}
-      >
-        <option value="">All Members</option>
-        {members.map((m) => (
-          <option key={m.userId} value={m.userId}>{m.name}</option>
-        ))}
-      </select>
+    <div className="flex flex-wrap gap-2 items-center">
+      {/* Member filter — only for manager all-members view */}
+      {showMemberFilter && (
+        <select
+          value={currentMember}
+          onChange={(e) => update("member", e.target.value)}
+          className="rounded-md px-3 py-2 text-sm outline-none"
+          style={{
+            background: "hsl(var(--muted))",
+            border: "1px solid hsl(var(--border))",
+            color: "hsl(var(--foreground))",
+          }}
+        >
+          <option value="">All Members</option>
+          {members.map((m) => (
+            <option key={m.userId} value={m.userId}>{m.name}</option>
+          ))}
+        </select>
+      )}
 
       {/* Month filter */}
       <input
@@ -62,6 +82,17 @@ export function DepositsFilter({
           colorScheme: "dark",
         }}
       />
+
+      {/* All Time shortcut */}
+      {currentMonth && (
+        <button
+          onClick={setAllTime}
+          className="px-3 py-2 text-sm rounded-md font-medium whitespace-nowrap"
+          style={{ background: "hsl(var(--accent))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))" }}
+        >
+          All Time
+        </button>
+      )}
 
       {/* Status filter */}
       <select
@@ -79,9 +110,9 @@ export function DepositsFilter({
         <option value="voided">Voided Only</option>
       </select>
 
-      {(currentMember || currentMonth || currentStatus) && (
+      {hasFilters && (
         <button
-          onClick={() => router.push(pathname)}
+          onClick={clearAll}
           className="px-3 py-2 text-sm rounded-md font-medium"
           style={{ background: "hsl(var(--accent))", color: "hsl(var(--muted-foreground))" }}
         >

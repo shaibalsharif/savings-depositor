@@ -74,6 +74,7 @@ html, body {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  min-width: 600px; /* force horizontal scroll on small screens */
 }
 .data-table thead th {
   text-align: left;
@@ -85,6 +86,7 @@ html, body {
   color: hsl(var(--muted-foreground));
   background: hsl(var(--muted));
   border-bottom: 1px solid hsl(var(--border));
+  white-space: nowrap;
 }
 .data-table tbody tr {
   border-bottom: 1px solid hsl(var(--border));
@@ -92,7 +94,14 @@ html, body {
 }
 .data-table tbody tr:last-child { border-bottom: none; }
 .data-table tbody tr:hover { background: hsl(var(--accent)); }
-.data-table td { padding: 12px 16px; vertical-align: middle; }
+.data-table td { padding: 12px 16px; vertical-align: middle; white-space: nowrap; }
+
+/* Table scroll wrapper */
+.glass.overflow-hidden { overflow: hidden; }
+.glass.overflow-hidden .overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* Progress bar */
 .progress-bar {
@@ -120,4 +129,20 @@ html, body {
   background: var(--teal-dim) !important;
   color: var(--teal) !important;
   border-left: 2px solid var(--teal);
+}
+
+/* Mobile responsive helpers */
+@media (max-width: 640px) {
+  .data-table { font-size: 12px; }
+  .data-table thead th { padding: 8px 12px; font-size: 10px; }
+  .data-table td { padding: 10px 12px; }
+
+  /* Reduce page title on mobile */
+  h1.text-2xl { font-size: 1.25rem; }
+
+  /* Stat cards: wrap on mobile */
+  .grid.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  /* Ensure header buttons don't overflow */
+  .flex.items-center.gap-3.flex-wrap { gap: 0.5rem; }
 }
