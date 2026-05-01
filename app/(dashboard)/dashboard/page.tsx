@@ -6,6 +6,7 @@ import { PaymentHeatmap } from "@/components/charts/PaymentHeatmap";
 import { format } from "date-fns";
 import { formatLocalDate } from "@/lib/format-date";
 import Link from "next/link";
+import { ProjectionTrigger } from "../projection/ProjectionTrigger";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function StatCard({
@@ -157,7 +158,17 @@ async function ManagerDash() {
       </SectionBox>
 
       {/* ── Row 3.5: Balance Trend Chart ── */}
-      <SectionBox title="Total Fund Balance Trend (All Time)">
+      <SectionBox 
+        title="Total Fund Balance Trend (All Time)"
+        action={
+          <ProjectionTrigger 
+            currentBalance={stats.balance}
+            memberCount={stats.membersCount}
+            monthlyPerMember={Math.round(stats.currentMonthExpected / (stats.membersCount || 1)) || 2100}
+            historicalData={stats.trendChart}
+          />
+        }
+      >
         <div className="px-5 pb-5">
           <BalanceTrendChart data={stats.trendChart} />
         </div>
