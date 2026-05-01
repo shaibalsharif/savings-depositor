@@ -73,7 +73,7 @@ export async function calculateAndSaveShares(
       .reduce((s, p) => s + Number(p.amountReceived), 0);
 
     const priorInvestmentDeducted = allPriorShares
-      .filter((s) => s.memberId === member.userId)
+      .filter((s) => s.memberId === member.userId && s.investmentId !== investmentEntryId)
       .reduce((sum, s) => sum + Number(s.balanceAtInvestment), 0);
 
     const balance =
@@ -90,6 +90,9 @@ export async function calculateAndSaveShares(
   });
 
   const totalBalance = memberBalances.reduce((s, m) => s + m.balance, 0);
+
+  // Clear existing share records for this investment to prevent duplicates/orphans
+  await db.delete(investmentShares).where(eq(investmentShares.investmentId, investmentEntryId));
 
   if (totalBalance <= 0) {
     // Edge case: no positive balances — assign equal shares
