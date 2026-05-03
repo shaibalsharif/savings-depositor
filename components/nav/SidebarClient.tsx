@@ -100,9 +100,8 @@ export function SidebarClient({
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r transform transition-all duration-300 ease-in-out md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } w-[260px] ${isCollapsed ? "md:w-[72px]" : "md:w-[260px]"}`}
         style={{
-          width: isCollapsed ? "72px" : "260px",
           background: "hsl(222 47% 8%)",
           borderColor: "hsl(var(--border))",
         }}

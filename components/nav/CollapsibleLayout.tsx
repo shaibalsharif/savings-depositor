@@ -35,10 +35,9 @@ export function CollapsibleLayout({
         toggleCollapse={toggleCollapse}
       />
       <main
-        className="flex-1 overflow-x-hidden overflow-y-auto pt-14 md:pt-0 w-full min-h-screen transition-all duration-300"
-        style={{
-          marginLeft: isMounted && isCollapsed ? "72px" : "260px",
-        }}
+        className={`flex-1 overflow-x-hidden overflow-y-auto pt-14 md:pt-0 w-full min-h-screen transition-all duration-300 ml-0 ${
+          isMounted && isCollapsed ? "md:ml-[72px]" : "md:ml-[260px]"
+        }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8 transition-all duration-300">
           {children}

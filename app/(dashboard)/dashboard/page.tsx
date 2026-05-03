@@ -15,17 +15,17 @@ function StatCard({
   label: string; value: string; sub?: string; accent?: string; href?: string;
 }) {
   const card = (
-    <div className="stat-card glass p-5 flex flex-col gap-2">
-      <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
+    <div className="stat-card glass p-4 sm:p-5 flex flex-col gap-1.5 min-h-[110px] justify-between">
+      <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground line-clamp-1">
         {label}
       </div>
-      <div className="text-3xl font-bold tracking-tight" style={{ color: accent ?? "hsl(var(--foreground))" }}>
+      <div className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate" style={{ color: accent ?? "hsl(var(--foreground))" }}>
         {value}
       </div>
-      {sub && <div className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{sub}</div>}
+      {sub && <div className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1">{sub}</div>}
     </div>
   );
-  return href ? <Link href={href}>{card}</Link> : card;
+  return href ? <Link href={href} className="block">{card}</Link> : card;
 }
 
 function ProgressBar({ pct, color = "var(--teal)" }: { pct: number; color?: string }) {
@@ -38,12 +38,14 @@ function ProgressBar({ pct, color = "var(--teal)" }: { pct: number; color?: stri
 
 function SectionBox({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="glass overflow-hidden">
-      <div className="flex items-center justify-between px-5 pt-5 pb-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
+    <div className="glass overflow-hidden flex flex-col h-full">
+      <div className="flex items-center justify-between p-4 sm:px-5 sm:pt-5 sm:pb-3 flex-wrap gap-2">
+        <h2 className="text-xs sm:text-sm font-semibold">{title}</h2>
         {action}
       </div>
-      {children}
+      <div className="flex-1">
+        {children}
+      </div>
     </div>
   );
 }
@@ -60,7 +62,7 @@ async function ManagerDash() {
     <div className="space-y-6">
 
       {/* ── Row 1: KPIs ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Fund Balance" value={`৳${stats.balance.toLocaleString()}`} accent="var(--teal)" sub="Liquid cash available" />
         <StatCard label="Total Collected" value={`৳${stats.totalCollected.toLocaleString()}`} sub={`From ${stats.membersCount} members`} />
         <StatCard label="Outstanding Dues" value={`৳${stats.totalOutstanding.toLocaleString()}`} accent="var(--red)" sub={`${stats.membersWithDues} members pending`} href="/deposits" />
@@ -70,30 +72,30 @@ async function ManagerDash() {
       {/* ── Row 2: This month progress + Rev/Exp ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* This month */}
-        <div className="glass p-5 space-y-4 lg:col-span-2">
-          <div className="flex items-center justify-between">
+        <div className="glass p-4 sm:p-5 space-y-4 lg:col-span-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 {format(new Date(), "MMMM yyyy")} — Monthly Collection
               </div>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-3xl font-bold" style={{ color: "var(--teal)" }}>
+                <span className="text-2xl sm:text-3xl font-bold text-[var(--teal)]">
                   ৳{stats.currentMonthAllocated.toLocaleString()}
                 </span>
-                <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   of ৳{stats.currentMonthExpected.toLocaleString()}
                 </span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold" style={{ color: collectionPct >= 100 ? "var(--green)" : "var(--amber)" }}>
+              <div className="text-xl sm:text-2xl font-bold" style={{ color: collectionPct >= 100 ? "var(--green)" : "var(--amber)" }}>
                 {Math.round(collectionPct)}%
               </div>
-              <div className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>collected</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">collected</div>
             </div>
           </div>
           <ProgressBar pct={collectionPct} />
-          <div className="grid grid-cols-2 gap-4 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="text-xs">
               <div className="text-muted-foreground mb-1">Members paid this month</div>
               <div className="font-semibold text-base">
@@ -103,7 +105,7 @@ async function ManagerDash() {
             </div>
             <div className="text-xs">
               <div className="text-muted-foreground mb-1">Still outstanding this month</div>
-              <div className="font-semibold text-base" style={{ color: "var(--red)" }}>
+              <div className="font-semibold text-base text-[var(--red)]">
                 ৳{Math.max(0, stats.currentMonthExpected - stats.currentMonthAllocated).toLocaleString()}
               </div>
             </div>
@@ -111,23 +113,23 @@ async function ManagerDash() {
         </div>
 
         {/* Revenue summary */}
-        <div className="glass p-5 space-y-4">
-          <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
+        <div className="glass p-4 sm:p-5 space-y-4">
+          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Revenue & Losses
           </div>
-          <div className="space-y-3 text-sm">
+          <div className="space-y-2.5 text-sm">
             {[
               { label: "Total Income", value: `+৳${stats.totalIncome.toLocaleString()}`, color: "var(--green)" },
               { label: "Total Losses", value: `৳${stats.totalLoss.toLocaleString()}`, color: "var(--red)" },
               { label: "Total Expenses", value: `-৳${stats.totalExpenses.toLocaleString()}`, color: "var(--amber)" },
             ].map((row) => (
               <div key={row.label} className="flex justify-between">
-                <span style={{ color: "hsl(var(--muted-foreground))" }}>{row.label}</span>
-                <span className="font-semibold" style={{ color: row.color }}>{row.value}</span>
+                <span className="text-muted-foreground text-xs sm:text-sm">{row.label}</span>
+                <span className="font-semibold text-xs sm:text-sm" style={{ color: row.color }}>{row.value}</span>
               </div>
             ))}
             <div
-              className="flex justify-between pt-3 border-t font-bold text-base"
+              className="flex justify-between pt-2 border-t font-bold text-sm sm:text-base"
               style={{ borderColor: "hsl(var(--border))" }}
             >
               <span>Net Revenue</span>
@@ -136,11 +138,11 @@ async function ManagerDash() {
               </span>
             </div>
           </div>
-          <div className="pt-2">
-            <div className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <div className="pt-1 border-t border-dashed">
+            <div className="text-[10px] text-muted-foreground">
               Next Investment Return
             </div>
-            <div className="font-semibold mt-1" style={{ color: "var(--amber)" }}>
+            <div className="font-semibold mt-0.5 text-xs sm:text-sm text-[var(--amber)]">
               {stats.nextReturn ? formatLocalDate(stats.nextReturn) : "—"}
             </div>
           </div>
@@ -150,9 +152,9 @@ async function ManagerDash() {
       {/* ── Row 3: Monthly chart ── */}
       <SectionBox
         title="Monthly Collections & Expenses (Last 12 Months)"
-        action={<Link href="/deposits" className="text-xs font-medium" style={{ color: "var(--teal)" }}>View All →</Link>}
+        action={<Link href="/deposits" className="text-xs font-medium text-[var(--teal)]">View All →</Link>}
       >
-        <div className="px-5 pb-5">
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
           <MonthlyCollectionChart data={stats.monthlyChart} />
         </div>
       </SectionBox>
@@ -169,7 +171,7 @@ async function ManagerDash() {
           />
         }
       >
-        <div className="px-5 pb-5">
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
           <BalanceTrendChart data={stats.trendChart} />
         </div>
       </SectionBox>
@@ -179,7 +181,7 @@ async function ManagerDash() {
         {/* Heatmap */}
         <div className="lg:col-span-3">
           <SectionBox title="Member Payment Pattern (Last 12 Months)">
-            <div className="px-5 pb-5 overflow-x-auto">
+            <div className="px-4 pb-4 sm:px-5 sm:pb-5 overflow-x-auto">
               <PaymentHeatmap
                 data={stats.heatmapData}
                 months={stats.monthlyChart.map((_, i) => {
@@ -197,26 +199,25 @@ async function ManagerDash() {
         <div className="lg:col-span-2">
           <SectionBox
             title="Outstanding Pendings"
-            action={<Link href="/deposits/new" className="text-xs font-medium" style={{ color: "var(--teal)" }}>Record Deposit →</Link>}
+            action={<Link href="/deposits/new" className="text-xs font-medium text-[var(--teal)]">Record Deposit →</Link>}
           >
-            <div className="divide-y" style={{ borderColor: "hsl(var(--border))" }}>
+            <div className="divide-y border-t" style={{ borderColor: "hsl(var(--border))" }}>
               {stats.memberPendings.length === 0 ? (
-                <div className="px-5 py-6 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <div className="p-4 sm:p-5 text-center text-sm text-muted-foreground">
                   🎉 All members are fully paid!
                 </div>
               ) : (
                 stats.memberPendings.slice(0, 8).map((m, idx) => (
-                  <div key={m.memberId} className="flex items-center justify-between px-5 py-3">
-                    <div className="flex items-center gap-3">
+                  <div key={m.memberId} className="flex items-center justify-between p-3 sm:px-5 sm:py-3">
+                    <div className="flex items-center gap-2">
                       <div
-                        className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold"
-                        style={{ background: "hsl(var(--accent))", color: "hsl(var(--foreground))" }}
+                        className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-muted text-foreground"
                       >
                         {m.name.charAt(0)}
                       </div>
-                      <span className="text-sm font-medium">{m.name}</span>
+                      <span className="text-xs sm:text-sm font-medium line-clamp-1">{m.name}</span>
                     </div>
-                    <span className="text-sm font-bold" style={{ color: "var(--red)" }}>
+                    <span className="text-xs sm:text-sm font-bold text-[var(--red)]">
                       ৳{m.due.toLocaleString()}
                     </span>
                   </div>
@@ -224,7 +225,7 @@ async function ManagerDash() {
               )}
             </div>
             {stats.memberPendings.length > 8 && (
-              <div className="px-5 py-3 border-t text-xs text-center" style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}>
+              <div className="p-3 border-t text-[10px] text-center text-muted-foreground" style={{ borderColor: "hsl(var(--border))" }}>
                 +{stats.memberPendings.length - 8} more with dues
               </div>
             )}
@@ -250,12 +251,12 @@ async function MemberDash({ userId }: { userId: string }) {
     <div className="space-y-6">
 
       {/* ── KPIs ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard
           label="My Balance Paid"
           value={`৳${stats.totalPaid.toLocaleString()}`}
           accent="var(--teal)"
-          sub={`of ৳${stats.totalExpected.toLocaleString()} total required`}
+          sub={`of ৳${stats.totalExpected.toLocaleString()} required`}
         />
         <StatCard
           label="Outstanding Balance"
@@ -272,9 +273,9 @@ async function MemberDash({ userId }: { userId: string }) {
       </div>
 
       {/* ── This Month Progress ── */}
-      <div className="glass p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>
+      <div className="glass p-4 sm:p-5 space-y-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             {format(new Date(), "MMMM yyyy")} — My Deposit Progress
           </div>
           <span className="text-xs font-medium" style={{ color: currentPct >= 100 ? "var(--green)" : "var(--amber)" }}>
@@ -282,10 +283,10 @@ async function MemberDash({ userId }: { userId: string }) {
           </span>
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold" style={{ color: currentPct >= 100 ? "var(--green)" : "var(--teal)" }}>
+          <span className="text-2xl sm:text-3xl font-bold" style={{ color: currentPct >= 100 ? "var(--green)" : "var(--teal)" }}>
             ৳{stats.currentMonth.paid.toLocaleString()}
           </span>
-          <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <span className="text-xs sm:text-sm text-muted-foreground">
             of ৳{stats.currentMonth.expected.toLocaleString()} required this month
           </span>
         </div>
@@ -294,7 +295,7 @@ async function MemberDash({ userId }: { userId: string }) {
 
       {/* ── My Payment Chart ── */}
       <SectionBox title="My Payments — Last 12 Months">
-        <div className="px-5 pb-5">
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
           <MemberCollectionChart data={stats.memberChart} />
         </div>
       </SectionBox>
@@ -303,65 +304,69 @@ async function MemberDash({ userId }: { userId: string }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Month breakdown */}
         <SectionBox title="Monthly Deposit Status">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Required</th>
-                <th>Paid</th>
-                <th>Remaining</th>
-              </tr>
-            </thead>
-            <tbody>
-              {last6.map((m) => (
-                <tr key={m.month}>
-                  <td className="font-mono text-xs">{m.month}</td>
-                  <td>৳{m.expected.toLocaleString()}</td>
-                  <td className="font-semibold" style={{ color: m.paid >= m.expected ? "var(--green)" : "var(--teal)" }}>
-                    ৳{m.paid.toLocaleString()}
-                  </td>
-                  <td
-                    className="font-semibold"
-                    style={{ color: m.due > 0 ? "var(--red)" : "var(--green)" }}
-                  >
-                    {m.due > 0 ? `৳${m.due.toLocaleString()}` : "✓ Paid"}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Required</th>
+                  <th>Paid</th>
+                  <th>Remaining</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {last6.map((m) => (
+                  <tr key={m.month}>
+                    <td className="font-mono text-xs">{m.month}</td>
+                    <td>৳{m.expected.toLocaleString()}</td>
+                    <td className="font-semibold" style={{ color: m.paid >= m.expected ? "var(--green)" : "var(--teal)" }}>
+                      ৳{m.paid.toLocaleString()}
+                    </td>
+                    <td
+                      className="font-semibold"
+                      style={{ color: m.due > 0 ? "var(--red)" : "var(--green)" }}
+                    >
+                      {m.due > 0 ? `৳${m.due.toLocaleString()}` : "✓ Paid"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </SectionBox>
 
         {/* Recent Payments */}
         <SectionBox
           title="Recent Payments"
-          action={<Link href="/my-deposits" className="text-xs font-medium" style={{ color: "var(--teal)" }}>View All →</Link>}
+          action={<Link href="/my-deposits" className="text-xs font-medium text-[var(--teal)]">View All →</Link>}
         >
           {stats.recentPayments.length === 0 ? (
-            <div className="px-5 pb-5 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <div className="p-4 sm:p-5 text-center text-sm text-muted-foreground">
               No payments yet.
             </div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Note</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.recentPayments.map((p) => (
-                  <tr key={p.id}>
-                    <td className="text-muted-foreground">{formatLocalDate(p.paymentDate)}</td>
-                    <td className="font-semibold" style={{ color: "var(--teal)" }}>
-                      +৳{Number(p.amountReceived).toLocaleString()}
-                    </td>
-                    <td className="text-muted-foreground truncate max-w-[120px]">{p.note || "—"}</td>
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Note</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {stats.recentPayments.map((p) => (
+                    <tr key={p.id}>
+                      <td className="text-muted-foreground text-xs">{formatLocalDate(p.paymentDate)}</td>
+                      <td className="font-semibold text-xs text-[var(--teal)]">
+                        +৳{Number(p.amountReceived).toLocaleString()}
+                      </td>
+                      <td className="text-muted-foreground text-xs truncate max-w-[120px]">{p.note || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </SectionBox>
       </div>
@@ -376,13 +381,13 @@ export default async function DashboardPage() {
   const manager = await isManager();
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
             {manager ? "Manager Dashboard" : "My Dashboard"}
           </h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <p className="text-xs sm:text-sm mt-0.5 text-muted-foreground">
             {manager
               ? "Full fund overview • member tracking • financial analytics"
               : `Welcome back, ${user.given_name ?? "Member"} — your deposit summary`}
@@ -392,8 +397,7 @@ export default async function DashboardPage() {
           <div className="flex gap-3">
             <Link
               href="/deposits/new"
-              className="px-4 py-2 rounded-lg text-sm font-semibold"
-              style={{ background: "var(--teal)", color: "hsl(222 47% 7%)" }}
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap bg-[var(--teal)] text-[hsl(222 47% 7%)] hover:opacity-90 transition shadow flex-shrink-0 text-center"
             >
               + Record Deposit
             </Link>
