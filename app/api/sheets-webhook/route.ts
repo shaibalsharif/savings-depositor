@@ -211,6 +211,15 @@ export async function POST(req: Request) {
       }
 
       case "Expenses": {
+        // If data was cleared via backspace, Entry ID will be empty.
+        if (data && (!data["Entry ID"] || data["Entry ID"].trim() === "")) {
+          await db.update(expenses).set({ deleted: true }).where(eq(expenses.sheetsRowIndex, row));
+          await log({ direction, sheetName: sheet, rowIndex: row, status: "success", payload: data });
+          revalidatePath("/dashboard");
+          revalidatePath("/expenses");
+          return NextResponse.json({ success: true, message: "Row cleared via backspace" });
+        }
+
         if (data["Date"]) data["Date"] = normalizeDate(data["Date"], "date");
         const parsed = ExpenseSchema.safeParse(data);
         if (!parsed.success) {
@@ -249,13 +258,16 @@ export async function POST(req: Request) {
           }).where(eq(expenses.entryId, d["Entry ID"]));
         }
 
-        // Verify against all active entries in the Google Sheet for Expenses to detect any removed rows
+        // Verify against all active entries in the Google Sheet for Expenses to detect any removed or cleared rows
         try {
           const sheetRows = await readSheet("Expenses");
           const validEntryIds = new Set(sheetRows.map((r) => r["Entry ID"]).filter(Boolean));
           const dbExpenses = await db.select().from(expenses);
           for (const e of dbExpenses) {
-            if (!validEntryIds.has(e.entryId) && !e.deleted) {
+            const sheetRow = e.sheetsRowIndex ? sheetRows[e.sheetsRowIndex - 2] : null;
+            const rowIsCleared = sheetRow && (!sheetRow["Entry ID"] || sheetRow["Entry ID"].trim() === "");
+
+            if ((!validEntryIds.has(e.entryId) || rowIsCleared) && !e.deleted) {
               await db.update(expenses).set({ deleted: true }).where(eq(expenses.id, e.id));
             }
           }
