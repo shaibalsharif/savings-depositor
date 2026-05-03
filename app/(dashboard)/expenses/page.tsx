@@ -7,6 +7,7 @@ import { desc } from "drizzle-orm";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ColumnConfigurator } from "@/components/ui/column-configurator";
 import { ExpensesFilter } from "./expenses-filter";
+import { ExpensesTable } from "./ExpensesTable";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
@@ -109,63 +110,12 @@ export default async function ExpensesPage(props: { searchParams: SearchParams }
         />
       </Suspense>
 
-      <div className="glass overflow-hidden">
-        <div className="overflow-x-auto">
-          <table id="expenses-table" className="data-table">
-            <thead>
-              <tr>
-                <th className="col-id">ID</th>
-                <th className="col-date">Date</th>
-                <th className="col-category">Category</th>
-                <th className="col-description">Description</th>
-                <th className="col-linked-inv">Linked Investment</th>
-                <th className="col-amount">Amount</th>
-                <th className="col-status">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((exp) => (
-                <tr key={exp.id} style={{ opacity: exp.voided ? 0.5 : 1 }}>
-                  <td className="col-id font-mono text-xs text-muted-foreground">{exp.entryId}</td>
-                  <td className="col-date text-muted-foreground">{formatLocalDate(exp.expenseDate)}</td>
-                  <td className="col-category">
-                    <span className={`${categoryColors[exp.category] ?? ""} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}>
-                      {exp.category}
-                    </span>
-                  </td>
-                  <td className="col-description font-medium max-w-[200px] truncate">{exp.description}</td>
-                  <td className="col-linked-inv text-muted-foreground font-mono text-xs">{exp.linkedInvestmentId || "—"}</td>
-                  <td className="col-amount font-semibold" style={{ color: "var(--red)" }}>
-                    −৳{Number(exp.amount).toLocaleString()}
-                  </td>
-                  <td className="col-status">
-                    {exp.voided ? (
-                      <span className="badge-red inline-flex items-center px-2 py-0.5 rounded-full text-xs">Voided</span>
-                    ) : (
-                      <span className="badge-teal inline-flex items-center px-2 py-0.5 rounded-full text-xs">Active</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                    {isFiltered ? "No expenses match the current filters." : "No expenses recorded yet."}{" "}
-                    {manager && !isFiltered && <Link href="/expenses/new" style={{ color: "var(--teal)" }}>Add the first one →</Link>}
-                  </td>
-                </tr>
-              )}
-              {filtered.length > 0 && (
-                <tr style={{ background: "hsl(var(--muted))", fontWeight: 600 }}>
-                  <td colSpan={5} className="text-right text-sm">Total Valid Expenses:</td>
-                  <td className="col-amount" style={{ color: "var(--red)" }}>−৳{totalValid.toLocaleString()}</td>
-                  <td className="col-status"></td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ExpensesTable
+        filtered={filtered}
+        isFiltered={isFiltered}
+        manager={manager}
+        totalValid={totalValid}
+      />
     </div>
   );
 }

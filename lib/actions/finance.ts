@@ -166,3 +166,71 @@ export async function createRevenue(data: any) {
   revalidatePath("/dashboard");
   return { success: true, entryId };
 }
+
+export async function updateExpense(entryId: string, data: any) {
+  const user = await requireManager();
+  const parsed = ExpenseSchema.parse(data);
+
+  const existing = await db.query.expenses.findFirst({
+    where: eq(expenses.entryId, entryId),
+  });
+  if (!existing) throw new Error("Expense not found");
+
+  await db.update(expenses).set({
+    expenseDate: parsed.expenseDate,
+    category: parsed.category,
+    description: parsed.description,
+    amount: parsed.amount.toString(),
+    linkedInvestmentId: parsed.linkedInvestmentId || null,
+  }).where(eq(expenses.entryId, entryId));
+
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "UPDATE_EXPENSE",
+    details: JSON.stringify({ entryId, before: existing, after: parsed }),
+  });
+
+  if (existing.sheetsRowIndex) {
+    try {
+      const row = [entryId, parsed.expenseDate, parsed.category, parsed.description, parsed.amount, parsed.linkedInvestmentId || "", existing.voided ? "TRUE" : "FALSE"];
+      await updateRow("Expenses", existing.sheetsRowIndex, row);
+    } catch (e) {
+      console.error("Failed to update expense in Google Sheets", e);
+    }
+  }
+
+  revalidatePath("/expenses");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function voidExpense(entryId: string) {
+  const user = await requireManager();
+
+  const existing = await db.query.expenses.findFirst({
+    where: eq(expenses.entryId, entryId),
+  });
+  if (!existing) throw new Error("Expense not found");
+
+  await db.update(expenses).set({
+    voided: true,
+  }).where(eq(expenses.entryId, entryId));
+
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "VOID_EXPENSE",
+    details: JSON.stringify({ entryId }),
+  });
+
+  if (existing.sheetsRowIndex) {
+    try {
+      await markVoided("Expenses", existing.sheetsRowIndex);
+    } catch (e) {
+      console.error("Failed to void expense in Google Sheets", e);
+    }
+  }
+
+  revalidatePath("/expenses");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
