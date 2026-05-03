@@ -28,11 +28,18 @@ export const UpdateInvestmentSchema = z.object({
 
 export const RevenueLossSchema = z.object({
   eventDate: z.string().min(1, "Date is required"),
-  // sourceType semantics: amount is ALWAYS positive; sourceType determines direction
-  // profit / principal_return / bank_profit / investment_return / business / other → ADD to balance
-  // loss → SUBTRACT from balance
-  sourceType: z.enum(["bank_profit", "investment_return", "business", "loss", "other", "profit", "principal_return"]),
+  sourceType: z.string().min(1, "Source type is required"),
   description: z.string().min(1, "Description is required").max(255),
-  amount: z.coerce.number().positive("Amount must be a positive number"),
+  amount: z.coerce.number(),
   linkedInvestmentId: z.string().optional(),
+});
+
+export const UpdateRevenueLossSchema = z.object({
+  eventDate: z.string().min(1, "Date is required"),
+  sourceType: z.string().min(1, "Source type is required"),
+  description: z.string().min(1, "Description is required").max(255),
+  amount: z.coerce.number(),
+  linkedInvestmentId: z.string().optional(),
+  voided: z.boolean().optional(),
+  deleted: z.boolean().optional(),
 });

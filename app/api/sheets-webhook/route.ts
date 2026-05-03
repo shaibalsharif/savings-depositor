@@ -362,6 +362,18 @@ export async function POST(req: Request) {
       }
 
       case "Revenue_Losses": {
+        // If data was cleared via backspace, Entry ID will be empty.
+        if (data && (!data["Entry ID"] || data["Entry ID"].trim() === "")) {
+          const toDelete = await db.select().from(revenueLosses).where(eq(revenueLosses.sheetsRowIndex, row));
+          for (const rev of toDelete) {
+            await db.update(revenueLosses).set({ deleted: true }).where(eq(revenueLosses.id, rev.id));
+          }
+          await log({ direction, sheetName: sheet, rowIndex: row, status: "success", payload: data });
+          revalidatePath("/dashboard");
+          revalidatePath("/revenue");
+          return NextResponse.json({ success: true, message: "Revenue row cleared via backspace" });
+        }
+
         if (data["Date"]) data["Date"] = normalizeDate(data["Date"], "date");
         const parsed = RevenueLossSchema.safeParse(data);
         if (!parsed.success) {
@@ -382,7 +394,7 @@ export async function POST(req: Request) {
             description: d["Description"],
             amount: d["Amount"].toString(),
             linkedInvestmentId: d["Linked Inv"] || null,
-            voided: d["Voided"],
+            voided: d["Voided"] === true || d["Voided"] === "TRUE",
             sheetsRowIndex: row,
             syncStatus: "synced",
             recordedBy: "system_sheet_sync",
@@ -394,10 +406,27 @@ export async function POST(req: Request) {
             description: d["Description"],
             amount: d["Amount"].toString(),
             linkedInvestmentId: d["Linked Inv"] || null,
-            voided: d["Voided"],
+            voided: d["Voided"] === true || d["Voided"] === "TRUE",
             sheetsRowIndex: row,
             syncStatus: "synced",
           }).where(eq(revenueLosses.entryId, d["Entry ID"]));
+        }
+
+        // Scan the whole sheet to detect any removed or cleared rows
+        try {
+          const sheetRows = await readSheet("Revenue_Losses");
+          const validEntryIds = new Set(sheetRows.map((r) => r["Entry ID"]).filter(Boolean));
+          const dbRevenue = await db.select().from(revenueLosses);
+          for (const r of dbRevenue) {
+            const sheetRow = r.sheetsRowIndex ? sheetRows[r.sheetsRowIndex - 2] : null;
+            const rowIsCleared = sheetRow && (!sheetRow["Entry ID"] || sheetRow["Entry ID"].trim() === "");
+
+            if ((!validEntryIds.has(r.entryId) || rowIsCleared) && !r.deleted) {
+              await db.update(revenueLosses).set({ deleted: true }).where(eq(revenueLosses.id, r.id));
+            }
+          }
+        } catch (err: any) {
+          console.error("Failed to sync removed revenue entries", err);
         }
 
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });

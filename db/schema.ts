@@ -100,6 +100,7 @@ export const revenueLosses = pgTable("revenue_losses", {
   linkedInvestmentId: varchar("linked_investment_id", { length: 64 }),
   recordedBy: varchar("recorded_by", { length: 255 }).notNull(),
   voided: boolean("voided").default(false).notNull(),
+  deleted: boolean("deleted").default(false).notNull(),
   sheetsRowIndex: integer("sheets_row_index"),
   syncStatus: varchar("sync_status", { length: 20 }).default("pending").notNull(), // synced | pending | failed
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

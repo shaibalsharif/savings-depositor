@@ -5,7 +5,7 @@ import { expenses, investments, revenueLosses, logs, investmentShares } from "@/
 import { generateExpenseId, generateInvestmentId, generateRevenueId } from "@/lib/id-generator";
 import { appendRow, updateRow, markVoided, clearRowRange } from "@/lib/sheets";
 import { requireManager } from "@/lib/auth";
-import { ExpenseSchema, InvestmentSchema, RevenueLossSchema, UpdateInvestmentSchema } from "../validators/finance";
+import { ExpenseSchema, InvestmentSchema, RevenueLossSchema, UpdateInvestmentSchema, UpdateRevenueLossSchema } from "../validators/finance";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { calculateAndSaveShares } from "@/lib/queries/investment";
@@ -318,6 +318,109 @@ export async function deleteInvestment(entryId: string) {
   });
 
   revalidatePath("/investments");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function updateRevenue(entryId: string, data: any) {
+  const user = await requireManager();
+  const parsed = UpdateRevenueLossSchema.parse(data);
+
+  const existing = await db.query.revenueLosses.findFirst({
+    where: eq(revenueLosses.entryId, entryId),
+  });
+  if (!existing) throw new Error("Revenue entry not found");
+
+  await db.update(revenueLosses).set({
+    eventDate: parsed.eventDate,
+    sourceType: parsed.sourceType,
+    description: parsed.description,
+    amount: parsed.amount.toString(),
+    linkedInvestmentId: parsed.linkedInvestmentId || null,
+  }).where(eq(revenueLosses.entryId, entryId));
+
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "UPDATE_REVENUE",
+    details: JSON.stringify({ entryId, before: existing, after: parsed }),
+  });
+
+  if (existing.sheetsRowIndex) {
+    try {
+      const row = [
+        entryId,
+        parsed.eventDate,
+        parsed.sourceType,
+        parsed.description,
+        parsed.amount,
+        parsed.linkedInvestmentId || "",
+        existing.voided ? "TRUE" : "FALSE",
+      ];
+      await updateRow("Revenue_Losses", existing.sheetsRowIndex, row);
+    } catch (e) {
+      console.error("Failed to update revenue in Google Sheets", e);
+    }
+  }
+
+  revalidatePath("/revenue");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function voidRevenue(entryId: string) {
+  const user = await requireManager();
+
+  const existing = await db.query.revenueLosses.findFirst({
+    where: eq(revenueLosses.entryId, entryId),
+  });
+  if (!existing) throw new Error("Revenue entry not found");
+
+  await db.update(revenueLosses).set({ voided: true }).where(eq(revenueLosses.entryId, entryId));
+
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "VOID_REVENUE",
+    details: JSON.stringify({ entryId }),
+  });
+
+  if (existing.sheetsRowIndex) {
+    try {
+      await markVoided("Revenue_Losses", existing.sheetsRowIndex);
+    } catch (e) {
+      console.error("Failed to void revenue in Google Sheets", e);
+    }
+  }
+
+  revalidatePath("/revenue");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function deleteRevenue(entryId: string) {
+  const user = await requireManager();
+
+  const existing = await db.query.revenueLosses.findFirst({
+    where: eq(revenueLosses.entryId, entryId),
+  });
+  if (!existing) throw new Error("Revenue entry not found");
+
+  await db.update(revenueLosses).set({ deleted: true }).where(eq(revenueLosses.entryId, entryId));
+
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "DELETE_REVENUE",
+    details: JSON.stringify({ entryId }),
+  });
+
+  if (existing.sheetsRowIndex) {
+    try {
+      await clearRowRange("Revenue_Losses", existing.sheetsRowIndex);
+    } catch (e) {
+      console.error("Failed to clear revenue row in Google Sheets", e);
+    }
+  }
+
+  revalidatePath("/revenue");
   revalidatePath("/dashboard");
   return { success: true };
 }

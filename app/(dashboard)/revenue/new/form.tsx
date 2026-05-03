@@ -34,20 +34,22 @@ export default function RevenueForm({
   const [isLoss, setIsLoss] = useState(false);
   const [eventDate, setEventDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [sourceType, setSourceType] = useState("");
+  const [customSourceType, setCustomSourceType] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [linkedInvestmentId, setLinkedInvestmentId] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!eventDate || !sourceType || !description || !amount) {
+    if (!eventDate || (!isLoss && !sourceType) || !description || !amount) {
       toast.error("Please fill all required fields");
       return;
     }
+    const finalSourceType = isLoss ? "loss" : sourceType === "other" ? customSourceType || "other" : sourceType;
     const finalAmount = isLoss ? -Math.abs(Number(amount)) : Math.abs(Number(amount));
     setLoading(true);
     try {
-      await createRevenue({ eventDate, sourceType, description, amount: finalAmount, linkedInvestmentId: linkedInvestmentId || undefined });
+      await createRevenue({ eventDate, sourceType: finalSourceType, description, amount: finalAmount, linkedInvestmentId: linkedInvestmentId || undefined });
       toast.success("Entry recorded");
       router.push("/revenue");
     } catch (e: any) {
@@ -110,6 +112,22 @@ export default function RevenueForm({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Custom Source Type Input */}
+      {!isLoss && sourceType === "other" && (
+        <div className="animate-in slide-in-from-left-2 duration-200">
+          <label className={labelClass} style={labelStyle}>Custom Source Type</label>
+          <input
+            type="text"
+            placeholder="e.g. Donation, Subsidy"
+            required
+            value={customSourceType}
+            onChange={(e) => setCustomSourceType(e.target.value)}
+            className={fieldClass}
+            style={fieldStyle}
+          />
         </div>
       )}
 
