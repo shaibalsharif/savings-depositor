@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { expenses, investments, revenueLosses, logs } from "@/db/schema";
+import { expenses, investments, revenueLosses, logs, investmentShares } from "@/db/schema";
 import { generateExpenseId, generateInvestmentId, generateRevenueId } from "@/lib/id-generator";
 import { appendRow, updateRow, markVoided } from "@/lib/sheets";
 import { requireManager } from "@/lib/auth";
@@ -278,6 +278,35 @@ export async function updateInvestment(entryId: string, data: any) {
       console.error("Failed to update investment in Google Sheets", e);
     }
   }
+
+  revalidatePath("/investments");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function deleteInvestment(entryId: string) {
+  const user = await requireManager();
+
+  const existing = await db.query.investments.findFirst({
+    where: eq(investments.entryId, entryId),
+  });
+  if (!existing) throw new Error("Investment not found");
+
+  // 1. Soft delete/Mark the investment as deleted
+  await db.update(investments).set({ deleted: true }).where(eq(investments.entryId, entryId));
+
+  // 2. Clear out any shares in investment_shares
+  await db.delete(investmentShares).where(eq(investmentShares.investmentId, entryId));
+
+  // 3. Unlink any expenses and revenue/losses
+  await db.update(expenses).set({ linkedInvestmentId: null }).where(eq(expenses.linkedInvestmentId, entryId));
+  await db.update(revenueLosses).set({ linkedInvestmentId: null }).where(eq(revenueLosses.linkedInvestmentId, entryId));
+
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "DELETE_INVESTMENT",
+    details: JSON.stringify({ entryId }),
+  });
 
   revalidatePath("/investments");
   revalidatePath("/dashboard");

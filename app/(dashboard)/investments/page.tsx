@@ -26,6 +26,7 @@ export default async function InvestmentsPage(props: { searchParams: SearchParam
 
   // Apply filters
   const filtered = allInvestments.filter((i) => {
+    if (i.deleted) return false;
     if (statusFilter && i.status !== statusFilter) return false;
     if (fromFilter && i.investDate < fromFilter) return false;
     if (toFilter && i.investDate > toFilter) return false;

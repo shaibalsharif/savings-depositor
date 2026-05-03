@@ -81,6 +81,7 @@ export const investments = pgTable("investments", {
   status: varchar("status", { length: 16 }).default("active").notNull(), // active / matured / defaulted
   note: varchar("note", { length: 255 }),
   recordedBy: varchar("recorded_by", { length: 255 }).notNull(),
+  deleted: boolean("deleted").default(false).notNull(),
   sheetsRowIndex: integer("sheets_row_index"),
   syncStatus: varchar("sync_status", { length: 20 }).default("pending").notNull(), // synced | pending | failed
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

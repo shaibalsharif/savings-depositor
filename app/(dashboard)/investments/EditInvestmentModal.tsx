@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Calendar, Edit, ShieldAlert } from "lucide-react";
-import { updateInvestment } from "@/lib/actions/finance";
+import { updateInvestment, deleteInvestment } from "@/lib/actions/finance";
 import { toast } from "sonner";
 
 export function EditInvestmentModal({
@@ -68,6 +68,27 @@ export function EditInvestmentModal({
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to update investment.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm("Are you sure you want to delete this investment? All proportional stakes will be permanently removed.")) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const res = await deleteInvestment(investment.entryId);
+      if (res?.success) {
+        toast.success("Investment deleted successfully!");
+        onClose();
+      } else {
+        toast.error("An error occurred. Please try again.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete investment.");
     } finally {
       setIsSubmitting(false);
     }
@@ -200,6 +221,14 @@ export function EditInvestmentModal({
               className="flex-1 py-2 px-4 border border-muted rounded-lg text-sm font-semibold hover:bg-muted/40 transition"
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white border border-transparent rounded-lg text-sm font-semibold transition"
+            >
+              Delete
             </button>
             <button
               type="submit"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/client";
-import { payments, expenses, investments, revenueLosses, syncLogs, depositAllocations, personalInfo } from "@/db/schema";
+import { payments, expenses, investments, revenueLosses, syncLogs, depositAllocations, personalInfo, investmentShares } from "@/db/schema";
 import { readSheet, SheetName } from "@/lib/sheets";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
@@ -280,6 +280,21 @@ export async function POST(req: Request) {
       }
 
       case "Investments": {
+        // If data was cleared via backspace, Entry ID will be empty.
+        if (data && (!data["Entry ID"] || data["Entry ID"].trim() === "")) {
+          const toDelete = await db.select().from(investments).where(eq(investments.sheetsRowIndex, row));
+          for (const inv of toDelete) {
+            await db.update(investments).set({ deleted: true }).where(eq(investments.id, inv.id));
+            await db.delete(investmentShares).where(eq(investmentShares.investmentId, inv.entryId));
+            await db.update(expenses).set({ linkedInvestmentId: null }).where(eq(expenses.linkedInvestmentId, inv.entryId));
+            await db.update(revenueLosses).set({ linkedInvestmentId: null }).where(eq(revenueLosses.linkedInvestmentId, inv.entryId));
+          }
+          await log({ direction, sheetName: sheet, rowIndex: row, status: "success", payload: data });
+          revalidatePath("/dashboard");
+          revalidatePath("/investments");
+          return NextResponse.json({ success: true, message: "Investment row cleared via backspace" });
+        }
+
         if (data["Date"]) data["Date"] = normalizeDate(data["Date"], "date");
         if (data["Exp Return"]) data["Exp Return"] = normalizeDate(data["Exp Return"], "date");
         if (data["Act Return"]) data["Act Return"] = normalizeDate(data["Act Return"], "date");
@@ -320,6 +335,26 @@ export async function POST(req: Request) {
             sheetsRowIndex: row,
             syncStatus: "synced",
           }).where(eq(investments.entryId, d["Entry ID"]));
+        }
+
+        // Verify against all active entries in the Google Sheet for Investments to detect any removed or cleared rows
+        try {
+          const sheetRows = await readSheet("Investments");
+          const validEntryIds = new Set(sheetRows.map((r) => r["Entry ID"]).filter(Boolean));
+          const dbInvestments = await db.select().from(investments);
+          for (const i of dbInvestments) {
+            const sheetRow = i.sheetsRowIndex ? sheetRows[i.sheetsRowIndex - 2] : null;
+            const rowIsCleared = sheetRow && (!sheetRow["Entry ID"] || sheetRow["Entry ID"].trim() === "");
+
+            if ((!validEntryIds.has(i.entryId) || rowIsCleared) && !i.deleted) {
+              await db.update(investments).set({ deleted: true }).where(eq(investments.id, i.id));
+              await db.delete(investmentShares).where(eq(investmentShares.investmentId, i.entryId));
+              await db.update(expenses).set({ linkedInvestmentId: null }).where(eq(expenses.linkedInvestmentId, i.entryId));
+              await db.update(revenueLosses).set({ linkedInvestmentId: null }).where(eq(revenueLosses.linkedInvestmentId, i.entryId));
+            }
+          }
+        } catch (err: any) {
+          console.error("Failed to sync removed investments", err);
         }
 
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });
