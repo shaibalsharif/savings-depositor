@@ -20,6 +20,10 @@ export default async function MyProfilePage() {
     );
   }
 
+  if (!profile.photo && user.picture) {
+    profile.photo = user.picture;
+  }
+
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       <Breadcrumbs crumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "My Profile" }]} />

@@ -69,5 +69,19 @@ export async function requireMember(): Promise<KindeUser<Record<string, unknown>
   
   const user = await getUser();
   if (!user) redirect("/api/auth/login");
+
+  if (user && user.picture) {
+    try {
+      const dbUser = await db.query.personalInfo.findFirst({
+        where: eq(personalInfo.userId, user.id),
+      });
+      if (dbUser && !dbUser.photo) {
+        await db.update(personalInfo).set({ photo: user.picture }).where(eq(personalInfo.userId, user.id));
+      }
+    } catch (err) {
+      console.error("Error updating member photo from Kinde picture", err);
+    }
+  }
+
   return user;
 }
