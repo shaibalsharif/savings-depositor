@@ -211,6 +211,7 @@ export async function POST(req: Request) {
       }
 
       case "Expenses": {
+        if (data["Date"]) data["Date"] = normalizeDate(data["Date"], "date");
         const parsed = ExpenseSchema.safeParse(data);
         if (!parsed.success) {
           const msg = parsed.error.issues.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ");
@@ -218,21 +219,44 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Validation failed", details: msg }, { status: 422 });
         }
         const d = parsed.data;
-        await db.update(expenses).set({
-          expenseDate: d["Date"],
-          category: d["Category"],
-          description: d["Description"],
-          amount: d["Amount"].toString(),
-          linkedInvestmentId: d["Linked Inv"] || null,
-          voided: d["Voided"],
-          sheetsRowIndex: row,
-          syncStatus: "synced",
-        }).where(eq(expenses.entryId, d["Entry ID"]));
+        const existing = await db.query.expenses.findFirst({
+          where: eq(expenses.entryId, d["Entry ID"]),
+        });
+
+        if (!existing) {
+          await db.insert(expenses).values({
+            entryId: d["Entry ID"],
+            expenseDate: d["Date"],
+            category: d["Category"],
+            description: d["Description"],
+            amount: d["Amount"].toString(),
+            linkedInvestmentId: d["Linked Inv"] || null,
+            voided: d["Voided"],
+            sheetsRowIndex: row,
+            syncStatus: "synced",
+            recordedBy: "system_sheet_sync",
+          });
+        } else {
+          await db.update(expenses).set({
+            expenseDate: d["Date"],
+            category: d["Category"],
+            description: d["Description"],
+            amount: d["Amount"].toString(),
+            linkedInvestmentId: d["Linked Inv"] || null,
+            voided: d["Voided"],
+            sheetsRowIndex: row,
+            syncStatus: "synced",
+          }).where(eq(expenses.entryId, d["Entry ID"]));
+        }
+
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });
         break;
       }
 
       case "Investments": {
+        if (data["Date"]) data["Date"] = normalizeDate(data["Date"], "date");
+        if (data["Exp Return"]) data["Exp Return"] = normalizeDate(data["Exp Return"], "date");
+        if (data["Act Return"]) data["Act Return"] = normalizeDate(data["Act Return"], "date");
         const parsed = InvestmentSchema.safeParse(data);
         if (!parsed.success) {
           const msg = parsed.error.issues.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ");
@@ -240,22 +264,44 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Validation failed", details: msg }, { status: 422 });
         }
         const d = parsed.data;
-        await db.update(investments).set({
-          investDate: d["Date"],
-          recipient: d["Recipient"],
-          principal: d["Principal"].toString(),
-          expectedReturnDate: d["Exp Return"],
-          actualReturnDate: d["Act Return"] || null,
-          status: d["Status"],
-          note: d["Note"] ?? "",
-          sheetsRowIndex: row,
-          syncStatus: "synced",
-        }).where(eq(investments.entryId, d["Entry ID"]));
+        const existing = await db.query.investments.findFirst({
+          where: eq(investments.entryId, d["Entry ID"]),
+        });
+
+        if (!existing) {
+          await db.insert(investments).values({
+            entryId: d["Entry ID"],
+            investDate: d["Date"],
+            recipient: d["Recipient"],
+            principal: d["Principal"].toString(),
+            expectedReturnDate: d["Exp Return"],
+            actualReturnDate: d["Act Return"] || null,
+            status: d["Status"],
+            note: d["Note"] ?? "",
+            sheetsRowIndex: row,
+            syncStatus: "synced",
+            recordedBy: "system_sheet_sync",
+          });
+        } else {
+          await db.update(investments).set({
+            investDate: d["Date"],
+            recipient: d["Recipient"],
+            principal: d["Principal"].toString(),
+            expectedReturnDate: d["Exp Return"],
+            actualReturnDate: d["Act Return"] || null,
+            status: d["Status"],
+            note: d["Note"] ?? "",
+            sheetsRowIndex: row,
+            syncStatus: "synced",
+          }).where(eq(investments.entryId, d["Entry ID"]));
+        }
+
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });
         break;
       }
 
       case "Revenue_Losses": {
+        if (data["Date"]) data["Date"] = normalizeDate(data["Date"], "date");
         const parsed = RevenueLossSchema.safeParse(data);
         if (!parsed.success) {
           const msg = parsed.error.issues.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ");
@@ -263,16 +309,36 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Validation failed", details: msg }, { status: 422 });
         }
         const d = parsed.data;
-        await db.update(revenueLosses).set({
-          eventDate: d["Date"],
-          sourceType: d["Source Type"],
-          description: d["Description"],
-          amount: d["Amount"].toString(),
-          linkedInvestmentId: d["Linked Inv"] || null,
-          voided: d["Voided"],
-          sheetsRowIndex: row,
-          syncStatus: "synced",
-        }).where(eq(revenueLosses.entryId, d["Entry ID"]));
+        const existing = await db.query.revenueLosses.findFirst({
+          where: eq(revenueLosses.entryId, d["Entry ID"]),
+        });
+
+        if (!existing) {
+          await db.insert(revenueLosses).values({
+            entryId: d["Entry ID"],
+            eventDate: d["Date"],
+            sourceType: d["Source Type"],
+            description: d["Description"],
+            amount: d["Amount"].toString(),
+            linkedInvestmentId: d["Linked Inv"] || null,
+            voided: d["Voided"],
+            sheetsRowIndex: row,
+            syncStatus: "synced",
+            recordedBy: "system_sheet_sync",
+          });
+        } else {
+          await db.update(revenueLosses).set({
+            eventDate: d["Date"],
+            sourceType: d["Source Type"],
+            description: d["Description"],
+            amount: d["Amount"].toString(),
+            linkedInvestmentId: d["Linked Inv"] || null,
+            voided: d["Voided"],
+            sheetsRowIndex: row,
+            syncStatus: "synced",
+          }).where(eq(revenueLosses.entryId, d["Entry ID"]));
+        }
+
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });
         break;
       }
