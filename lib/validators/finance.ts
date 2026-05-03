@@ -16,6 +16,16 @@ export const InvestmentSchema = z.object({
   note: z.string().max(255).optional(),
 });
 
+export const UpdateInvestmentSchema = z.object({
+  investDate: z.string().min(1, "Date is required"),
+  recipient: z.string().min(1, "Recipient is required").max(255),
+  principal: z.coerce.number().positive("Amount must be positive"),
+  expectedReturnDate: z.string().min(1, "Expected return date is required"),
+  actualReturnDate: z.string().optional(),
+  status: z.enum(["active", "matured", "defaulted"]),
+  note: z.string().max(255).optional(),
+});
+
 export const RevenueLossSchema = z.object({
   eventDate: z.string().min(1, "Date is required"),
   // sourceType semantics: amount is ALWAYS positive; sourceType determines direction

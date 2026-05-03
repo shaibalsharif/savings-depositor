@@ -5,7 +5,7 @@ import { expenses, investments, revenueLosses, logs } from "@/db/schema";
 import { generateExpenseId, generateInvestmentId, generateRevenueId } from "@/lib/id-generator";
 import { appendRow, updateRow, markVoided } from "@/lib/sheets";
 import { requireManager } from "@/lib/auth";
-import { ExpenseSchema, InvestmentSchema, RevenueLossSchema } from "../validators/finance";
+import { ExpenseSchema, InvestmentSchema, RevenueLossSchema, UpdateInvestmentSchema } from "../validators/finance";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { calculateAndSaveShares } from "@/lib/queries/investment";
@@ -225,6 +225,61 @@ export async function voidExpense(entryId: string) {
   }
 
   revalidatePath("/expenses");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function updateInvestment(entryId: string, data: any) {
+  const user = await requireManager();
+  const parsed = UpdateInvestmentSchema.parse(data);
+
+  const existing = await db.query.investments.findFirst({
+    where: eq(investments.entryId, entryId),
+  });
+  if (!existing) throw new Error("Investment not found");
+
+  await db.update(investments).set({
+    investDate: parsed.investDate,
+    recipient: parsed.recipient,
+    principal: parsed.principal.toString(),
+    expectedReturnDate: parsed.expectedReturnDate,
+    actualReturnDate: parsed.actualReturnDate || null,
+    status: parsed.status,
+    note: parsed.note || "",
+  }).where(eq(investments.entryId, entryId));
+
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "UPDATE_INVESTMENT",
+    details: JSON.stringify({ entryId, before: existing, after: parsed }),
+  });
+
+  // Re-calculate member stakes
+  try {
+    await calculateAndSaveShares(entryId, parsed.investDate);
+  } catch (e) {
+    console.error("Failed to re-calculate investment shares on update", e);
+  }
+
+  if (existing.sheetsRowIndex) {
+    try {
+      const row = [
+        entryId,
+        parsed.investDate,
+        parsed.recipient,
+        parsed.principal,
+        parsed.expectedReturnDate,
+        parsed.actualReturnDate || "",
+        parsed.status,
+        parsed.note || "",
+      ];
+      await updateRow("Investments", existing.sheetsRowIndex, row);
+    } catch (e) {
+      console.error("Failed to update investment in Google Sheets", e);
+    }
+  }
+
+  revalidatePath("/investments");
   revalidatePath("/dashboard");
   return { success: true };
 }
