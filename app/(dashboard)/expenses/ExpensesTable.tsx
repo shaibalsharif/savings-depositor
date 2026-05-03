@@ -12,7 +12,6 @@ const categoryColors: Record<string, string> = {
   Materials: "badge-amber",
   "Bank Charge": "badge-red",
   Conveyance: "badge-green",
-  Other: "",
 };
 
 export function ExpensesTable({
@@ -53,7 +52,7 @@ export function ExpensesTable({
                   <td className="col-id font-mono text-xs text-muted-foreground">{exp.entryId}</td>
                   <td className="col-date text-muted-foreground">{formatLocalDate(exp.expenseDate)}</td>
                   <td className="col-category">
-                    <span className={`${categoryColors[exp.category] ?? ""} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}>
+                    <span className={`${categoryColors[exp.category] || "badge-purple"} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}>
                       {exp.category}
                     </span>
                   </td>
