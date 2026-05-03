@@ -32,7 +32,6 @@ const managerNav: NavItem[] = [
   { href: "/investments", label: "Investments", icon: <TrendingUp size={17} /> },
   { href: "/revenue", label: "Revenue & Losses", icon: <ArrowDownUp size={17} /> },
   { href: "/members", label: "Members", icon: <Users size={17} /> },
-  { href: "/projection", label: "Fund Projection", icon: <TrendingUp size={17} /> },
   { href: "/settings/deposits", label: "Settings", icon: <Settings size={17} /> },
 ];
 
@@ -43,7 +42,6 @@ const memberNav: NavItem[] = [
   { href: "/investments", label: "Investments", icon: <TrendingUp size={17} /> },
   { href: "/revenue", label: "Revenue & Losses", icon: <ArrowDownUp size={17} /> },
   { href: "/members", label: "Members", icon: <Users size={17} /> },
-  { href: "/projection", label: "Fund Projection", icon: <TrendingUp size={17} /> },
   { href: "/my-profile", label: "My Profile", icon: <User size={17} /> },
 ];
 
