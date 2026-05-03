@@ -45,7 +45,7 @@ export async function calculateAndSaveShares(
     db
       .select()
       .from(revenueLosses)
-      .where(and(eq(revenueLosses.voided, false), lte(revenueLosses.eventDate, investDate))),
+      .where(and(eq(revenueLosses.voided, false), eq(revenueLosses.deleted, false), lte(revenueLosses.eventDate, investDate))),
     db.select().from(investmentShares),
   ]);
 
@@ -151,7 +151,8 @@ export async function getInvestmentWithShares(entryId: string) {
     .where(
       and(
         eq(revenueLosses.linkedInvestmentId, entryId),
-        eq(revenueLosses.voided, false)
+        eq(revenueLosses.voided, false),
+        eq(revenueLosses.deleted, false)
       )
     );
 

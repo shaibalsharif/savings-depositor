@@ -69,10 +69,10 @@ export async function getManagerDashboardStats() {
   const validExpenses = allExpenses.filter((e) => !e.voided && !e.deleted);
   const totalExpenses = validExpenses.reduce((s, e) => s + Number(e.amount), 0);
 
-  const activeInvestments = allInvestments.filter((i) => i.status === "active");
+  const activeInvestments = allInvestments.filter((i) => i.status === "active" && !i.deleted);
   const totalInvested = activeInvestments.reduce((s, i) => s + Number(i.principal), 0);
 
-  const validRevenue = allRevenue.filter((r) => !r.voided);
+  const validRevenue = allRevenue.filter((r) => !r.voided && !r.deleted);
 
   // amount is always positive; sourceType drives direction:
   // profit / bank_profit / other / principal_return → add to balance
@@ -166,8 +166,8 @@ export async function getManagerDashboardStats() {
     const monthRevenue = validRevenue.filter(r => r.eventDate.startsWith(m)).reduce((s, r) => {
       return r.sourceType === "loss" ? s - Number(r.amount) : s + Number(r.amount);
     }, 0);
-    const monthInvestmentsOut = allInvestments.filter(i => i.investDate.startsWith(m)).reduce((s, i) => s + Number(i.principal), 0);
-    const monthInvestmentsIn = allInvestments.filter(i => i.status === "matured" && i.actualReturnDate?.startsWith(m)).reduce((s, i) => s + Number(i.principal), 0);
+    const monthInvestmentsOut = allInvestments.filter(i => !i.deleted && i.investDate.startsWith(m)).reduce((s, i) => s + Number(i.principal), 0);
+    const monthInvestmentsIn = allInvestments.filter(i => !i.deleted && i.status === "matured" && i.actualReturnDate?.startsWith(m)).reduce((s, i) => s + Number(i.principal), 0);
 
     const netFlow = monthPayments - monthExpenses + monthRevenue - monthInvestmentsOut + monthInvestmentsIn;
     runningBalance += netFlow;
