@@ -54,7 +54,7 @@ export function MemberListTable({
               <tr>
                 <th className="col-id">ID</th>
                 <th className="col-name">Name</th>
-                <th className="col-profession">Profession</th>
+                <th className="col-profession max-w-[120px]">Profession</th>
                 <th className="col-mobile">Mobile</th>
                 <th className="col-position">Position</th>
                 <th className="col-joined">Joined Date</th>
@@ -84,7 +84,7 @@ export function MemberListTable({
                         </span>
                       </div>
                     </td>
-                    <td className="col-profession text-muted-foreground">
+                    <td className="col-profession max-w-[120px] text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
                       <span className="line-clamp-2 overflow-hidden text-ellipsis leading-tight max-h-[2.5rem]" title={m.profession}>
                         {m.profession || "—"}
                       </span>
