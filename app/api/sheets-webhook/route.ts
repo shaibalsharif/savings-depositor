@@ -74,9 +74,9 @@ const InvestmentSchema = z.object({
 const RevenueLossSchema = z.object({
   "Entry ID": z.string().min(1),
   "Date": z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
-  "Source Type": z.enum(["profit", "loss", "principal_return", "bank_profit", "other"]),
+  "Source Type": z.string().min(1),
   "Description": z.string().min(1),
-  "Amount": z.coerce.number().positive("Amount must be a positive number"),
+  "Amount": z.coerce.number(),
   "Linked Inv": z.string().optional(),
   "Voided": z.string().transform((v) => v.toUpperCase() === "TRUE"),
 });
@@ -394,7 +394,7 @@ export async function POST(req: Request) {
             description: d["Description"],
             amount: d["Amount"].toString(),
             linkedInvestmentId: d["Linked Inv"] || null,
-            voided: d["Voided"] === true || d["Voided"] === "TRUE",
+            voided: d["Voided"] || false,
             sheetsRowIndex: row,
             syncStatus: "synced",
             recordedBy: "system_sheet_sync",
@@ -406,7 +406,7 @@ export async function POST(req: Request) {
             description: d["Description"],
             amount: d["Amount"].toString(),
             linkedInvestmentId: d["Linked Inv"] || null,
-            voided: d["Voided"] === true || d["Voided"] === "TRUE",
+            voided: d["Voided"] || false,
             sheetsRowIndex: row,
             syncStatus: "synced",
           }).where(eq(revenueLosses.entryId, d["Entry ID"]));
