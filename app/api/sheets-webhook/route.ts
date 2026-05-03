@@ -180,6 +180,7 @@ export async function POST(req: Request) {
             voided: d["Voided"],
             sheetsRowIndex: row,
             syncStatus: "synced",
+            createdBy: "system_sheet_sync",
           });
         } else {
           // Update existing payment
