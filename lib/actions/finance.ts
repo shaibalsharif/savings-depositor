@@ -3,7 +3,7 @@
 import { db } from "@/db/client";
 import { expenses, investments, revenueLosses, logs, investmentShares } from "@/db/schema";
 import { generateExpenseId, generateInvestmentId, generateRevenueId } from "@/lib/id-generator";
-import { appendRow, updateRow, markVoided } from "@/lib/sheets";
+import { appendRow, updateRow, markVoided, clearRowRange } from "@/lib/sheets";
 import { requireManager } from "@/lib/auth";
 import { ExpenseSchema, InvestmentSchema, RevenueLossSchema, UpdateInvestmentSchema } from "../validators/finance";
 import { revalidatePath } from "next/cache";
@@ -301,6 +301,15 @@ export async function deleteInvestment(entryId: string) {
   // 3. Unlink any expenses and revenue/losses
   await db.update(expenses).set({ linkedInvestmentId: null }).where(eq(expenses.linkedInvestmentId, entryId));
   await db.update(revenueLosses).set({ linkedInvestmentId: null }).where(eq(revenueLosses.linkedInvestmentId, entryId));
+
+  // 4. Clear the row in Google Sheets
+  if (existing.sheetsRowIndex) {
+    try {
+      await clearRowRange("Investments", existing.sheetsRowIndex);
+    } catch (e) {
+      console.error("Failed to clear investment row in Google Sheets", e);
+    }
+  }
 
   await db.insert(logs).values({
     userId: user.id,

@@ -126,3 +126,17 @@ export async function readSheet(sheetName: SheetName): Promise<Record<string, st
     return obj;
   });
 }
+
+export async function clearRowRange(sheetName: SheetName, rowIndex: number, numCols: number = 8): Promise<void> {
+  const spreadsheetId = getSpreadsheetId();
+  if (!spreadsheetId) throw new Error("GOOGLE_SHEET_ID is missing");
+  const sheets = getSheets();
+
+  const maxCol = String.fromCharCode(65 + numCols - 1);
+  const range = `${sheetName}!A${rowIndex}:${maxCol}${rowIndex}`;
+
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range,
+  });
+}
