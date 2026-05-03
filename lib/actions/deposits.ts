@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { payments, depositAllocations, logs } from "@/db/schema";
+import { payments, depositAllocations, logs, personalInfo } from "@/db/schema";
 import { generatePaymentId, generateAllocId } from "@/lib/id-generator";
 import { appendRow, updateRow, markVoided } from "@/lib/sheets";
 import { requireManager } from "@/lib/auth";
@@ -12,22 +12,25 @@ import { eq } from "drizzle-orm";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-/**
- * Build the Payments sheet row array.
- * Columns must match the header in the Google Sheet exactly:
- * Payment ID | Member ID | Amount | Date | For Month | Note | Voided | Sync Status
- */
 function toSheetRow(
   paymentId: string,
-  memberId: string,
+  memberName: string,
   amount: number | string,
   date: string,
   forMonth: string,
   note: string,
   voided: boolean
 ) {
-  return [paymentId, memberId, amount, date, forMonth, note, voided ? "TRUE" : "FALSE", "synced"];
+  return [paymentId, memberName, amount, date, forMonth, note, voided ? "TRUE" : "FALSE", "synced"];
 }
+
+async function getMemberName(memberId: string): Promise<string> {
+  const member = await db.query.personalInfo.findFirst({
+    where: eq(personalInfo.userId, memberId),
+  });
+  return member?.name || memberId;
+}
+
 
 // ─── createPayment ────────────────────────────────────────────────────────────
 
@@ -72,9 +75,10 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
 
   // Sync to Google Sheets (single Payments tab — no separate Allocations tab)
   try {
+    const memberName = await getMemberName(parsed.memberId);
     const pRow = toSheetRow(
       paymentId,
-      parsed.memberId,
+      memberName,
       parsed.amountReceived,
       parsed.paymentDate,
       parsed.forMonth,
@@ -151,9 +155,10 @@ export async function createBatchPayments(
       });
 
     try {
+      const memberName = await getMemberName(parsed.memberId);
       const pRow = toSheetRow(
         paymentId,
-        parsed.memberId,
+        memberName,
         parsed.amountReceived,
         parsed.paymentDate,
         parsed.forMonth,
@@ -231,9 +236,10 @@ export async function updatePayment(
 
   if (existing.sheetsRowIndex) {
     try {
+      const memberName = await getMemberName(parsed.memberId);
       const pRow = toSheetRow(
         paymentId,
-        parsed.memberId,
+        memberName,
         parsed.amountReceived,
         parsed.paymentDate,
         parsed.forMonth,

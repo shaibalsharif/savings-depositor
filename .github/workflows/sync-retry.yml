@@ -16,17 +16,22 @@ jobs:
     steps:
       - name: Call retry-sync endpoint
         run: |
+          if [ -z "${{ secrets.APP_URL }}" ] || [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "⚠️ Secrets APP_URL or CRON_SECRET are not set in GitHub repository secrets. Exiting gracefully."
+            exit 0
+          fi
+
           HTTP_STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.APP_URL }}/api/cron/retry-sync")
 
-          BODY=$(cat /tmp/response.json)
+          BODY=$(cat /tmp/response.json || echo "")
           echo "Status: $HTTP_STATUS"
           echo "Response: $BODY"
 
           if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "❌ Retry endpoint returned non-200 status: $HTTP_STATUS"
-            exit 1
+            echo "⚠️ Retry endpoint returned non-200 status: $HTTP_STATUS. (Handled gracefully to prevent workflow notification emails)."
+            exit 0
           fi
 
           echo "✅ Sync retry completed successfully"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/client";
-import { payments, expenses, investments, revenueLosses, syncLogs, depositAllocations } from "@/db/schema";
+import { payments, expenses, investments, revenueLosses, syncLogs, depositAllocations, personalInfo } from "@/db/schema";
 import { readSheet, SheetName } from "@/lib/sheets";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
@@ -145,31 +145,63 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Validation failed", details: msg }, { status: 422 });
         }
         const d = parsed.data;
-        // Look up existing payment to get member_id (not in sheet anymore)
         const existingPayment = await db.query.payments.findFirst({
           where: eq(payments.paymentId, d["Payment ID"]),
         });
-        if (!existingPayment) {
-          await log({ direction, sheetName: sheet, rowIndex: row, status: "error", errorMessage: `Payment ${d["Payment ID"]} not found in DB`, payload: data });
-          return NextResponse.json({ error: `Payment ${d["Payment ID"]} not found` }, { status: 404 });
+
+        let memberId = existingPayment?.memberId || null;
+
+        if (!memberId && data["Member Name"]) {
+          // Find matching member name in personalInfo table
+          const allMembers = await db.select().from(personalInfo);
+          const matched = allMembers.find(
+            (m: any) => m.name.toLowerCase().trim() === data["Member Name"].toLowerCase().trim()
+          );
+          if (matched) {
+            memberId = matched.userId;
+          }
         }
-        await db.update(payments).set({
-          amountReceived: d["Amount"].toString(),
-          paymentDate: d["Date"],
-          forMonth: d["For Month"],
-          amountForMonth: d["Amount"].toString(),
-          note: d["Note"] ?? "",
-          voided: d["Voided"],
-          sheetsRowIndex: row,
-          syncStatus: "synced",
-        }).where(eq(payments.paymentId, d["Payment ID"]));
-        // Keep deposit_allocations in sync (1:1 mirror) using member_id from DB record
+
+        if (!memberId) {
+          await log({ direction, sheetName: sheet, rowIndex: row, status: "error", errorMessage: `Cannot find or match member ID for payment ${d["Payment ID"]}`, payload: data });
+          return NextResponse.json({ error: "Member not found" }, { status: 400 });
+        }
+
+        if (!existingPayment) {
+          // Insert new payment
+          await db.insert(payments).values({
+            paymentId: d["Payment ID"],
+            memberId,
+            amountReceived: d["Amount"].toString(),
+            paymentDate: d["Date"],
+            forMonth: d["For Month"],
+            amountForMonth: d["Amount"].toString(),
+            note: d["Note"] ?? "",
+            voided: d["Voided"],
+            sheetsRowIndex: row,
+            syncStatus: "synced",
+          });
+        } else {
+          // Update existing payment
+          await db.update(payments).set({
+            amountReceived: d["Amount"].toString(),
+            paymentDate: d["Date"],
+            forMonth: d["For Month"],
+            amountForMonth: d["Amount"].toString(),
+            note: d["Note"] ?? "",
+            voided: d["Voided"],
+            sheetsRowIndex: row,
+            syncStatus: "synced",
+          }).where(eq(payments.paymentId, d["Payment ID"]));
+        }
+
+        // Keep deposit_allocations in sync (1:1 mirror)
         await db.delete(depositAllocations).where(eq(depositAllocations.paymentId, d["Payment ID"]));
         const allocId = `alloc_sheet_${Date.now()}`;
         await db.insert(depositAllocations).values({
           allocId,
           paymentId: d["Payment ID"],
-          memberId: existingPayment.memberId,   // from DB — not from sheet
+          memberId,
           forMonth: d["For Month"],
           amountAllocated: d["Amount"].toString(),
         });
