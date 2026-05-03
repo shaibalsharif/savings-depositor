@@ -161,10 +161,24 @@ export const personalInfo = pgTable("personal_info", {
   permanentAddress: text("permanent_address").notNull(),
   mobile: varchar("mobile", { length: 20 }).notNull(),
   nidNumber: varchar("nid_number", { length: 17 }).notNull(),
-  nidFront: text("nid_front").notNull(),
-  nidBack: text("nid_back").notNull(),
-  signature: text("signature").notNull(),
+  nidFront: text("nid_front"),
+  nidBack: text("nid_back"),
+  signature: text("signature"),
+  photo: text("photo"),
   position: varchar("position", { length: 50 }).notNull().default("member"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const nomineeInfo = pgTable("nominee_info", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  relation: varchar("relation", { length: 100 }).notNull(),
+  dob: date("dob"),
+  mobile: varchar("mobile", { length: 20 }),
+  nidNumber: varchar("nid_number", { length: 20 }),
+  address: text("address"),
+  photo: text("photo"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
