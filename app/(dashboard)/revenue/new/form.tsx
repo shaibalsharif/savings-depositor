@@ -24,7 +24,11 @@ const fieldStyle = {
 const labelClass = "text-xs font-semibold uppercase tracking-widest block mb-2";
 const labelStyle = { color: "hsl(var(--muted-foreground))" } as React.CSSProperties;
 
-export default function RevenueForm() {
+export default function RevenueForm({
+  availableInvestments = [],
+}: {
+  availableInvestments?: any[];
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isLoss, setIsLoss] = useState(false);
@@ -138,8 +142,20 @@ export default function RevenueForm() {
       </div>
 
       <div>
-        <label className={labelClass} style={labelStyle}>Linked Investment ID (Optional)</label>
-        <input type="text" placeholder="INV-000001" value={linkedInvestmentId} onChange={(e) => setLinkedInvestmentId(e.target.value)} className={fieldClass} style={fieldStyle} />
+        <label className={labelClass} style={labelStyle}>Linked Investment (Optional)</label>
+        <select
+          value={linkedInvestmentId}
+          onChange={(e) => setLinkedInvestmentId(e.target.value)}
+          className={fieldClass}
+          style={fieldStyle}
+        >
+          <option value="">No linked investment</option>
+          {availableInvestments.map((inv) => (
+            <option key={inv.entryId} value={inv.entryId}>
+              {inv.entryId} - {inv.recipient} (৳{Number(inv.principal).toLocaleString()})
+            </option>
+          ))}
+        </select>
       </div>
 
       <button
