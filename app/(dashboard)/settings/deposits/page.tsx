@@ -5,6 +5,8 @@ import { SettingsForm } from "./settings-form";
 import { desc } from "drizzle-orm";
 import { format } from "date-fns";
 
+import Link from "next/link";
+
 export default async function DepositSettingsPage() {
   await requireManager();
 
@@ -12,6 +14,27 @@ export default async function DepositSettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex gap-4 border-b pb-3 text-sm select-none">
+        <Link
+          href="/settings/deposits"
+          className="font-bold text-[var(--teal)] border-b-2 border-[var(--teal)] pb-2.5 -mb-3.5"
+        >
+          Deposit Settings
+        </Link>
+        <Link
+          href="/settings/sync"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Google Sheets Sync
+        </Link>
+        <Link
+          href="/settings/reports"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Monthly Reports
+        </Link>
+      </div>
+
       <h1 className="text-2xl font-bold tracking-tight">Deposit Settings</h1>
       
       <div className="grid md:grid-cols-2 gap-6">

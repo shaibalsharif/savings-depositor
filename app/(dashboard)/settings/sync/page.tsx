@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { SyncRetryButton } from "./retry-button";
 
+import Link from "next/link";
+
 export default async function SyncDashboardPage() {
   await requireManager();
 
@@ -32,6 +34,27 @@ export default async function SyncDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex gap-4 border-b pb-3 text-sm select-none">
+        <Link
+          href="/settings/deposits"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Deposit Settings
+        </Link>
+        <Link
+          href="/settings/sync"
+          className="font-bold text-[var(--teal)] border-b-2 border-[var(--teal)] pb-2.5 -mb-3.5"
+        >
+          Google Sheets Sync
+        </Link>
+        <Link
+          href="/settings/reports"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Monthly Reports
+        </Link>
+      </div>
+
       <Breadcrumbs
         crumbs={[
           { label: "Dashboard", href: "/dashboard" },

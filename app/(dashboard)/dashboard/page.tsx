@@ -79,16 +79,27 @@ async function ManagerDash() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 h-full">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 h-full">
             <div className="flex-1 flex flex-col justify-center">
-              <div className="flex items-baseline gap-1 sm:gap-2">
-                <span className="text-base sm:text-3xl font-extrabold text-[var(--teal)]">
-                  ৳{stats.currentMonthAllocated.toLocaleString()}
-                </span>
-                <span className="text-[10px] sm:text-sm text-muted-foreground">
-                  of ৳{stats.currentMonthExpected.toLocaleString()}
-                </span>
+              <div className="flex items-baseline gap-1 sm:gap-2 justify-between sm:justify-start">
+                <div className="flex items-baseline gap-1 sm:gap-2">
+                  <span className="text-base sm:text-3xl font-extrabold text-[var(--teal)]">
+                    ৳{stats.currentMonthAllocated.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] sm:text-sm text-muted-foreground">
+                    of ৳{stats.currentMonthExpected.toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Mobile ONLY: Vertical progress bar next to numbers */}
+                <div className="sm:hidden w-1.5 bg-muted rounded-full overflow-hidden flex flex-col justify-end h-[35px] flex-shrink-0 select-none">
+                  <div
+                    className="rounded-full transition-all duration-500 ease-in-out"
+                    style={{ height: `${Math.min(collectionPct, 100)}%`, background: "var(--teal)" }}
+                  />
+                </div>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 border-t border-dashed pt-2">
                 <div className="text-[10px] sm:text-xs">
                   <div className="text-muted-foreground">Paid</div>
@@ -104,14 +115,14 @@ async function ManagerDash() {
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Vertical progress bar */}
-            <div className="w-1.5 sm:w-2 bg-muted rounded-full overflow-hidden flex flex-col justify-end h-[60px] sm:h-[85px] flex-shrink-0 select-none">
-              <div
-                className="rounded-full transition-all duration-500 ease-in-out"
-                style={{ height: `${Math.min(collectionPct, 100)}%`, background: "var(--teal)" }}
-              />
+              {/* Larger views ONLY: Horizontal progress bar */}
+              <div className="hidden sm:block w-full bg-muted rounded-full overflow-hidden h-2 select-none mt-4">
+                <div
+                  className="h-full rounded-full transition-all duration-500 ease-in-out"
+                  style={{ width: `${Math.min(collectionPct, 100)}%`, background: "var(--teal)" }}
+                />
+              </div>
             </div>
           </div>
         </div>
