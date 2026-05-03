@@ -249,6 +249,20 @@ export async function POST(req: Request) {
           }).where(eq(expenses.entryId, d["Entry ID"]));
         }
 
+        // Verify against all active entries in the Google Sheet for Expenses to detect any removed rows
+        try {
+          const sheetRows = await readSheet("Expenses");
+          const validEntryIds = new Set(sheetRows.map((r) => r["Entry ID"]).filter(Boolean));
+          const dbExpenses = await db.select().from(expenses);
+          for (const e of dbExpenses) {
+            if (!validEntryIds.has(e.entryId) && !e.deleted) {
+              await db.update(expenses).set({ deleted: true }).where(eq(expenses.id, e.id));
+            }
+          }
+        } catch (err: any) {
+          console.error("Failed to sync removed expenses", err);
+        }
+
         await log({ direction, sheetName: sheet, rowIndex: row, entryId: d["Entry ID"], status: "success", payload: data });
         break;
       }

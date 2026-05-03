@@ -41,7 +41,7 @@ export async function calculateAndSaveShares(
     db
       .select()
       .from(expenses)
-      .where(and(eq(expenses.voided, false), lte(expenses.expenseDate, investDate))),
+      .where(and(eq(expenses.voided, false), eq(expenses.deleted, false), lte(expenses.expenseDate, investDate))),
     db
       .select()
       .from(revenueLosses)

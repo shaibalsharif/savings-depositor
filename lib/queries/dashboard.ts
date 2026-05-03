@@ -66,7 +66,7 @@ export async function getManagerDashboardStats() {
   const validPayments = allPayments.filter((p) => !p.voided);
   const totalCollected = validPayments.reduce((s, p) => s + Number(p.amountReceived), 0);
 
-  const validExpenses = allExpenses.filter((e) => !e.voided);
+  const validExpenses = allExpenses.filter((e) => !e.voided && !e.deleted);
   const totalExpenses = validExpenses.reduce((s, e) => s + Number(e.amount), 0);
 
   const activeInvestments = allInvestments.filter((i) => i.status === "active");

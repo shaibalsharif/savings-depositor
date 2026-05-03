@@ -29,6 +29,7 @@ export default async function ExpensesPage(props: { searchParams: SearchParams }
 
   // Apply filters
   const filtered = allExpenses.filter((e) => {
+    if (e.deleted) return false;
     if (categoryFilter && e.category !== categoryFilter) return false;
     if (statusFilter === "active" && e.voided) return false;
     if (statusFilter === "voided" && !e.voided) return false;
