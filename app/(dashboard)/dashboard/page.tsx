@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { formatLocalDate } from "@/lib/format-date";
 import Link from "next/link";
 import { ProjectionTrigger } from "../projection/ProjectionTrigger";
+import { OutstandingPendingsSection } from "./OutstandingPendingsSection";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function StatCard({
@@ -15,25 +16,17 @@ function StatCard({
   label: string; value: string; sub?: string; accent?: string; href?: string;
 }) {
   const card = (
-    <div className="stat-card glass p-4 sm:p-5 flex flex-col gap-1.5 min-h-[110px] justify-between">
-      <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground line-clamp-1">
+    <div className="stat-card glass p-3 sm:p-5 flex flex-col gap-1.5 justify-between min-h-[95px] sm:min-h-[110px]">
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground line-clamp-1">
         {label}
       </div>
-      <div className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate" style={{ color: accent ?? "hsl(var(--foreground))" }}>
+      <div className="text-base sm:text-2xl md:text-3xl font-bold tracking-tight truncate" style={{ color: accent ?? "hsl(var(--foreground))" }}>
         {value}
       </div>
-      {sub && <div className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1">{sub}</div>}
+      {sub && <div className="text-[9px] sm:text-xs text-muted-foreground line-clamp-1 leading-tight">{sub}</div>}
     </div>
   );
   return href ? <Link href={href} className="block">{card}</Link> : card;
-}
-
-function ProgressBar({ pct, color = "var(--teal)" }: { pct: number; color?: string }) {
-  return (
-    <div className="progress-bar">
-      <div className="progress-bar-fill" style={{ width: `${Math.min(pct, 100)}%`, background: color }} />
-    </div>
-  );
 }
 
 function SectionBox({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
@@ -56,94 +49,101 @@ async function ManagerDash() {
   const collectionPct = stats.currentMonthExpected > 0
     ? (stats.currentMonthAllocated / stats.currentMonthExpected) * 100
     : 0;
-  const last12Months = stats.monthlyChart.map((d) => d.month.slice(-5));
 
   return (
     <div className="space-y-6">
 
-      {/* ── Row 1: KPIs ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── Row 1: KPIs (2x2 grid on all small devices, 4 cols on desktop) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Fund Balance" value={`৳${stats.balance.toLocaleString()}`} accent="var(--teal)" sub="Liquid cash available" />
         <StatCard label="Total Collected" value={`৳${stats.totalCollected.toLocaleString()}`} sub={`From ${stats.membersCount} members`} />
         <StatCard label="Outstanding Dues" value={`৳${stats.totalOutstanding.toLocaleString()}`} accent="var(--red)" sub={`${stats.membersWithDues} members pending`} href="/deposits" />
         <StatCard label="Capital Deployed" value={`৳${stats.totalInvested.toLocaleString()}`} accent="var(--purple)" sub={`${stats.activeInvestmentsCount} active investments`} href="/investments" />
       </div>
 
-      {/* ── Row 2: This month progress + Rev/Exp ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* This month */}
-        <div className="glass p-4 sm:p-5 space-y-4 lg:col-span-2">
+      {/* ── Row 2: This month progress + Rev/Exp (Flex row side-by-side on all screens) ── */}
+      <div className="flex flex-row gap-3 sm:gap-4 w-full justify-between items-stretch">
+        {/* Monthly Collection with vertical progress bar */}
+        <div className="glass p-3 sm:p-5 flex-1 flex flex-col justify-between gap-3 min-w-[130px] sm:min-w-[200px]">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                {format(new Date(), "MMMM yyyy")} — Monthly Collection
+              <div className="text-[9px] sm:text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                {format(new Date(), "MMMM yyyy")}
               </div>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl sm:text-3xl font-bold text-[var(--teal)]">
+              <div className="text-[9px] sm:text-xs text-muted-foreground font-normal leading-tight">Monthly Collection</div>
+            </div>
+            <div className="text-right">
+              <div className="text-lg sm:text-2xl font-extrabold" style={{ color: collectionPct >= 100 ? "var(--green)" : "var(--amber)" }}>
+                {Math.round(collectionPct)}%
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 h-full">
+            <div className="flex-1 flex flex-col justify-center">
+              <div className="flex items-baseline gap-1 sm:gap-2">
+                <span className="text-base sm:text-3xl font-extrabold text-[var(--teal)]">
                   ৳{stats.currentMonthAllocated.toLocaleString()}
                 </span>
-                <span className="text-xs sm:text-sm text-muted-foreground">
+                <span className="text-[10px] sm:text-sm text-muted-foreground">
                   of ৳{stats.currentMonthExpected.toLocaleString()}
                 </span>
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xl sm:text-2xl font-bold" style={{ color: collectionPct >= 100 ? "var(--green)" : "var(--amber)" }}>
-                {Math.round(collectionPct)}%
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 border-t border-dashed pt-2">
+                <div className="text-[10px] sm:text-xs">
+                  <div className="text-muted-foreground">Paid</div>
+                  <div className="font-semibold text-xs sm:text-base">
+                    {stats.memberPendings.length > 0 ? stats.membersCount - stats.membersWithDues : stats.membersCount}
+                    <span className="text-muted-foreground font-normal"> / {stats.membersCount}</span>
+                  </div>
+                </div>
+                <div className="text-[10px] sm:text-xs">
+                  <div className="text-muted-foreground">Dues</div>
+                  <div className="font-semibold text-xs sm:text-base text-[var(--red)]">
+                    ৳{Math.max(0, stats.currentMonthExpected - stats.currentMonthAllocated).toLocaleString()}
+                  </div>
+                </div>
               </div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground">collected</div>
             </div>
-          </div>
-          <ProgressBar pct={collectionPct} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div className="text-xs">
-              <div className="text-muted-foreground mb-1">Members paid this month</div>
-              <div className="font-semibold text-base">
-                {stats.memberPendings.length > 0 ? stats.membersCount - stats.membersWithDues : stats.membersCount}
-                <span className="text-muted-foreground font-normal"> / {stats.membersCount}</span>
-              </div>
-            </div>
-            <div className="text-xs">
-              <div className="text-muted-foreground mb-1">Still outstanding this month</div>
-              <div className="font-semibold text-base text-[var(--red)]">
-                ৳{Math.max(0, stats.currentMonthExpected - stats.currentMonthAllocated).toLocaleString()}
-              </div>
+
+            {/* Vertical progress bar */}
+            <div className="w-1.5 sm:w-2 bg-muted rounded-full overflow-hidden flex flex-col justify-end h-[60px] sm:h-[85px] flex-shrink-0 select-none">
+              <div
+                className="rounded-full transition-all duration-500 ease-in-out"
+                style={{ height: `${Math.min(collectionPct, 100)}%`, background: "var(--teal)" }}
+              />
             </div>
           </div>
         </div>
 
         {/* Revenue summary */}
-        <div className="glass p-4 sm:p-5 space-y-4">
-          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Revenue & Losses
+        <div className="glass p-3 sm:p-5 w-[42%] sm:w-[35%] flex flex-col justify-between gap-3 flex-shrink-0 select-none">
+          <div>
+            <div className="text-[9px] sm:text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Revenue
+            </div>
+            <div className="text-[9px] sm:text-xs text-muted-foreground font-normal leading-tight">Total Overview</div>
           </div>
-          <div className="space-y-2.5 text-sm">
+
+          <div className="space-y-1 text-xs">
             {[
-              { label: "Total Income", value: `+৳${stats.totalIncome.toLocaleString()}`, color: "var(--green)" },
-              { label: "Total Losses", value: `৳${stats.totalLoss.toLocaleString()}`, color: "var(--red)" },
-              { label: "Total Expenses", value: `-৳${stats.totalExpenses.toLocaleString()}`, color: "var(--amber)" },
+              { label: "Income", value: `+৳${stats.totalIncome.toLocaleString()}`, color: "var(--green)" },
+              { label: "Losses", value: `৳${stats.totalLoss.toLocaleString()}`, color: "var(--red)" },
+              { label: "Expenses", value: `-৳${stats.totalExpenses.toLocaleString()}`, color: "var(--amber)" },
             ].map((row) => (
-              <div key={row.label} className="flex justify-between">
-                <span className="text-muted-foreground text-xs sm:text-sm">{row.label}</span>
-                <span className="font-semibold text-xs sm:text-sm" style={{ color: row.color }}>{row.value}</span>
+              <div key={row.label} className="flex justify-between text-[10px] sm:text-sm">
+                <span className="text-muted-foreground truncate max-w-[55px] sm:max-w-none">{row.label}</span>
+                <span className="font-semibold" style={{ color: row.color }}>{row.value}</span>
               </div>
             ))}
             <div
-              className="flex justify-between pt-2 border-t font-bold text-sm sm:text-base"
+              className="flex justify-between pt-1.5 border-t font-bold text-[10px] sm:text-base mt-1"
               style={{ borderColor: "hsl(var(--border))" }}
             >
-              <span>Net Revenue</span>
+              <span className="truncate max-w-[55px] sm:max-w-none">Net Rev</span>
               <span style={{ color: stats.netRevenue >= 0 ? "var(--green)" : "var(--red)" }}>
                 {stats.netRevenue >= 0 ? "+" : ""}৳{stats.netRevenue.toLocaleString()}
               </span>
-            </div>
-          </div>
-          <div className="pt-1 border-t border-dashed">
-            <div className="text-[10px] text-muted-foreground">
-              Next Investment Return
-            </div>
-            <div className="font-semibold mt-0.5 text-xs sm:text-sm text-[var(--amber)]">
-              {stats.nextReturn ? formatLocalDate(stats.nextReturn) : "—"}
             </div>
           </div>
         </div>
@@ -195,41 +195,12 @@ async function ManagerDash() {
           </SectionBox>
         </div>
 
-        {/* Outstanding Pendings */}
-        <div className="lg:col-span-2">
-          <SectionBox
-            title="Outstanding Pendings"
-            action={<Link href="/deposits/new" className="text-xs font-medium text-[var(--teal)]">Record Deposit →</Link>}
-          >
-            <div className="divide-y border-t" style={{ borderColor: "hsl(var(--border))" }}>
-              {stats.memberPendings.length === 0 ? (
-                <div className="p-4 sm:p-5 text-center text-sm text-muted-foreground">
-                  🎉 All members are fully paid!
-                </div>
-              ) : (
-                stats.memberPendings.slice(0, 8).map((m, idx) => (
-                  <div key={m.memberId} className="flex items-center justify-between p-3 sm:px-5 sm:py-3">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-muted text-foreground"
-                      >
-                        {m.name.charAt(0)}
-                      </div>
-                      <span className="text-xs sm:text-sm font-medium line-clamp-1">{m.name}</span>
-                    </div>
-                    <span className="text-xs sm:text-sm font-bold text-[var(--red)]">
-                      ৳{m.due.toLocaleString()}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-            {stats.memberPendings.length > 8 && (
-              <div className="p-3 border-t text-[10px] text-center text-muted-foreground" style={{ borderColor: "hsl(var(--border))" }}>
-                +{stats.memberPendings.length - 8} more with dues
-              </div>
-            )}
-          </SectionBox>
+        {/* Outstanding Pendings Section Component */}
+        <div className="lg:col-span-2 select-none h-full">
+          <OutstandingPendingsSection
+            memberPendings={stats.memberPendings}
+            totalOutstanding={stats.totalOutstanding}
+          />
         </div>
       </div>
 
@@ -250,8 +221,8 @@ async function MemberDash({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
 
-      {/* ── KPIs ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {/* ── KPIs (2x2 Grid on mobile, 3 cols on desktop) ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard
           label="My Balance Paid"
           value={`৳${stats.totalPaid.toLocaleString()}`}
@@ -264,16 +235,18 @@ async function MemberDash({ userId }: { userId: string }) {
           accent={stats.totalDue > 0 ? "var(--red)" : "var(--green)"}
           sub={stats.totalDue > 0 ? "Please clear your dues" : "Fully paid up ✓"}
         />
-        <StatCard
-          label={`${format(new Date(), "MMMM")} Status`}
-          value={stats.currentMonth.due === 0 ? "Cleared ✓" : `৳${stats.currentMonth.due.toLocaleString()} Due`}
-          accent={stats.currentMonth.due === 0 ? "var(--green)" : "var(--amber)"}
-          sub={`Paid ৳${stats.currentMonth.paid.toLocaleString()} of ৳${stats.currentMonth.expected.toLocaleString()}`}
-        />
+        <div className="col-span-2 md:col-span-1">
+          <StatCard
+            label={`${format(new Date(), "MMMM")} Status`}
+            value={stats.currentMonth.due === 0 ? "Cleared ✓" : `৳${stats.currentMonth.due.toLocaleString()} Due`}
+            accent={stats.currentMonth.due === 0 ? "var(--green)" : "var(--amber)"}
+            sub={`Paid ৳${stats.currentMonth.paid.toLocaleString()} of ৳${stats.currentMonth.expected.toLocaleString()}`}
+          />
+        </div>
       </div>
 
       {/* ── This Month Progress ── */}
-      <div className="glass p-4 sm:p-5 space-y-4">
+      <div className="glass p-4 sm:p-5 space-y-4 select-none">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             {format(new Date(), "MMMM yyyy")} — My Deposit Progress
@@ -290,7 +263,9 @@ async function MemberDash({ userId }: { userId: string }) {
             of ৳{stats.currentMonth.expected.toLocaleString()} required this month
           </span>
         </div>
-        <ProgressBar pct={currentPct} color={currentPct >= 100 ? "var(--green)" : "var(--teal)"} />
+        <div className="progress-bar">
+          <div className="progress-bar-fill" style={{ width: `${Math.min(currentPct, 100)}%`, background: currentPct >= 100 ? "var(--green)" : "var(--teal)" }} />
+        </div>
       </div>
 
       {/* ── My Payment Chart ── */}

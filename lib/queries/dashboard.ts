@@ -103,11 +103,17 @@ export async function getManagerDashboardStats() {
       return acc;
     }, {} as Record<string, number>);
     let due = 0;
+    const breakdown: { month: string; expected: number; paid: number; due: number }[] = [];
     for (const m of allMonths) {
       const exp = getExpectedForMonth(settingsSorted, m);
-      due += Math.max(0, exp - (paidByMonth[m] || 0));
+      const paid = paidByMonth[m] || 0;
+      const mDue = Math.max(0, exp - paid);
+      due += mDue;
+      if (mDue > 0) {
+        breakdown.push({ month: m, expected: exp, paid, due: mDue });
+      }
     }
-    return { memberId: member.userId, name: member.name, due };
+    return { memberId: member.userId, name: member.name, due, breakdown };
   }).filter((m) => m.due > 0).sort((a, b) => b.due - a.due);
 
   // Total outstanding across all members
