@@ -38,11 +38,11 @@ export function MemberViewModal({
   if (!isOpen || !member) return null;
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-card glass border p-6 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl relative">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-none">
+      <div className="bg-card glass border p-6 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl relative">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden border bg-muted/30 flex items-center justify-center font-bold text-lg text-foreground select-none flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full overflow-hidden border bg-muted/30 flex items-center justify-center font-bold text-xl text-foreground flex-shrink-0">
               {member.photo ? (
                 <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
               ) : (
@@ -109,7 +109,20 @@ export function MemberViewModal({
 
         {/* Nominee Info */}
         <div className="border-t pt-4 space-y-3">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Nominee Info</h3>
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-14 h-14 rounded-full overflow-hidden border bg-muted/30 flex items-center justify-center font-bold text-lg text-foreground flex-shrink-0">
+              {member.nominee?.photo ? (
+                <img src={member.nominee.photo} alt={member.nominee.name} className="w-full h-full object-cover" />
+              ) : (
+                <span>{member.nominee?.name ? member.nominee.name.charAt(0) : "N"}</span>
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Nominee Info</h3>
+              <p className="text-xs text-muted-foreground">{member.nominee?.relation || "Nominee"}</p>
+            </div>
+          </div>
+
           {member.nominee ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm">
               <div>
@@ -144,13 +157,13 @@ export function MemberViewModal({
             onClick={onPrev}
             className="px-4 py-2 border rounded-lg text-xs font-semibold hover:bg-muted/40 transition flex items-center gap-1 bg-muted/20"
           >
-            ← Previous (Left Arrow)
+            ← Previous
           </button>
           <button
             onClick={onNext}
             className="px-4 py-2 border rounded-lg text-xs font-semibold hover:bg-muted/40 transition flex items-center gap-1 bg-muted/20"
           >
-            Next (Right Arrow) →
+            Next →
           </button>
         </div>
       </div>

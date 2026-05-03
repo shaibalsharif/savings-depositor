@@ -43,5 +43,12 @@ export async function getMemberFullProfile(userId: string) {
     }
   }
 
+  if (profile && profile.photo && profile.photo.startsWith("blob:")) {
+    profile.photo = "";
+  }
+  if (nominee && nominee.photo && nominee.photo.startsWith("blob:")) {
+    nominee.photo = "";
+  }
+
   return { profile, nominee };
 }

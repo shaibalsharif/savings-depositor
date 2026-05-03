@@ -35,8 +35,10 @@ export default async function MembersPage() {
   const profilesWithNominees = await Promise.all(
     allMembers.map(async (m) => {
       const full = await getMemberFullProfile(m.userId);
+      const photoClean = m.photo && m.photo.startsWith("blob:") ? "" : m.photo;
       return {
         ...m,
+        photo: photoClean,
         nominee: full.nominee,
       };
     })
