@@ -202,14 +202,18 @@ export default async function MyProfilePage() {
                   <div className="text-xs text-muted-foreground mb-0.5">Address</div>
                   <div className="font-medium text-foreground">{nominee.address || "—"}</div>
                 </div>
-                {nominee.photo && (
-                  <div className="sm:col-span-2 pt-2 border-t mt-2">
-                    <div className="text-xs text-muted-foreground mb-1">Nominee Photo</div>
-                    <div className="w-24 h-24 rounded-lg overflow-hidden border bg-muted/40">
+                <div className="sm:col-span-2 pt-2 border-t mt-2">
+                  <div className="text-xs text-muted-foreground mb-1">Nominee Photo</div>
+                  <div className="w-24 h-24 rounded-lg overflow-hidden border bg-muted/40 flex items-center justify-center">
+                    {nominee.photo ? (
                       <img src={nominee.photo} alt="Nominee" className="w-full h-full object-cover" />
-                    </div>
+                    ) : (
+                      <span className="text-3xl font-bold text-muted-foreground select-none">
+                        {nominee.name ? nominee.name.charAt(0) : "N"}
+                      </span>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground text-sm">No nominee information saved.</p>

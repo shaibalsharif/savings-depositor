@@ -115,7 +115,28 @@ export async function updateMemberFullProfile(
 
 export async function updateSelfPhoto(photo: string) {
   const user = await requireMember();
+  const dbUser = await db.query.personalInfo.findFirst({
+    where: eq(personalInfo.userId, user.id),
+    columns: { photo: true }
+  });
+
+  const oldPhoto = dbUser?.photo;
   await db.update(personalInfo).set({ photo }).where(eq(personalInfo.userId, user.id));
+
+  if (oldPhoto && (oldPhoto.includes("utfs.io") || oldPhoto.includes("uploadthing"))) {
+    try {
+      const parts = oldPhoto.split("/f/");
+      const key = parts[parts.length - 1];
+      if (key) {
+        const { UTApi } = await import("uploadthing/server");
+        const utapi = new UTApi();
+        await utapi.deleteFiles(key);
+      }
+    } catch (err) {
+      console.error("Failed to delete previous photo from UploadThing", err);
+    }
+  }
+
   revalidatePath("/my-profile");
   return { success: true };
 }

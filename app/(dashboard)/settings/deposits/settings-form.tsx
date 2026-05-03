@@ -29,6 +29,11 @@ export function SettingsForm() {
       return;
     }
 
+    if (Number(monthlyAmount) <= 0) {
+      toast.error("Monthly amount must be a positive number");
+      return;
+    }
+
     setLoading(true);
     try {
       await createDepositSetting(Number(monthlyAmount), effectiveMonth);
@@ -51,11 +56,12 @@ export function SettingsForm() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label>Effective Month (YYYY-MM)</Label>
+          <Label>Effective Month</Label>
           <Input 
-            placeholder="e.g. 2024-05" 
+            type="month"
             value={effectiveMonth} 
             onChange={(e) => setEffectiveMonth(e.target.value)} 
+            className="w-full bg-background select-none text-foreground"
           />
         </div>
         
@@ -64,8 +70,10 @@ export function SettingsForm() {
           <Input 
             type="number" 
             placeholder="3000" 
+            min="1"
             value={monthlyAmount} 
             onChange={(e) => setMonthlyAmount(e.target.value)} 
+            className="w-full bg-background select-none text-foreground"
           />
         </div>
       </CardContent>
