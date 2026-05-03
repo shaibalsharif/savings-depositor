@@ -20,11 +20,13 @@ export function ExpensesTable({
   isFiltered,
   manager,
   totalValid,
+  availableInvestments = [],
 }: {
   filtered: any[];
   isFiltered: any;
   manager: boolean;
   totalValid: number;
+  availableInvestments?: any[];
 }) {
   const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
 
@@ -103,6 +105,7 @@ export function ExpensesTable({
         isOpen={!!selectedExpense}
         onClose={() => setSelectedExpense(null)}
         expense={selectedExpense}
+        availableInvestments={availableInvestments}
       />
     </>
   );

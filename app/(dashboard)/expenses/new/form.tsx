@@ -19,12 +19,13 @@ const fieldStyle = {
 const labelClass = "text-xs font-semibold uppercase tracking-widest block mb-2";
 const labelStyle = { color: "hsl(var(--muted-foreground))" } as React.CSSProperties;
 
-export default function ExpenseForm() {
+export default function ExpenseForm({ availableInvestments = [] }: { availableInvestments?: any[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const [expenseDate, setExpenseDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [category, setCategory] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [linkedInvestmentId, setLinkedInvestmentId] = useState("");
@@ -35,11 +36,17 @@ export default function ExpenseForm() {
       toast.error("Please fill all required fields");
       return;
     }
+
+    let finalCategory = category;
+    if (category === "Other") {
+      finalCategory = customCategory.trim() || "Other";
+    }
+
     setLoading(true);
     try {
       await createExpense({
         expenseDate,
-        category,
+        category: finalCategory,
         description,
         amount: Number(amount),
         linkedInvestmentId: linkedInvestmentId || undefined,
@@ -78,6 +85,18 @@ export default function ExpenseForm() {
             </button>
           ))}
         </div>
+        {category === "Other" && (
+          <div className="mt-3">
+            <input
+              type="text"
+              placeholder="Enter custom category name (e.g. Travel)"
+              value={customCategory}
+              onChange={(e) => setCustomCategory(e.target.value)}
+              className={fieldClass}
+              style={fieldStyle}
+            />
+          </div>
+        )}
       </div>
 
       <div>
@@ -106,15 +125,20 @@ export default function ExpenseForm() {
       </div>
 
       <div>
-        <label className={labelClass} style={labelStyle}>Linked Investment ID (Optional)</label>
-        <input
-          type="text"
-          placeholder="INV-000001"
+        <label className={labelClass} style={labelStyle}>Linked Investment (Optional)</label>
+        <select
           value={linkedInvestmentId}
           onChange={(e) => setLinkedInvestmentId(e.target.value)}
           className={fieldClass}
           style={fieldStyle}
-        />
+        >
+          <option value="">No linked investment</option>
+          {availableInvestments.map((inv) => (
+            <option key={inv.entryId} value={inv.entryId}>
+              {inv.entryId} ({inv.recipient}) — ৳{Number(inv.principal).toLocaleString()}
+            </option>
+          ))}
+        </select>
       </div>
 
       <button

@@ -1,5 +1,5 @@
 import { db } from "@/db/client";
-import { expenses } from "@/db/schema";
+import { expenses, investments } from "@/db/schema";
 import { requireMember, isManager } from "@/lib/auth";
 import Link from "next/link";
 import { formatLocalDate } from "@/lib/format-date";
@@ -25,6 +25,7 @@ export default async function ExpensesPage(props: { searchParams: SearchParams }
   const toFilter = sp.to ?? "";
 
   const allExpenses = await db.select().from(expenses).orderBy(desc(expenses.expenseDate));
+  const allInvestments = await db.select().from(investments).orderBy(desc(investments.investDate));
 
   // Apply filters
   const filtered = allExpenses.filter((e) => {
@@ -115,6 +116,7 @@ export default async function ExpensesPage(props: { searchParams: SearchParams }
         isFiltered={isFiltered}
         manager={manager}
         totalValid={totalValid}
+        availableInvestments={allInvestments}
       />
     </div>
   );

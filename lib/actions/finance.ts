@@ -15,21 +15,19 @@ export async function createExpense(data: any) {
   const parsed = ExpenseSchema.parse(data);
   const entryId = await generateExpenseId();
 
-  await db.transaction(async (tx) => {
-    await tx.insert(expenses).values({
-      entryId,
-      expenseDate: parsed.expenseDate,
-      category: parsed.category,
-      description: parsed.description,
-      amount: parsed.amount.toString(),
-      linkedInvestmentId: parsed.linkedInvestmentId || null,
-      recordedBy: user.id,
-    });
-    await tx.insert(logs).values({
-      userId: user.id,
-      action: "CREATE_EXPENSE",
-      details: JSON.stringify({ entryId, amount: parsed.amount }),
-    });
+  await db.insert(expenses).values({
+    entryId,
+    expenseDate: parsed.expenseDate,
+    category: parsed.category,
+    description: parsed.description,
+    amount: parsed.amount.toString(),
+    linkedInvestmentId: parsed.linkedInvestmentId || null,
+    recordedBy: user.id,
+  });
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "CREATE_EXPENSE",
+    details: JSON.stringify({ entryId, amount: parsed.amount }),
   });
 
   try {
@@ -51,21 +49,19 @@ export async function createInvestment(data: any) {
   const parsed = InvestmentSchema.parse(data);
   const entryId = await generateInvestmentId();
 
-  await db.transaction(async (tx) => {
-    await tx.insert(investments).values({
-      entryId,
-      investDate: parsed.investDate,
-      recipient: parsed.recipient,
-      principal: parsed.principal.toString(),
-      expectedReturnDate: parsed.expectedReturnDate,
-      note: parsed.note || "",
-      recordedBy: user.id,
-    });
-    await tx.insert(logs).values({
-      userId: user.id,
-      action: "CREATE_INVESTMENT",
-      details: JSON.stringify({ entryId, principal: parsed.principal }),
-    });
+  await db.insert(investments).values({
+    entryId,
+    investDate: parsed.investDate,
+    recipient: parsed.recipient,
+    principal: parsed.principal.toString(),
+    expectedReturnDate: parsed.expectedReturnDate,
+    note: parsed.note || "",
+    recordedBy: user.id,
+  });
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "CREATE_INVESTMENT",
+    details: JSON.stringify({ entryId, principal: parsed.principal }),
   });
 
   // Snapshot each member's proportional stake at this investment's date
@@ -125,21 +121,19 @@ export async function createRevenue(data: any) {
   const parsed = RevenueLossSchema.parse(data);
   const entryId = await generateRevenueId();
 
-  await db.transaction(async (tx) => {
-    await tx.insert(revenueLosses).values({
-      entryId,
-      eventDate: parsed.eventDate,
-      sourceType: parsed.sourceType,
-      description: parsed.description,
-      amount: parsed.amount.toString(),
-      linkedInvestmentId: parsed.linkedInvestmentId || null,
-      recordedBy: user.id,
-    });
-    await tx.insert(logs).values({
-      userId: user.id,
-      action: "CREATE_REVENUE",
-      details: JSON.stringify({ entryId, amount: parsed.amount }),
-    });
+  await db.insert(revenueLosses).values({
+    entryId,
+    eventDate: parsed.eventDate,
+    sourceType: parsed.sourceType,
+    description: parsed.description,
+    amount: parsed.amount.toString(),
+    linkedInvestmentId: parsed.linkedInvestmentId || null,
+    recordedBy: user.id,
+  });
+  await db.insert(logs).values({
+    userId: user.id,
+    action: "CREATE_REVENUE",
+    details: JSON.stringify({ entryId, amount: parsed.amount }),
   });
 
   // If this is a principal_return, mark the linked investment as matured

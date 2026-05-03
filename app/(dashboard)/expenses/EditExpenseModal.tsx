@@ -22,10 +22,12 @@ export function EditExpenseModal({
   isOpen,
   onClose,
   expense,
+  availableInvestments = [],
 }: {
   isOpen: boolean;
   onClose: () => void;
   expense: any | null;
+  availableInvestments?: any[];
 }) {
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -33,6 +35,7 @@ export function EditExpenseModal({
 
   const [expenseDate, setExpenseDate] = useState("");
   const [category, setCategory] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [linkedInvestmentId, setLinkedInvestmentId] = useState("");
@@ -40,7 +43,13 @@ export function EditExpenseModal({
   useEffect(() => {
     if (expense) {
       setExpenseDate(expense.expenseDate);
-      setCategory(expense.category);
+      if (CATEGORIES.includes(expense.category)) {
+        setCategory(expense.category);
+        setCustomCategory("");
+      } else {
+        setCategory("Other");
+        setCustomCategory(expense.category);
+      }
       setDescription(expense.description);
       setAmount(expense.amount);
       setLinkedInvestmentId(expense.linkedInvestmentId || "");
@@ -71,9 +80,13 @@ export function EditExpenseModal({
     setLoading(true);
     try {
       if (actionType === "save") {
+        let finalCategory = category;
+        if (category === "Other") {
+          finalCategory = customCategory.trim() || "Other";
+        }
         await updateExpense(expense.entryId, {
           expenseDate,
-          category,
+          category: finalCategory,
           description,
           amount: Number(amount),
           linkedInvestmentId: linkedInvestmentId || undefined,
@@ -174,6 +187,18 @@ export function EditExpenseModal({
                   </button>
                 ))}
               </div>
+              {category === "Other" && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    placeholder="Enter custom category name (e.g. Travel)"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    className={fieldClass}
+                    style={fieldStyle}
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -202,15 +227,20 @@ export function EditExpenseModal({
             </div>
 
             <div>
-              <label className={labelClass} style={labelStyle}>Linked Investment ID (Optional)</label>
-              <input
-                type="text"
-                placeholder="INV-000001"
+              <label className={labelClass} style={labelStyle}>Linked Investment (Optional)</label>
+              <select
                 value={linkedInvestmentId}
                 onChange={(e) => setLinkedInvestmentId(e.target.value)}
                 className={fieldClass}
                 style={fieldStyle}
-              />
+              >
+                <option value="">No linked investment</option>
+                {availableInvestments.map((inv) => (
+                  <option key={inv.entryId} value={inv.entryId}>
+                    {inv.entryId} ({inv.recipient}) — ৳{Number(inv.principal).toLocaleString()}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="flex gap-3 pt-3 border-t" style={{ borderColor: "hsl(var(--border))" }}>
