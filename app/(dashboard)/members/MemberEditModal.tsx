@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { updateMemberFullProfile } from "@/lib/actions/members";
+import { UploadThingButton } from "@/components/UploadThingButton";
 
 export function MemberEditModal({
   isOpen,
@@ -218,6 +219,16 @@ export function MemberEditModal({
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
                   />
                 </div>
+                <div className="sm:col-span-2 border-t pt-3 flex flex-col items-center gap-2">
+                  <label className="text-xs font-semibold text-muted-foreground self-start select-none">Or Upload New Image</label>
+                  <UploadThingButton
+                    endpoint="userImage"
+                    onComplete={(url) => {
+                      setPersonal({ ...personal, photo: url });
+                      setMessage("✓ Member Photo uploaded!");
+                    }}
+                  />
+                </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold">Present Address</label>
                   <textarea
@@ -299,6 +310,16 @@ export function MemberEditModal({
                     value={nominee.photo}
                     onChange={(e) => setNominee({ ...nominee, photo: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
+                  />
+                </div>
+                <div className="sm:col-span-2 border-t pt-3 flex flex-col items-center gap-2">
+                  <label className="text-xs font-semibold text-muted-foreground self-start select-none">Or Upload Nominee Image</label>
+                  <UploadThingButton
+                    endpoint="nomineePhoto"
+                    onComplete={(url) => {
+                      setNominee({ ...nominee, photo: url });
+                      setMessage("✓ Nominee Photo uploaded!");
+                    }}
                   />
                 </div>
                 <div className="sm:col-span-2">

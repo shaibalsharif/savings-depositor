@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Edit2 } from "lucide-react";
+import { Pencil, Eye } from "lucide-react";
 import { toggleMemberRole } from "@/lib/actions/members";
 import { MemberEditModal } from "./MemberEditModal";
+import { MemberViewModal } from "./MemberViewModal";
 
 export function MemberListTable({
   members,
@@ -15,7 +16,8 @@ export function MemberListTable({
   isAdmin: boolean;
   currentUserId: string;
 }) {
-  const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [selectedEditMember, setSelectedEditMember] = useState<any | null>(null);
+  const [selectedViewMember, setSelectedViewMember] = useState<any | null>(null);
   const [rolePending, setRolePending] = useState<string | null>(null);
 
   async function handleToggleRole(userId: string, currentPosition: string) {
@@ -27,6 +29,20 @@ export function MemberListTable({
     } finally {
       setRolePending(null);
     }
+  }
+
+  function handleNavigate(direction: "prev" | "next") {
+    if (!selectedViewMember || members.length === 0) return;
+    const currentIndex = members.findIndex((m) => m.userId === selectedViewMember.userId);
+    if (currentIndex === -1) return;
+
+    let newIndex = currentIndex;
+    if (direction === "prev") {
+      newIndex = currentIndex === 0 ? members.length - 1 : currentIndex - 1;
+    } else {
+      newIndex = currentIndex === members.length - 1 ? 0 : currentIndex + 1;
+    }
+    setSelectedViewMember(members[newIndex]);
   }
 
   return (
@@ -49,32 +65,54 @@ export function MemberListTable({
               {members.map((m) => {
                 const isUserAdminMode = isAdmin && m.userId !== currentUserId;
                 return (
-                  <tr key={m.userId}>
+                  <tr key={m.userId} className="group">
                     <td className="col-id font-mono text-xs text-muted-foreground">#{m.id}</td>
-                    <td className="col-name font-medium">{m.name}</td>
-                    <td className="col-profession text-muted-foreground">{m.profession}</td>
+                    <td className="col-name font-medium">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full overflow-hidden border bg-muted/30 flex items-center justify-center text-xs font-bold select-none flex-shrink-0">
+                          {m.photo ? (
+                            <img src={m.photo} alt={m.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{m.name.charAt(0)}</span>
+                          )}
+                        </div>
+                        <span
+                          className="line-clamp-2 overflow-hidden text-ellipsis leading-tight max-h-[2.5rem]"
+                          title={m.name}
+                        >
+                          {m.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="col-profession text-muted-foreground">
+                      <span className="line-clamp-2 overflow-hidden text-ellipsis leading-tight max-h-[2.5rem]" title={m.profession}>
+                        {m.profession || "—"}
+                      </span>
+                    </td>
                     <td className="col-mobile font-mono text-sm">{m.mobile}</td>
                     <td className="col-position">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col justify-center min-h-[44px] gap-1 relative select-none">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium self-start ${
                             m.position === "manager" ? "badge-purple" : "badge-teal"
                           }`}
                         >
                           {m.position}
                         </span>
                         {isUserAdminMode && (
-                          <button
-                            onClick={() => handleToggleRole(m.userId, m.position)}
-                            disabled={rolePending === m.userId}
-                            className="text-xs font-semibold px-2.5 py-1 rounded transition-colors bg-muted/60 hover:bg-muted"
-                          >
-                            {rolePending === m.userId
-                              ? "Updating..."
-                              : m.position === "manager"
-                              ? "Revoke"
-                              : "Make Manager"}
-                          </button>
+                          <div className="hidden group-hover:block transition duration-200">
+                            <button
+                              onClick={() => handleToggleRole(m.userId, m.position)}
+                              disabled={rolePending === m.userId}
+                              className="text-xs font-semibold px-2 py-0.5 rounded bg-muted hover:bg-muted/80 transition text-foreground whitespace-nowrap mt-1 border"
+                            >
+                              {rolePending === m.userId
+                                ? "Updating..."
+                                : m.position === "manager"
+                                ? "Revoke"
+                                : "Make Manager"}
+                            </button>
+                          </div>
                         )}
                       </div>
                     </td>
@@ -82,12 +120,22 @@ export function MemberListTable({
                       {format(new Date(m.createdAt), "dd MMM yyyy")}
                     </td>
                     <td className="col-actions">
-                      <button
-                        onClick={() => setSelectedMember(m)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-muted/60 border bg-muted/30 transition text-foreground"
-                      >
-                        <Edit2 size={12} /> Edit Profile
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSelectedViewMember(m)}
+                          title={`View ${m.name}`}
+                          className="p-1.5 rounded-lg text-xs font-semibold border hover:bg-muted/60 bg-muted/30 transition text-foreground"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          onClick={() => setSelectedEditMember(m)}
+                          title={`Edit ${m.name}`}
+                          className="p-1.5 rounded-lg text-xs font-semibold border hover:bg-muted/60 bg-muted/30 transition text-foreground"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -104,10 +152,18 @@ export function MemberListTable({
         </div>
       </div>
 
+      <MemberViewModal
+        isOpen={!!selectedViewMember}
+        onClose={() => setSelectedViewMember(null)}
+        member={selectedViewMember}
+        onPrev={() => handleNavigate("prev")}
+        onNext={() => handleNavigate("next")}
+      />
+
       <MemberEditModal
-        isOpen={!!selectedMember}
-        onClose={() => setSelectedMember(null)}
-        member={selectedMember}
+        isOpen={!!selectedEditMember}
+        onClose={() => setSelectedEditMember(null)}
+        member={selectedEditMember}
       />
     </>
   );

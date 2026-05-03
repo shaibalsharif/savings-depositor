@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateSelfPhoto } from "@/lib/actions/members";
+import { UploadThingButton } from "@/components/UploadThingButton";
 
 export function ProfilePhotoUploader({ currentPhoto }: { currentPhoto: string }) {
   const [photo, setPhoto] = useState(currentPhoto);
@@ -23,7 +24,7 @@ export function ProfilePhotoUploader({ currentPhoto }: { currentPhoto: string })
   }
 
   return (
-    <div className="space-y-3 w-full text-left">
+    <div className="space-y-4 w-full text-left">
       <div>
         <label className="text-xs font-semibold text-muted-foreground select-none">Update Profile Photo (URL)</label>
         <div className="flex gap-2 mt-1">
@@ -37,14 +38,26 @@ export function ProfilePhotoUploader({ currentPhoto }: { currentPhoto: string })
           <button
             onClick={handleSave}
             disabled={isPending || photo === currentPhoto}
-            className="px-3 py-2 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:opacity-50"
+            className="px-3 py-2 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:opacity-50 select-none flex-shrink-0"
           >
             {isPending ? "Saving..." : "Save"}
           </button>
         </div>
       </div>
+
+      <div className="border-t pt-3 flex flex-col items-center gap-2">
+        <label className="text-xs font-semibold text-muted-foreground select-none self-start">Or Upload New Image</label>
+        <UploadThingButton
+          endpoint="userImage"
+          onComplete={(url) => {
+            setPhoto(url);
+            setMessage("✓ File uploaded! Press Save to commit.");
+          }}
+        />
+      </div>
+
       {message && (
-        <p className={`text-xs mt-1 ${message.startsWith("✓") ? "text-green" : "text-red"}`}>
+        <p className={`text-xs mt-1 font-semibold ${message.startsWith("✓") ? "text-green" : "text-red"}`}>
           {message}
         </p>
       )}
