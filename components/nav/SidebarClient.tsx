@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -81,12 +82,7 @@ export function SidebarClient({
         style={{ background: "hsl(222 47% 8%)", borderBottom: "1px solid hsl(var(--border))" }}
       >
         <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg font-bold text-xs"
-            style={{ background: "var(--teal-dim)", color: "var(--teal)", border: "1px solid var(--teal-border)" }}
-          >
-            P13
-          </div>
+          <Image src="/logo.png" alt="Project-13 Logo" width={32} height={32} className="rounded-lg object-cover select-none" />
           <span className="font-bold text-sm" style={{ color: "hsl(var(--foreground))" }}>
             Project 13
           </span>
@@ -129,12 +125,7 @@ export function SidebarClient({
           style={{ borderColor: "hsl(var(--border))" }}
         >
           <div className={`flex items-center gap-3 transition-all duration-300 ${isCollapsed ? "flex-col" : "flex-row"}`}>
-            <div
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg font-bold text-sm select-none"
-              style={{ background: "var(--teal-dim)", color: "var(--teal)", border: "1px solid var(--teal-border)" }}
-            >
-              P13
-            </div>
+            <Image src="/logo.png" alt="Project-13 Logo" width={36} height={36} className="rounded-lg object-cover select-none" />
             {!isCollapsed && (
               <div>
                 <div className="font-bold text-base leading-tight" style={{ color: "hsl(var(--foreground))" }}>
