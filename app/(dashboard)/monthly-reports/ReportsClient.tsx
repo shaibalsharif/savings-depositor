@@ -173,14 +173,15 @@ export function ReportsClient({
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; color: black !important; }
+          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .print-only { display: block !important; }
-          .glass { border: none !important; background: transparent !important; box-shadow: none !important; padding: 0 !important; }
-          .stat-print-box { border: 1px solid #cbd5e1 !important; padding: 12px !important; border-radius: 8px !important; }
-          .print-title { font-size: 24px !important; font-weight: bold !important; border-bottom: 2px solid #cbd5e1 !important; padding-bottom: 8px !important; margin-bottom: 12px !important; }
+          .glass { border: none !important; background: #f8fafc !important; box-shadow: none !important; }
+          .stat-print-box { border: 1px solid #cbd5e1 !important; padding: 12px !important; border-radius: 8px !important; background-color: #f1f5f9 !important; }
+          .print-title { text-align: center !important; font-size: 24px !important; font-weight: 800 !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; border-bottom: 2px solid #0284c7 !important; padding-bottom: 12px !important; margin-bottom: 24px !important; color: #0369a1 !important; display: block !important; width: 100% !important; }
           .print-label { font-size: 11px !important; color: #475569 !important; font-weight: 600 !important; text-transform: uppercase !important; }
-          .print-value { font-size: 18px !important; font-weight: 800 !important; color: black !important; }
+          .print-value { font-size: 18px !important; font-weight: 800 !important; color: #0f172a !important; }
           .print-all-rows { max-height: none !important; overflow: visible !important; }
+          .page-break-avoid { page-break-inside: avoid !important; break-inside: avoid !important; }
         }
       `}</style>
 
@@ -289,7 +290,7 @@ export function ReportsClient({
           ) : (
             <div className="glass p-4 sm:p-6 space-y-6 flex flex-col justify-between h-full bg-white print:p-0 print:border-0 print:shadow-none print:text-black">
               <div className="flex items-center justify-between gap-4 flex-wrap pb-4 border-b border-border/60">
-                <div className="print-title print:w-full">
+                <div className="print-title print:w-full select-none">
                   <h1 className="text-lg sm:text-xl font-bold">Report for {getFriendlyMonthName(selectedReport.month)}</h1>
                   <p className="text-xs text-muted-foreground mt-0.5 no-print">Complete financial reconciliation summary.</p>
                 </div>
@@ -387,25 +388,34 @@ export function ReportsClient({
                 </div>
 
                 {/* Outstanding Dues list */}
-                <div className="space-y-2">
+                <div className="space-y-2 page-break-avoid">
                   <div className="text-xs font-bold text-muted-foreground">Outstanding dues for <span className="font-bold">{getFriendlyMonthName(selectedReport.month)}</span></div>
                   <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
                     <table className="w-full text-xs text-left">
                       <thead className="bg-muted/50 sticky top-0 backdrop-blur">
                         <tr>
                           <th className="px-3 py-2 font-bold">Member</th>
+                          <th className="px-3 py-2 font-bold text-center">Months Overdue</th>
                           <th className="px-3 py-2 font-bold text-right">Remaining Due</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {selectedReport.details.dueList.map((d: any) => (
+                        {selectedReport.details.dueList.filter((d: any) => d.due > 0).map((d: any) => (
                           <tr key={d.userId}>
                             <td className="px-3 py-1.5 font-bold">{d.name}</td>
-                            <td className={`px-3 py-1.5 font-extrabold text-right ${d.due > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
-                              {d.due > 0 ? `৳${d.due.toLocaleString()}` : "Cleared ✓"}
+                            <td className="px-3 py-1.5 font-bold text-center">{Math.max(1, Math.ceil(d.due / 2000))}</td>
+                            <td className="px-3 py-1.5 font-extrabold text-right text-[var(--red)]">
+                              ৳{d.due.toLocaleString()}
                             </td>
                           </tr>
                         ))}
+                        {selectedReport.details.dueList.filter((d: any) => d.due > 0).length === 0 && (
+                          <tr>
+                            <td colSpan={3} className="px-3 py-4 text-center text-[var(--green)] font-bold">
+                              All outstanding dues for this month are cleared ✓
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
