@@ -173,7 +173,8 @@ export function ReportsClient({
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; }
+          body, main, div, .max-w-7xl { padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100% !important; height: auto !important; box-shadow: none !important; }
+          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .print-only { display: block !important; }
           .glass { border: none !important; background: white !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
           .stat-print-box { border: 1px solid #94a3b8 !important; padding: 10px !important; border-radius: 4px !important; background-color: #f8fafc !important; }
