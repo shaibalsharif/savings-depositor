@@ -74,6 +74,18 @@ export async function getAvailableReports() {
   })).sort((a, b) => b.month.localeCompare(a.month));
 }
 
+export async function getMinMaxMonthLimits() {
+  const allSettings = await db.select().from(depositSettings);
+  const settingsSorted = [...allSettings].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth));
+  const minMonth = settingsSorted.length > 0 ? settingsSorted[0].effectiveMonth : "2024-01";
+  
+  // Previous completed month
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  const maxMonth = d.toISOString().slice(0, 7);
+  return { minMonth, maxMonth };
+}
+
 // Generate the monthly report
 export async function generateReport(monthStr: string) {
   await requireManager();
@@ -240,6 +252,14 @@ export async function generateReport(monthStr: string) {
     payload: reportPayload,
   });
 
+  revalidatePath("/settings/reports");
+  revalidatePath("/monthly-reports");
+  return { success: true };
+}
+
+export async function clearOldReports() {
+  await requireManager();
+  await db.delete(syncLogs).where(eq(syncLogs.direction, "monthly_report"));
   revalidatePath("/settings/reports");
   revalidatePath("/monthly-reports");
   return { success: true };

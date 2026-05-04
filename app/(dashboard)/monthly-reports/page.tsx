@@ -1,5 +1,5 @@
-import { requireMember } from "@/lib/auth";
-import { getAvailableReports, getReportForMonth } from "@/lib/actions/reports";
+import { requireMember, isManager } from "@/lib/auth";
+import { getAvailableReports, getReportForMonth, getMinMaxMonthLimits } from "@/lib/actions/reports";
 import { ReportsClient } from "./ReportsClient";
 
 export default async function MonthlyReportsPage({
@@ -10,7 +10,10 @@ export default async function MonthlyReportsPage({
   await requireMember();
   const { month } = await searchParams;
 
+  const manager = await isManager();
   const availableReports = await getAvailableReports();
+  const { minMonth, maxMonth } = await getMinMaxMonthLimits();
+  
   let selectedReport = null;
 
   if (month) {
@@ -21,7 +24,7 @@ export default async function MonthlyReportsPage({
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="no-print">
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Monthly Reports</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
           View official financial summaries and download PDF records.
@@ -31,6 +34,9 @@ export default async function MonthlyReportsPage({
       <ReportsClient
         availableReports={availableReports}
         selectedReport={selectedReport}
+        isManager={manager}
+        minMonth={minMonth}
+        maxMonth={maxMonth}
       />
     </div>
   );
