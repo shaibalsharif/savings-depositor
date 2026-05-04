@@ -55,6 +55,24 @@ export function ReportsClient({
   const [monthToGen, setMonthToGen] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
 
+  const reportsByYear = availableReports.reduce((acc, r) => {
+    const year = r.month.split("-")[0];
+    if (!acc[year]) acc[year] = [];
+    acc[year].push(r);
+    return acc;
+  }, {} as Record<string, typeof availableReports>);
+
+  const years = Object.keys(reportsByYear).sort((a, b) => b.localeCompare(a));
+  const [openYears, setOpenYears] = useState<string[]>(years.length > 0 ? [years[0]] : []);
+
+  const toggleYear = (year: string) => {
+    if (openYears.includes(year)) {
+      setOpenYears(openYears.filter((y) => y !== year));
+    } else {
+      setOpenYears([...openYears, year]);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!monthToGen) {
       toast.error("Please pick a month to generate");
@@ -179,34 +197,14 @@ export function ReportsClient({
               <div className="space-y-3">
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground font-medium">Select Month</span>
-                  <select
+                  <input
+                    type="month"
+                    min={minMonth}
+                    max={maxMonth}
                     value={monthToGen}
                     onChange={(e) => setMonthToGen(e.target.value)}
                     className="w-full bg-background border border-border text-foreground text-xs sm:text-sm p-2 rounded-lg h-10 outline-none"
-                  >
-                    <option value="">Choose Month</option>
-                    {(() => {
-                      const validMonths: string[] = [];
-                      if (minMonth && maxMonth) {
-                        const [minY, minM] = minMonth.split("-").map(Number);
-                        const [maxY, maxM] = maxMonth.split("-").map(Number);
-                        let y = minY, m = minM;
-                        while (y < maxY || (y === maxY && m <= maxM)) {
-                          validMonths.push(`${y}-${String(m).padStart(2, "0")}`);
-                          m++;
-                          if (m > 12) { m = 1; y++; }
-                        }
-                      }
-                      return validMonths.map((m) => {
-                        const isGen = availableReports.some((r) => r.month === m);
-                        return (
-                          <option key={m} value={m} disabled={isGen}>
-                            {getFriendlyMonthName(m)} {isGen ? "✓ Generated" : ""}
-                          </option>
-                        );
-                      });
-                    })()}
-                  </select>
+                  />
                 </div>
                 <button
                   onClick={handleGenerate}
@@ -236,27 +234,45 @@ export function ReportsClient({
               <h2 className="text-sm sm:text-base font-bold">Report Selection</h2>
               <p className="text-xs text-muted-foreground mt-0.5">Select a month to view or print the details.</p>
             </div>
-            <div className="divide-y border border-border rounded-lg bg-card overflow-hidden">
+            <div className="space-y-2 max-h-[350px] overflow-y-auto">
               {availableReports.length === 0 ? (
                 <div className="p-4 text-center text-xs text-muted-foreground">
                   No generated reports yet.
                 </div>
               ) : (
-                availableReports.map((r) => (
-                  <button
-                    key={r.month}
-                    onClick={() => selectReport(r.month)}
-                    className={`w-full flex items-center justify-between p-3.5 text-xs font-medium text-left hover:bg-accent transition ${
-                      selectedReport?.month === r.month ? "bg-accent text-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <FileText size={15} className="text-muted-foreground" />
-                      <span>{r.month}</span>
+                years.map((year) => {
+                  const isOpen = openYears.includes(year);
+                  return (
+                    <div key={year} className="border border-border rounded-lg bg-card overflow-hidden">
+                      <button
+                        onClick={() => toggleYear(year)}
+                        className="w-full flex items-center justify-between p-3 text-xs font-bold bg-muted/20 hover:bg-muted/40 transition select-none"
+                      >
+                        <span>{year} Reports</span>
+                        <span className="text-xs">{isOpen ? "▲" : "▼"}</span>
+                      </button>
+                      {isOpen && (
+                        <div className="divide-y border-t border-border">
+                          {reportsByYear[year].map((r) => (
+                            <button
+                              key={r.month}
+                              onClick={() => selectReport(r.month)}
+                              className={`w-full flex items-center justify-between p-3.5 text-xs font-medium text-left hover:bg-accent transition ${
+                                selectedReport?.month === r.month ? "bg-accent text-foreground font-bold" : "text-muted-foreground"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <FileText size={15} className="text-muted-foreground" />
+                                <span>{r.month}</span>
+                              </div>
+                              <CheckCircle size={14} className="text-[var(--teal)] opacity-60" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <CheckCircle size={14} className="text-[var(--teal)] opacity-60" />
-                  </button>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
