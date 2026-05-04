@@ -78,7 +78,7 @@ export function SidebarClient({
     <>
       {/* Mobile Top App Bar */}
       <div
-        className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4"
+        className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4 no-print"
         style={{ background: "hsl(222 47% 8%)", borderBottom: "1px solid hsl(var(--border))" }}
       >
         <div className="flex items-center gap-2.5">

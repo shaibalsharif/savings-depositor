@@ -173,15 +173,16 @@ export function ReportsClient({
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; }
           .print-only { display: block !important; }
-          .glass { border: none !important; background: #f8fafc !important; box-shadow: none !important; }
-          .stat-print-box { border: 1px solid #cbd5e1 !important; padding: 12px !important; border-radius: 8px !important; background-color: #f1f5f9 !important; }
-          .print-title { text-align: center !important; font-size: 24px !important; font-weight: 800 !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; border-bottom: 2px solid #0284c7 !important; padding-bottom: 12px !important; margin-bottom: 24px !important; color: #0369a1 !important; display: block !important; width: 100% !important; }
-          .print-label { font-size: 11px !important; color: #475569 !important; font-weight: 600 !important; text-transform: uppercase !important; }
-          .print-value { font-size: 18px !important; font-weight: 800 !important; color: #0f172a !important; }
+          .glass { border: none !important; background: white !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+          .stat-print-box { border: 1px solid #94a3b8 !important; padding: 10px !important; border-radius: 4px !important; background-color: #f8fafc !important; }
+          .print-title { text-align: center !important; font-size: 22px !important; font-weight: 800 !important; letter-spacing: 0.15em !important; text-transform: uppercase !important; border-bottom: 2px solid #0f172a !important; padding-bottom: 10px !important; margin-bottom: 20px !important; color: #0f172a !important; width: 100% !important; display: block !important; }
+          .print-label { font-size: 10px !important; color: #334155 !important; font-weight: 600 !important; text-transform: uppercase !important; }
+          .print-value { font-size: 16px !important; font-weight: 800 !important; color: #0f172a !important; }
           .print-all-rows { max-height: none !important; overflow: visible !important; }
           .page-break-avoid { page-break-inside: avoid !important; break-inside: avoid !important; }
+          .page-break-before { page-break-before: always !important; break-before: page !important; }
         }
       `}</style>
 
@@ -288,7 +289,7 @@ export function ReportsClient({
               <p className="text-xs">Pick a monthly summary from the list to view.</p>
             </div>
           ) : (
-            <div className="glass p-4 sm:p-6 space-y-6 flex flex-col justify-between h-full bg-white print:p-0 print:border-0 print:shadow-none print:text-black">
+            <div className="glass p-4 sm:p-6 space-y-6 flex flex-col justify-between h-full bg-white print:p-0 print:border-0 print:shadow-none print:text-black print:gap-4 print:space-y-4">
               <div className="flex items-center justify-between gap-4 flex-wrap pb-4 border-b border-border/60">
                 <div className="print-title print:w-full select-none">
                   <h1 className="text-lg sm:text-xl font-bold">Report for {getFriendlyMonthName(selectedReport.month)}</h1>
@@ -388,7 +389,7 @@ export function ReportsClient({
                 </div>
 
                 {/* Outstanding Dues list */}
-                <div className="space-y-2 page-break-avoid">
+                <div className="space-y-2 page-break-avoid page-break-before pt-4">
                   <div className="text-xs font-bold text-muted-foreground">Outstanding dues for <span className="font-bold">{getFriendlyMonthName(selectedReport.month)}</span></div>
                   <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
                     <table className="w-full text-xs text-left">
