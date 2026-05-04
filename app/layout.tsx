@@ -7,12 +7,14 @@ import { AuthProvider } from "@/lib/kinde-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
+import { PwaInit } from "@/components/PwaInit";
+
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 
 
 export const metadata: Metadata = {
-  title: "Money Depositor",
+  title: "Project-13",
   description: "Track monthly savings and manage deposits in a collective goal-based system.",
   manifest: "/manifest.json",
   icons: {
@@ -25,7 +27,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   userScalable: false,
-  themeColor: "#0d9488",
+  themeColor: "#0b0f19",
 };
 
 export default function RootLayout({
@@ -38,6 +40,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>
+            <PwaInit />
             {children}
             <Toaster />
           </AuthProvider>

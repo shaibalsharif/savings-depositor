@@ -311,56 +311,31 @@ export function ReportsClient({
               <div className="space-y-4 border-t pt-4 print:space-y-2 print:pt-2">
                 <h3 className="text-sm sm:text-base font-bold no-print">Summary Breakdowns</h3>
 
-                {/* Outstanding Dues list */}
-                <div className="space-y-2">
-                  <div className="text-xs font-semibold text-muted-foreground">Outstanding dues for {getFriendlyMonthName(selectedReport.month)}</div>
-                  <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
-                    <table className="w-full text-xs text-left">
-                      <thead className="bg-muted/50 sticky top-0 backdrop-blur">
-                        <tr>
-                          <th className="px-3 py-2">Member</th>
-                          <th className="px-3 py-2 text-right">Remaining Due</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {selectedReport.details.dueList.map((d: any) => (
-                          <tr key={d.userId}>
-                            <td className="px-3 py-1.5 font-medium">{d.name}</td>
-                            <td className={`px-3 py-1.5 font-bold text-right ${d.due > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
-                              {d.due > 0 ? `৳${d.due.toLocaleString()}` : "Cleared ✓"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
                 {/* Deposits List */}
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-muted-foreground">Deposit in {getFriendlyMonthName(selectedReport.month)}</div>
+                  <div className="text-xs font-bold text-muted-foreground">Deposit in <span className="font-bold">{getFriendlyMonthName(selectedReport.month)}</span></div>
                   <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
                     <table className="w-full text-xs text-left">
                       <thead className="bg-muted/50 sticky top-0 backdrop-blur">
                         <tr>
-                          <th className="px-3 py-2">Member</th>
-                          <th className="px-3 py-2">Date</th>
-                          <th className="px-3 py-2 text-right">Amount Received</th>
+                          <th className="px-3 py-2 font-bold">Member</th>
+                          <th className="px-3 py-2 font-bold">Date</th>
+                          <th className="px-3 py-2 font-bold text-right">Amount Received</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
                         {selectedReport.details.payments.map((p: any) => (
                           <tr key={p.paymentId}>
-                            <td className="px-3 py-1.5">{p.memberName}</td>
-                            <td className="px-3 py-1.5">{p.paymentDate}</td>
-                            <td className="px-3 py-1.5 font-semibold text-right text-[var(--teal)]">
+                            <td className="px-3 py-1.5 font-bold">{p.memberName}</td>
+                            <td className="px-3 py-1.5 font-bold">{p.paymentDate}</td>
+                            <td className="px-3 py-1.5 font-extrabold text-right text-[var(--teal)]">
                               ৳{p.amountReceived.toLocaleString()}
                             </td>
                           </tr>
                         ))}
                         {selectedReport.details.payments.length === 0 && (
                           <tr>
-                            <td colSpan={3} className="px-3 py-4 text-center text-muted-foreground">
+                            <td colSpan={3} className="px-3 py-4 text-center text-muted-foreground font-bold">
                               No deposits submitted.
                             </td>
                           </tr>
@@ -369,12 +344,37 @@ export function ReportsClient({
                     </table>
                   </div>
                 </div>
+
+                {/* Outstanding Dues list */}
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-muted-foreground">Outstanding dues for <span className="font-bold">{getFriendlyMonthName(selectedReport.month)}</span></div>
+                  <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-muted/50 sticky top-0 backdrop-blur">
+                        <tr>
+                          <th className="px-3 py-2 font-bold">Member</th>
+                          <th className="px-3 py-2 font-bold text-right">Remaining Due</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {selectedReport.details.dueList.map((d: any) => (
+                          <tr key={d.userId}>
+                            <td className="px-3 py-1.5 font-bold">{d.name}</td>
+                            <td className={`px-3 py-1.5 font-extrabold text-right ${d.due > 0 ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
+                              {d.due > 0 ? `৳${d.due.toLocaleString()}` : "Cleared ✓"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
 
               {/* Footer inside print view */}
               <div className="hidden print:flex items-center justify-between text-[9px] text-slate-500 border-t pt-2 select-none">
-                <div>Project 13 Financial Summary Report • {getFriendlyMonthName(selectedReport.month)}</div>
-                <div>Exported on {new Date().toLocaleDateString()}</div>
+                <div className="font-bold">Project 13 Financial Summary Report • {getFriendlyMonthName(selectedReport.month)}</div>
+                <div className="font-bold">Exported on {new Date().toLocaleDateString()}</div>
               </div>
             </div>
           )}
