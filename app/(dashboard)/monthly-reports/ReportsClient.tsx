@@ -173,7 +173,7 @@ export function ReportsClient({
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body, main, div, .max-w-7xl { padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100% !important; height: auto !important; box-shadow: none !important; }
+          body, main, div, .max-w-7xl { padding: 0 5px !important; margin: 0 !important; max-width: none !important; width: 100% !important; height: auto !important; box-shadow: none !important; border: none !important; }
           body { background: white !important; color: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .print-only { display: block !important; }
           .glass { border: none !important; background: white !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
@@ -183,7 +183,6 @@ export function ReportsClient({
           .print-value { font-size: 16px !important; font-weight: 800 !important; color: #0f172a !important; }
           .print-all-rows { max-height: none !important; overflow: visible !important; }
           .page-break-avoid { page-break-inside: avoid !important; break-inside: avoid !important; }
-          .page-break-before { page-break-before: always !important; break-before: page !important; }
         }
       `}</style>
 
@@ -390,7 +389,7 @@ export function ReportsClient({
                 </div>
 
                 {/* Outstanding Dues list */}
-                <div className="space-y-2 page-break-avoid page-break-before pt-4">
+                <div className="space-y-2 page-break-avoid pt-2">
                   <div className="text-xs font-bold text-muted-foreground">Outstanding dues for <span className="font-bold">{getFriendlyMonthName(selectedReport.month)}</span></div>
                   <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
                     <table className="w-full text-xs text-left">
