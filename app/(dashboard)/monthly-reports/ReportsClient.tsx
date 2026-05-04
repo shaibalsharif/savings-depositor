@@ -55,6 +55,10 @@ export function ReportsClient({
   const [monthToGen, setMonthToGen] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
 
+  const minYear = parseInt(minMonth.split("-")[0] || "2024");
+  const maxYear = parseInt(maxMonth.split("-")[0] || "2026");
+  const [pickerYear, setPickerYear] = useState(maxYear);
+
   const reportsByYear = availableReports.reduce((acc, r) => {
     const year = r.month.split("-")[0];
     if (!acc[year]) acc[year] = [];
@@ -197,17 +201,93 @@ export function ReportsClient({
                 <p className="text-xs text-muted-foreground mt-0.5">Generate or clear old summaries.</p>
               </div>
               <div className="space-y-3">
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground font-medium">Select Month</span>
-                  <input
-                    type="month"
-                    min={minMonth}
-                    max={maxMonth}
-                    value={monthToGen}
-                    onChange={(e) => setMonthToGen(e.target.value)}
-                    className="w-full bg-background border border-border text-foreground text-xs sm:text-sm p-2 rounded-lg h-10 outline-none"
-                  />
-                </div>
+                {(() => {
+                  const monthsArray = Array.from({ length: 12 }, (_, i) => {
+                    const m = String(i + 1).padStart(2, "0");
+                    const fullMonthStr = `${pickerYear}-${m}`;
+                    const date = new Date(pickerYear, i, 1);
+                    const monthLabel = date.toLocaleDateString("en-US", { month: "short" });
+                    const isGenerated = availableReports.some((r) => r.month === fullMonthStr);
+                    const isOutOfBounds = fullMonthStr < minMonth || fullMonthStr > maxMonth;
+                    return {
+                      monthStr: fullMonthStr,
+                      label: monthLabel,
+                      isGenerated,
+                      isOutOfBounds,
+                    };
+                  });
+
+                  return (
+                    <div className="space-y-2">
+                      <span className="text-xs text-muted-foreground font-medium">Select Month</span>
+                      
+                      {/* Year selector */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => setPickerYear(Math.max(minYear, pickerYear - 1))}
+                          disabled={pickerYear <= minYear}
+                          className="px-2.5 py-1 text-xs border border-border bg-background rounded hover:bg-accent disabled:opacity-30"
+                        >
+                          ◄
+                        </button>
+                        <span className="text-xs font-bold flex-1 text-center">{pickerYear}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPickerYear(Math.min(maxYear, pickerYear + 1))}
+                          disabled={pickerYear >= maxYear}
+                          className="px-2.5 py-1 text-xs border border-border bg-background rounded hover:bg-accent disabled:opacity-30"
+                        >
+                          ►
+                        </button>
+                      </div>
+
+                      {/* Month grid */}
+                      <div className="grid grid-cols-4 gap-1.5 p-1 bg-muted/20 border border-border rounded-lg">
+                        {monthsArray.map((m) => {
+                          const isSelected = monthToGen === m.monthStr;
+                          if (m.isOutOfBounds) {
+                            return (
+                              <div
+                                key={m.monthStr}
+                                className="p-1.5 text-[10px] sm:text-xs text-center border border-dashed border-border/40 text-muted-foreground/40 rounded bg-muted/10 cursor-not-allowed select-none"
+                                title="Out of bounds"
+                              >
+                                {m.label}
+                              </div>
+                            );
+                          }
+                          if (m.isGenerated) {
+                            return (
+                              <div
+                                key={m.monthStr}
+                                className="p-1.5 text-[10px] sm:text-xs text-center border border-border bg-muted/40 text-muted-foreground/60 rounded flex items-center justify-center gap-0.5 cursor-not-allowed select-none"
+                                title="Generated"
+                              >
+                                <span>{m.label}</span>
+                                <span className="text-[10px] text-[var(--teal)] font-bold leading-none">✓</span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <button
+                              key={m.monthStr}
+                              type="button"
+                              onClick={() => setMonthToGen(m.monthStr)}
+                              className={`p-1.5 text-[10px] sm:text-xs font-semibold text-center border rounded transition ${
+                                isSelected
+                                  ? "bg-[var(--teal)] text-[hsl(222 47% 7%)] border-[var(--teal)]"
+                                  : "bg-background text-foreground border-border hover:bg-accent"
+                              }`}
+                            >
+                              {m.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
                 <button
                   onClick={handleGenerate}
                   disabled={loading}
@@ -265,7 +345,7 @@ export function ReportsClient({
                             >
                               <div className="flex items-center gap-2">
                                 <FileText size={15} className="text-muted-foreground" />
-                                <span>{r.month}</span>
+                                <span>{getFriendlyMonthName(r.month)}</span>
                               </div>
                               <CheckCircle size={14} className="text-[var(--teal)] opacity-60" />
                             </button>
