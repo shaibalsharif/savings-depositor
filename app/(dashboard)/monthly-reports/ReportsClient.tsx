@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { generateReport, clearOldReports } from "@/lib/actions/reports";
@@ -54,6 +52,11 @@ export function ReportsClient({
   const [clearing, setClearing] = useState(false);
   const [monthToGen, setMonthToGen] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  useEffect(() => {
+    setIsNavigating(false);
+  }, [selectedReport]);
 
   const minYear = parseInt(minMonth.split("-")[0] || "2024");
   const maxYear = parseInt(maxMonth.split("-")[0] || "2026");
@@ -116,6 +119,7 @@ export function ReportsClient({
   };
 
   const selectReport = (month: string) => {
+    setIsNavigating(true);
     router.push(`/monthly-reports?month=${month}`);
   };
 
@@ -362,7 +366,32 @@ export function ReportsClient({
 
         {/* Selected Report View Container */}
         <div className={`select-none print:w-full ${isMaximized ? "lg:col-span-1" : "lg:col-span-2"}`}>
-          {!selectedReport ? (
+          {loading || isNavigating ? (
+            <div className="glass p-4 sm:p-6 space-y-6 flex flex-col justify-between h-full bg-white animate-pulse min-h-[400px]">
+              <div className="flex justify-between items-center pb-4 border-b">
+                <div className="space-y-2">
+                  <div className="h-6 w-48 bg-slate-200 rounded"></div>
+                  <div className="h-3 w-32 bg-slate-100 rounded"></div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="h-9 w-16 bg-slate-200 rounded-lg"></div>
+                  <div className="h-9 w-24 bg-slate-200 rounded-lg"></div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-16 bg-slate-100 rounded-xl border border-slate-200 p-3 flex flex-col justify-between">
+                    <div className="h-3 w-12 bg-slate-200 rounded"></div>
+                    <div className="h-5 w-20 bg-slate-300 rounded"></div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <div className="h-5 w-36 bg-slate-200 rounded"></div>
+                <div className="h-32 bg-slate-100 rounded-lg border"></div>
+              </div>
+            </div>
+          ) : !selectedReport ? (
             <div className="glass p-12 text-center text-muted-foreground flex flex-col items-center gap-2 justify-center h-full min-h-[300px] no-print">
               <Calendar className="w-10 h-10 opacity-30 animate-pulse text-[var(--teal)]" />
               <div className="text-sm font-semibold">No report selected</div>
