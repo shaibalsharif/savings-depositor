@@ -199,6 +199,9 @@ export async function generateReport(monthStr: string) {
     };
   });
 
+  const activeInvestmentsAmount = activeInvestments.reduce((sum, i) => sum + Number(i.principal), 0);
+  const returnedInvestmentsAmount = returnedInvestments.reduce((sum, i) => sum + Number(i.principal), 0);
+
   const reportPayload = {
     month: monthStr,
     summary: {
@@ -208,7 +211,9 @@ export async function generateReport(monthStr: string) {
       prevTotalExpenses,
       balance,
       activeInvestmentsCount: activeInvestments.length,
+      activeInvestmentsAmount,
       returnedInvestmentsCount: returnedInvestments.length,
+      returnedInvestmentsAmount,
       netRevenueThisMonth: thisIncome - thisLosses,
     },
     details: {

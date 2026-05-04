@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -16,7 +18,9 @@ type SummaryData = {
   prevTotalExpenses: number;
   balance: number;
   activeInvestmentsCount: number;
+  activeInvestmentsAmount?: number | string;
   returnedInvestmentsCount: number;
+  returnedInvestmentsAmount?: number | string;
   netRevenueThisMonth: number;
 };
 
@@ -478,12 +482,24 @@ export function ReportsClient({
                   </span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-muted-foreground">Active Investments:</span>
-                  <span className="font-semibold">{selectedReport.summary.activeInvestmentsCount}</span>
+                  <span className="text-muted-foreground">Active Investments Amount:</span>
+                  <span className="font-semibold">
+                    {typeof selectedReport.summary.activeInvestmentsAmount === "number"
+                      ? `৳${selectedReport.summary.activeInvestmentsAmount.toLocaleString()}`
+                      : typeof selectedReport.summary.activeInvestmentsAmount === "string"
+                      ? `৳${Number(selectedReport.summary.activeInvestmentsAmount).toLocaleString()}`
+                      : selectedReport.summary.activeInvestmentsCount}
+                  </span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-muted-foreground">Returned Investments:</span>
-                  <span className="font-semibold">{selectedReport.summary.returnedInvestmentsCount}</span>
+                  <span className="text-muted-foreground">Returned Investments Amount:</span>
+                  <span className="font-semibold">
+                    {typeof selectedReport.summary.returnedInvestmentsAmount === "number"
+                      ? `৳${selectedReport.summary.returnedInvestmentsAmount.toLocaleString()}`
+                      : typeof selectedReport.summary.returnedInvestmentsAmount === "string"
+                      ? `৳${Number(selectedReport.summary.returnedInvestmentsAmount).toLocaleString()}`
+                      : selectedReport.summary.returnedInvestmentsCount}
+                  </span>
                 </div>
               </div>
 
