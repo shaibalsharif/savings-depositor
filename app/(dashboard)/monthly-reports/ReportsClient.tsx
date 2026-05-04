@@ -178,15 +178,35 @@ export function ReportsClient({
               </div>
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">Select Month</span>
-                  <input
-                    type="month"
-                    min={minMonth}
-                    max={maxMonth}
+                  <span className="text-xs text-muted-foreground font-medium">Select Month</span>
+                  <select
                     value={monthToGen}
                     onChange={(e) => setMonthToGen(e.target.value)}
                     className="w-full bg-background border border-border text-foreground text-xs sm:text-sm p-2 rounded-lg h-10 outline-none"
-                  />
+                  >
+                    <option value="">Choose Month</option>
+                    {(() => {
+                      const validMonths: string[] = [];
+                      if (minMonth && maxMonth) {
+                        const [minY, minM] = minMonth.split("-").map(Number);
+                        const [maxY, maxM] = maxMonth.split("-").map(Number);
+                        let y = minY, m = minM;
+                        while (y < maxY || (y === maxY && m <= maxM)) {
+                          validMonths.push(`${y}-${String(m).padStart(2, "0")}`);
+                          m++;
+                          if (m > 12) { m = 1; y++; }
+                        }
+                      }
+                      return validMonths.map((m) => {
+                        const isGen = availableReports.some((r) => r.month === m);
+                        return (
+                          <option key={m} value={m} disabled={isGen}>
+                            {getFriendlyMonthName(m)} {isGen ? "✓ Generated" : ""}
+                          </option>
+                        );
+                      });
+                    })()}
+                  </select>
                 </div>
                 <button
                   onClick={handleGenerate}
