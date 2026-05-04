@@ -60,6 +60,11 @@ export function ReportsClient({
       toast.error("Please pick a month to generate");
       return;
     }
+    const alreadyExists = availableReports.some((r) => r.month === monthToGen);
+    if (alreadyExists) {
+      toast.error(`Report for ${monthToGen} has already been generated.`);
+      return;
+    }
     setLoading(true);
     try {
       await generateReport(monthToGen);
