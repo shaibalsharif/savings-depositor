@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { generateReport, clearOldReports } from "@/lib/actions/reports";
-import { Loader2, Calendar, FileText, Download, CheckCircle, Trash2 } from "lucide-react";
+import { Loader2, Calendar, FileText, Download, CheckCircle, Trash2, Maximize, Minimize } from "lucide-react";
 
 type ReportItem = {
   month: string;
@@ -53,6 +53,7 @@ export function ReportsClient({
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [monthToGen, setMonthToGen] = useState("");
+  const [isMaximized, setIsMaximized] = useState(false);
 
   const handleGenerate = async () => {
     if (!monthToGen) {
@@ -156,12 +157,13 @@ export function ReportsClient({
           .print-title { font-size: 24px !important; font-weight: bold !important; border-bottom: 2px solid #cbd5e1 !important; padding-bottom: 8px !important; margin-bottom: 12px !important; }
           .print-label { font-size: 11px !important; color: #475569 !important; font-weight: 600 !important; text-transform: uppercase !important; }
           .print-value { font-size: 18px !important; font-weight: 800 !important; color: black !important; }
+          .print-all-rows { max-height: none !important; overflow: visible !important; }
         }
       `}</style>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 ${isMaximized ? "lg:grid-cols-1" : "lg:grid-cols-3"} gap-6`}>
         {/* Available reports and generation tools */}
-        <div className="space-y-6 lg:col-span-1 select-none no-print">
+        <div className={`space-y-6 lg:col-span-1 select-none no-print ${isMaximized ? "hidden" : "block"}`}>
           {/* Manager generation and tools only */}
           {isManager && (
             <div className="glass p-4 sm:p-5 space-y-3.5">
@@ -236,7 +238,7 @@ export function ReportsClient({
         </div>
 
         {/* Selected Report View Container */}
-        <div className="lg:col-span-2 select-none print:w-full">
+        <div className={`select-none print:w-full ${isMaximized ? "lg:col-span-1" : "lg:col-span-2"}`}>
           {!selectedReport ? (
             <div className="glass p-12 text-center text-muted-foreground flex flex-col items-center gap-2 justify-center h-full min-h-[300px] no-print">
               <Calendar className="w-10 h-10 opacity-30 animate-pulse text-[var(--teal)]" />
@@ -250,13 +252,22 @@ export function ReportsClient({
                   <h1 className="text-lg sm:text-xl font-bold">Report for {getFriendlyMonthName(selectedReport.month)}</h1>
                   <p className="text-xs text-muted-foreground mt-0.5 no-print">Complete financial reconciliation summary.</p>
                 </div>
-                <button
-                  onClick={handlePrint}
-                  className="px-4 py-2 border border-border bg-background rounded-lg text-xs font-semibold hover:bg-accent flex items-center gap-2 select-none no-print"
-                >
-                  <Download size={15} />
-                  Print / Download PDF
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsMaximized(!isMaximized)}
+                    className="px-3 py-2 border border-border bg-background rounded-lg text-xs font-semibold hover:bg-accent flex items-center gap-2 select-none no-print"
+                  >
+                    {isMaximized ? <Minimize size={15} /> : <Maximize size={15} />}
+                    {isMaximized ? "Minimize" : "Maximize"}
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="px-4 py-2 border border-border bg-background rounded-lg text-xs font-semibold hover:bg-accent flex items-center gap-2 select-none no-print"
+                  >
+                    <Download size={15} />
+                    Print / Download PDF
+                  </button>
+                </div>
               </div>
 
               {/* Summary Terminologies Grid */}
@@ -303,7 +314,7 @@ export function ReportsClient({
                 {/* Outstanding Dues list */}
                 <div className="space-y-2">
                   <div className="text-xs font-semibold text-muted-foreground">Outstanding dues for {getFriendlyMonthName(selectedReport.month)}</div>
-                  <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto">
+                  <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
                     <table className="w-full text-xs text-left">
                       <thead className="bg-muted/50 sticky top-0 backdrop-blur">
                         <tr>
@@ -328,7 +339,7 @@ export function ReportsClient({
                 {/* Deposits List */}
                 <div className="space-y-2">
                   <div className="text-xs font-semibold text-muted-foreground">Deposit in {getFriendlyMonthName(selectedReport.month)}</div>
-                  <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto">
+                  <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
                     <table className="w-full text-xs text-left">
                       <thead className="bg-muted/50 sticky top-0 backdrop-blur">
                         <tr>
