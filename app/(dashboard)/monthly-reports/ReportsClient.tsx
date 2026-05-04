@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { generateReport, clearOldReports } from "@/lib/actions/reports";
-import { Loader2, Calendar, FileText, Download, CheckCircle, Trash2, Maximize, Minimize } from "lucide-react";
+import { Loader2, Calendar, FileText, Download, CheckCircle, Trash2, Maximize, Minimize, ChevronLeft, ChevronRight } from "lucide-react";
 
 type ReportItem = {
   month: string;
@@ -376,6 +376,34 @@ export function ReportsClient({
                   <p className="text-xs text-muted-foreground mt-0.5 no-print">Complete financial reconciliation summary.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {(() => {
+                    const currentIndex = availableReports.findIndex((r) => r.month === selectedReport?.month);
+                    const nextReport = currentIndex > 0 ? availableReports[currentIndex - 1] : null;
+                    const prevReport = currentIndex < availableReports.length - 1 ? availableReports[currentIndex + 1] : null;
+
+                    return (
+                      <div className="flex items-center gap-2 select-none no-print">
+                        <button
+                          onClick={() => prevReport && selectReport(prevReport.month)}
+                          disabled={!prevReport}
+                          title="Previous Month"
+                          className="px-2 sm:px-3 py-2 border border-border bg-background rounded-lg text-xs font-semibold hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
+                        >
+                          <ChevronLeft size={14} />
+                          <span className="hidden sm:inline">Prev</span>
+                        </button>
+                        <button
+                          onClick={() => nextReport && selectReport(nextReport.month)}
+                          disabled={!nextReport}
+                          title="Next Month"
+                          className="px-2 sm:px-3 py-2 border border-border bg-background rounded-lg text-xs font-semibold hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
+                        >
+                          <span className="hidden sm:inline">Next</span>
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    );
+                  })()}
                   <button
                     onClick={() => setIsMaximized(!isMaximized)}
                     className="px-3 py-2 border border-border bg-background rounded-lg text-xs font-semibold hover:bg-accent flex items-center gap-2 select-none no-print"

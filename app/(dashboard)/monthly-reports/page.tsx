@@ -19,7 +19,16 @@ export default async function MonthlyReportsPage({
   if (month) {
     selectedReport = await getReportForMonth(month);
   } else if (availableReports.length > 0) {
-    selectedReport = await getReportForMonth(availableReports[0].month);
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    const lastMonthStr = d.toISOString().slice(0, 7);
+    const lastMonthExists = availableReports.find((r) => r.month === lastMonthStr);
+
+    if (lastMonthExists) {
+      selectedReport = await getReportForMonth(lastMonthExists.month);
+    } else {
+      selectedReport = await getReportForMonth(availableReports[0].month);
+    }
   }
 
   return (
