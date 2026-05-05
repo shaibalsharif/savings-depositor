@@ -12,20 +12,20 @@ export async function sendPush(
   payload: NotificationPayload
 ): Promise<"ok" | "expired"> {
   try {
+    const pushPayload = JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+      url: payload.url ?? "/dashboard",
+      icon: "/icons/icon-192x192.png",
+    });
     await webpush.sendNotification(
       {
         endpoint: subscription.endpoint,
         keys: { p256dh: subscription.keys.p256dh, auth: subscription.keys.auth },
       },
-      JSON.stringify({
-        title: payload.title,
-        body: payload.body,
-        url: payload.url ?? "/dashboard",
-        icon: "/icons/icon-192x192.png",
-        badge: "/icons/icon-192x192.png",
-      })
+      pushPayload
     );
-    console.log(`[PushAdapter] Sent to ${subscription.endpoint.slice(0, 50)}…`);
+    console.log(`[PushAdapter] Sent push to ${subscription.endpoint.slice(0, 50)}... Payload length: ${pushPayload.length}`);
     return "ok";
   } catch (err: any) {
     const status = err?.statusCode;

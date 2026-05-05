@@ -80,10 +80,12 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body,
       icon,
-      badge: "/icons/icon-192x192.png",
+      // badge: "/icons/icon-192x192.png", // Disabled to avoid black block on Android
       data: { url },
       vibrate: [200, 100, 200],
-      requireInteraction: false,
+      tag: "project13-notification",
+      renotify: true,
+      requireInteraction: true,
     })
   );
 });
