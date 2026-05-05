@@ -94,6 +94,10 @@ self.addEventListener("push", (event) => {
       renotify: true,
       requireInteraction: true,
       timestamp: Date.now(),
+      actions: [
+        { action: "view", title: "View Details" },
+        { action: "close", title: "Dismiss" }
+      ]
     })
   );
 });

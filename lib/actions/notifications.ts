@@ -90,14 +90,18 @@ export async function sendManualNotification(data: {
       targets = allMembers.map(m => m.userId);
     }
 
+    console.log(`[NotificationAction] Sending manual notification to ${targets.length} targets. Type: ${data.type}`);
+    
     for (const targetId of targets) {
+      console.log(`[NotificationAction] Triggering delivery for user: ${targetId}`);
       await notifyCustom(manager.id, targetId, data.title, data.message, data.type);
     }
 
     revalidatePath("/notifications");
+    console.log(`[NotificationAction] Successfully processed ${targets.length} notifications.`);
     return { success: true, count: targets.length };
   } catch (error: any) {
-    console.error("Failed to send notifications:", error);
+    console.error("[NotificationAction] Failed to send notifications:", error);
     return { success: false, error: error.message };
   }
 }

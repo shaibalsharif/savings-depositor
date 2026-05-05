@@ -2,37 +2,49 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Send, Users, AlertCircle, Info, Search, Mail, Loader2 } from "lucide-react";
+import { Send, Users, AlertCircle, Info, Search, Mail, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { sendManualNotification } from "@/lib/actions/notifications";
+import Image from "next/image";
 
 export function ManagerNotifications({ quota, history, allMembers, membersWithDues }: any) {
   const [targetMode, setTargetMode] = useState<"broadcast" | "specific">("broadcast");
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [msgType, setMsgType] = useState<"info" | "reminder">("info");
   
   const [customTitle, setCustomTitle] = useState("");
   const [customMessage, setCustomMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const toggleMemberSelection = (userId: string) => {
+    setSelectedUserIds(prev => 
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
   // Derived preview logic
   let previewTitle = customTitle;
   let previewMessage = customMessage;
 
   if (msgType === "reminder") {
-    const memberDue = membersWithDues.find((m: any) => m.id === selectedUserId);
-    if (memberDue) {
+    if (selectedUserIds.length === 1) {
+      const memberDue = membersWithDues.find((m: any) => m.id === selectedUserIds[0]);
+      if (memberDue) {
+        previewTitle = "⚠️ Payment Reminder — Project 13";
+        previewMessage = `Dear ${memberDue.name},\n\nYou have an outstanding deposit balance of ৳${memberDue.totalDue.toLocaleString()}.\n\nPlease clear your dues at your earliest convenience.\n\nThank you,\nProject 13 Management`;
+      }
+    } else if (selectedUserIds.length > 1) {
       previewTitle = "⚠️ Payment Reminder — Project 13";
-      previewMessage = `Dear ${memberDue.name},\n\nYou have an outstanding deposit balance of ৳${memberDue.totalDue.toLocaleString()}.\n\nPlease clear your dues at your earliest convenience to maintain your active status.\n\nThank you,\nProject 13 Management`;
+      previewMessage = "Dear Member,\n\nYou have an outstanding deposit balance with Project 13. Please check your dashboard and clear any pending dues.\n\nThank you,\nProject 13 Management";
     } else {
       previewTitle = "⚠️ Payment Reminder";
-      previewMessage = "Please select a member with pending dues to preview this reminder.";
+      previewMessage = "Please select member(s) to preview the reminder.";
     }
   }
 
   const handleSend = async () => {
-    if (targetMode === "specific" && !selectedUserId) {
-      toast.error("Please select a member.");
+    if (targetMode === "specific" && selectedUserIds.length === 0) {
+      toast.error("Please select at least one member.");
       return;
     }
     if (!previewTitle || !previewMessage) {
@@ -43,7 +55,7 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
     setLoading(true);
     try {
       const res = await sendManualNotification({
-        userIds: targetMode === "broadcast" ? [] : [selectedUserId],
+        userIds: targetMode === "broadcast" ? [] : selectedUserIds,
         type: msgType,
         title: previewTitle,
         message: previewMessage,
@@ -53,6 +65,7 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
         toast.success(`Notification sent to ${res.count} member(s)!`);
         setCustomTitle("");
         setCustomMessage("");
+        if (targetMode === "specific") setSelectedUserIds([]);
       } else {
         toast.error(res.error || "Failed to send notification.");
       }
@@ -66,7 +79,7 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
   const pctUsed = Math.min(100, Math.round((quota.used / quota.total) * 100));
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto pb-20">
       <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -102,45 +115,72 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
         <div className="glass p-6 rounded-xl border space-y-6">
           <h2 className="text-lg font-bold border-b pb-2">Compose Notification</h2>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 block">
                 Target Audience
               </label>
               <div className="flex gap-2">
                 <button
                   onClick={() => setTargetMode("broadcast")}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border flex items-center justify-center gap-2 transition ${targetMode === "broadcast" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
+                  className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium border flex items-center justify-center gap-2 transition ${targetMode === "broadcast" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
                 >
                   <Users size={16} /> Broadcast All
                 </button>
                 <button
                   onClick={() => setTargetMode("specific")}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border flex items-center justify-center gap-2 transition ${targetMode === "specific" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
+                  className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium border flex items-center justify-center gap-2 transition ${targetMode === "specific" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
                 >
-                  <Search size={16} /> Specific Member
+                  <Search size={16} /> Select Members
                 </button>
               </div>
             </div>
 
             {targetMode === "specific" && (
-              <div className="animate-in slide-in-from-top-2 fade-in">
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Select Member</label>
-                <select 
-                  className="w-full bg-card border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                >
-                  <option value="">-- Choose a member --</option>
+              <div className="animate-in slide-in-from-top-2 fade-in space-y-3">
+                <div className="flex justify-between items-center">
+                   <label className="text-xs font-semibold text-muted-foreground uppercase">Select Members ({selectedUserIds.length})</label>
+                   <button 
+                     onClick={() => setSelectedUserIds([])}
+                     className="text-[10px] text-primary hover:underline"
+                   >
+                     Clear Selection
+                   </button>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                   {allMembers.map((m: any) => {
+                    const isSelected = selectedUserIds.includes(m.id);
                     const due = membersWithDues.find((d: any) => d.id === m.id);
                     return (
-                      <option key={m.id} value={m.id}>
-                        {m.name} {due && due.totalDue > 0 ? ` (৳${due.totalDue.toLocaleString()} Due)` : ""}
-                      </option>
+                      <button
+                        key={m.id}
+                        onClick={() => toggleMemberSelection(m.id)}
+                        className={`relative group flex flex-col items-center gap-1.5 p-1 rounded-lg transition-all ${isSelected ? 'bg-primary/10' : 'hover:bg-muted'}`}
+                      >
+                        <div className={`relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'}`}>
+                          <Image 
+                            src={m.photo || "/placeholder-user.jpg"} 
+                            alt={m.name} 
+                            width={48} 
+                            height={48} 
+                            className="object-cover w-full h-full"
+                          />
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-primary/40 flex items-center justify-center">
+                              <Check size={20} className="text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <span className={`text-[10px] truncate w-full text-center font-medium ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
+                          {m.name.split(" ")[0]}
+                        </span>
+                        {due && due.totalDue > 0 && (
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-background rounded-full" title={`Due: ৳${due.totalDue.toLocaleString()}`} />
+                        )}
+                      </button>
                     );
                   })}
-                </select>
+                </div>
               </div>
             )}
 
@@ -219,14 +259,14 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
             className="mt-4 w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-            {loading ? "Sending..." : targetMode === "broadcast" ? "Broadcast to All Members" : "Send Notification"}
+            {loading ? "Sending..." : targetMode === "broadcast" ? "Broadcast to All Members" : `Send to ${selectedUserIds.length} Members`}
           </button>
         </div>
       </div>
 
       {/* History Table */}
       <div className="glass rounded-xl border overflow-hidden">
-        <div className="p-4 border-b bg-muted/20">
+        <div className="p-4 border-b bg-muted/20 flex justify-between items-center">
           <h2 className="font-bold">Sent History (Last 100)</h2>
         </div>
         <div className="overflow-x-auto">
