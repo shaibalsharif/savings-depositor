@@ -65,6 +65,23 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
     }
   }
 
+  const handleTestPush = async () => {
+    setLoading(true);
+    try {
+      const res = await sendManualNotification({
+        userIds: [allMembers.find((m: any) => m.email === "shaibalsharif@gmail.com")?.id].filter(Boolean) as string[],
+        type: "info",
+        title: "🔔 Test Notification",
+        message: "This is a test notification to verify delivery on this device.",
+      });
+      if (res.success) toast.success("Test notification sent!");
+    } catch (err: any) {
+      toast.error("Test failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSend = async () => {
     if (targetMode === "specific" && selectedUserIds.length === 0) {
       toast.error("Please select at least one member.");
@@ -112,6 +129,28 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
           <p className="text-muted-foreground text-sm mt-1">
             Dispatch manual alerts and monitor notification history.
           </p>
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              onClick={handleEnableNotifications}
+              className={`text-[11px] px-3 py-1.5 rounded-full border flex items-center gap-2 transition font-bold ${
+                pushPermission === "granted" 
+                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                  : "bg-rose-500/10 text-rose-500 border-rose-500/20 animate-pulse"
+              }`}
+            >
+              <div className={`w-1.5 h-1.5 rounded-full ${pushPermission === "granted" ? "bg-emerald-500" : "bg-rose-500"}`} />
+              {pushPermission === "granted" ? "Browser Alerts Active" : "Enable Browser Alerts"}
+            </button>
+            
+            {pushPermission === "granted" && (
+              <button
+                onClick={handleTestPush}
+                className="text-[11px] px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 transition font-bold"
+              >
+                Test This Device
+              </button>
+            )}
+          </div>
         </div>
         
         <div className="glass px-4 py-3 rounded-xl border flex items-center gap-4">
@@ -344,19 +383,6 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
             </tbody>
           </table>
         </div>
-      </div>
-      {/* Push Status Debug */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={handleEnableNotifications}
-          className={`p-3 rounded-full shadow-lg flex items-center gap-2 transition ${
-            pushPermission === "granted" ? "bg-emerald-500 text-white" : "bg-rose-500 text-white animate-bounce"
-          }`}
-          title={pushPermission === "granted" ? "Notifications Enabled" : "Notifications Disabled - Click to Enable"}
-        >
-          {pushPermission === "granted" ? <BellRing size={20} /> : <BellOff size={20} />}
-          <span className="text-xs font-bold pr-1">{pushPermission === "granted" ? "Active" : "Enable Alerts"}</span>
-        </button>
       </div>
     </div>
   );
