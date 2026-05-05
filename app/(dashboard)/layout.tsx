@@ -1,6 +1,7 @@
 import { CollapsibleLayout } from "@/components/nav/CollapsibleLayout";
 import { requireMember, isManager } from "@/lib/auth";
 import { SessionGuard } from "@/components/SessionGuard";
+import { PushPermissionBanner } from "@/components/PushPermissionBanner";
 import "@/app/dashboard.css";
 
 export default async function DashboardLayout({
@@ -14,6 +15,7 @@ export default async function DashboardLayout({
   return (
     <CollapsibleLayout isManagerRole={managerRole}>
       <SessionGuard />
+      <PushPermissionBanner />
       {children}
     </CollapsibleLayout>
   );

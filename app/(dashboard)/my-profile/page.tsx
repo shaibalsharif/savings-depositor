@@ -2,6 +2,7 @@ import { getMemberFullProfile } from "@/lib/queries/members";
 import { requireMember, isManager } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ProfilePhotoUploader } from "./ProfilePhotoUploader";
+import { NotificationSettings } from "./NotificationSettings";
 import { formatLocalDate } from "@/lib/format-date";
 import { formatPhoneNumber } from "@/lib/utils/format-phone";
 
@@ -227,6 +228,9 @@ export default async function MyProfilePage() {
               <p className="text-muted-foreground text-sm">No nominee information saved.</p>
             )}
           </div>
+          
+          {/* Notification Settings */}
+          <NotificationSettings initialPrefs={profile} userId={user.id} />
         </div>
       </div>
     </div>

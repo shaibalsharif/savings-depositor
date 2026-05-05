@@ -161,12 +161,16 @@ export const personalInfo = pgTable("personal_info", {
   permanentAddress: text("permanent_address").notNull(),
   mobile: varchar("mobile", { length: 20 }).notNull(),
   email: varchar("email", { length: 255 }),
-  nidNumber: varchar("nid_number", { length: 17 }).notNull(),
+  nidNumber: varchar("nid_number", { length: 50 }).notNull(),
   nidFront: text("nid_front"),
   nidBack: text("nid_back"),
   signature: text("signature"),
   photo: text("photo"),
-  position: varchar("position", { length: 50 }).notNull().default("member"),
+  position: varchar("position", { length: 50 }).default("member").notNull(),
+  notificationEmail: varchar("notification_email", { length: 255 }),
+  notifyOnDeposit: boolean("notify_on_deposit").default(true).notNull(),
+  notifyOnReminder: boolean("notify_on_reminder").default(true).notNull(),
+  notifyOnSummary: boolean("notify_on_summary").default(true).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

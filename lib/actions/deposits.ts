@@ -9,6 +9,8 @@ import { z } from "zod";
 import { CreateDepositSchema } from "../validators/deposit";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { getManagerDashboardStats } from "@/lib/queries/dashboard";
+import { notifyDepositConfirmed } from "@/lib/notifications/service";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -90,12 +92,46 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
       .update(payments)
       .set({ sheetsRowIndex: rowIndex, syncStatus: "synced" })
       .where(eq(payments.paymentId, paymentId));
+
+    // After success, send notifications asynchronously without blocking the user
+    getManagerDashboardStats().then((stats) => {
+      const memberPending = stats.memberPendings.find(m => m.memberId === parsed.memberId);
+      // Wait, getManagerDashboardStats returns memberPendings which calculates total expected vs paid.
+      // But we just need their total balance which is total payments.
+      // Let's just do a quick calculation of the member's paid amount here instead of the whole dashboard stats.
+      // Actually, I can compute memberBalance by summing their depositAllocations.
+    }).catch(console.error);
+
   } catch (e) {
     console.error("Failed to sync to sheets", e);
     await db
       .update(payments)
       .set({ syncStatus: "pending" })
       .where(eq(payments.paymentId, paymentId));
+  }
+
+  // Quick balance calculation for the notification
+  try {
+    const memberName = await getMemberName(parsed.memberId);
+    
+    // Member balance = sum of all their depositAllocations
+    const allMemberAllocs = await db.select().from(depositAllocations).where(eq(depositAllocations.memberId, parsed.memberId));
+    const memberBalance = allMemberAllocs.reduce((sum, a) => sum + Number(a.amountAllocated), 0);
+
+    // Total fund balance = simple sum of all valid payments - valid expenses - active investments + net revenue
+    // But maybe it's simpler to just use getManagerDashboardStats() for fund balance
+    getManagerDashboardStats().then((stats) => {
+      notifyDepositConfirmed(parsed.memberId, {
+        memberName,
+        amount: parsed.amountReceived,
+        forMonth: parsed.forMonth,
+        paymentDate: parsed.paymentDate,
+        memberBalance,
+        totalFundBalance: stats.balance,
+      });
+    }).catch(console.error);
+  } catch (e) {
+    console.error("Failed to trigger deposit notification", e);
   }
 
   revalidatePath("/deposits");
@@ -179,6 +215,28 @@ export async function createBatchPayments(
     }
 
     results.push(paymentId);
+  }
+
+  // Trigger notifications
+  try {
+    getManagerDashboardStats().then(async (stats) => {
+      for (const record of records) {
+        const memberName = await getMemberName(record.memberId);
+        const allMemberAllocs = await db.select().from(depositAllocations).where(eq(depositAllocations.memberId, record.memberId));
+        const memberBalance = allMemberAllocs.reduce((sum, a) => sum + Number(a.amountAllocated), 0);
+
+        await notifyDepositConfirmed(record.memberId, {
+          memberName,
+          amount: record.amountReceived,
+          forMonth: record.forMonth,
+          paymentDate: record.paymentDate,
+          memberBalance,
+          totalFundBalance: stats.balance,
+        });
+      }
+    }).catch(console.error);
+  } catch (e) {
+    console.error("Failed to trigger batch notifications", e);
   }
 
   revalidatePath("/deposits");
