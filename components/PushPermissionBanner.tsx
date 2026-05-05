@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BellRing, X, CheckCircle2 } from "lucide-react";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { toast } from "sonner";
 
 function base64ToUint8Array(base64: string) {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -73,12 +74,14 @@ export function PushPermissionBanner() {
           setTimeout(() => setShow(false), 2000);
         } else {
           console.error("Failed to save subscription to server");
+          toast.error("Failed to sync with server. Please try again.");
         }
       } else {
         handleDismiss();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Push subscription failed:", err);
+      toast.error(err.message || "Failed to enable notifications");
     } finally {
       setLoading(false);
     }
