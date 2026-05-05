@@ -3,6 +3,7 @@ import { requireMember, isManager } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ProfilePhotoUploader } from "./ProfilePhotoUploader";
 import { formatLocalDate } from "@/lib/format-date";
+import { formatPhoneNumber } from "@/lib/utils/format-phone";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,13 @@ export default async function MyProfilePage() {
   const user = await requireMember();
   const manager = await isManager();
   const { profile, nominee } = await getMemberFullProfile(user.id);
+
+  if (profile) {
+    profile.mobile = formatPhoneNumber(profile.mobile);
+  }
+  if (nominee) {
+    nominee.mobile = formatPhoneNumber(nominee.mobile);
+  }
 
   if (!profile) {
     return (

@@ -7,6 +7,7 @@ import { X, Search, Filter, SortDesc, SortAsc } from "lucide-react";
 type MemberPending = {
   memberId: string;
   name: string;
+  photo?: string | null;
   due: number;
   breakdown: { month: string; expected: number; paid: number; due: number }[];
 };
@@ -92,8 +93,12 @@ export function OutstandingPendingsSection({
             return (
               <div key={m.memberId} className="flex items-center justify-between p-3 sm:px-5 sm:py-3.5 transition">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-muted text-foreground">
-                    {m.name.charAt(0)}
+                  <div className="h-6 w-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold bg-muted text-foreground border border-border flex-shrink-0">
+                    {m.photo ? (
+                      <img src={m.photo} alt={m.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{m.name.charAt(0)}</span>
+                    )}
                   </div>
                   <div>
                     <span className={`text-xs sm:text-sm font-medium line-clamp-1 ${getColorGrade(m.due)}`}>
@@ -218,8 +223,12 @@ export function OutstandingPendingsSection({
                         {/* Member overview */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold bg-muted text-foreground flex-shrink-0">
-                              {m.name.charAt(0)}
+                            <div className="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold bg-muted text-foreground border border-border flex-shrink-0">
+                              {m.photo ? (
+                                <img src={m.photo} alt={m.name} className="h-full w-full object-cover" />
+                              ) : (
+                                <span>{m.name.charAt(0)}</span>
+                              )}
                             </div>
                             <div>
                               <div className={`text-sm sm:text-base font-bold ${getColorGrade(m.due)}`}>

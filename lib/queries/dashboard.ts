@@ -113,7 +113,7 @@ export async function getManagerDashboardStats() {
         breakdown.push({ month: m, expected: exp, paid, due: mDue });
       }
     }
-    return { memberId: member.userId, name: member.name, due, breakdown };
+    return { memberId: member.userId, name: member.name, photo: member.photo, due, breakdown };
   }).filter((m) => m.due > 0).sort((a, b) => b.due - a.due);
 
   // Total outstanding across all members
@@ -161,7 +161,7 @@ export async function getManagerDashboardStats() {
       const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
       return { month: m, paid, expected: exp, pct };
     });
-    return { memberId: member.userId, name: member.name, months };
+    return { memberId: member.userId, name: member.name, photo: member.photo, months };
   });
 
   // ── Trend Chart Data (Start to Current) ────────────────────────────────────

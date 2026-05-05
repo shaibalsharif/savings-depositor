@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Loader2, Check, ChevronRight, X, CheckSquare } from "lucide-react";
 import { format } from "date-fns";
 
-type Member = { id: string; name: string; mobile: string; position: string };
+type Member = { id: string; name: string; mobile: string; photo?: string | null; position: string };
 
 type MemberEntry = {
   outstanding: OutstandingMonth[];
@@ -72,10 +72,14 @@ function MemberEntryEditor({
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2.5" style={{ background: "hsl(var(--accent))" }}>
         <div
-          className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+          className="h-7 w-7 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold shrink-0 border border-border"
           style={{ background: AVATAR_COLORS[memberIdx % AVATAR_COLORS.length], color: "#fff" }}
         >
-          {getInitials(member.name)}
+          {member.photo ? (
+            <img src={member.photo} alt={member.name} className="h-full w-full object-cover" />
+          ) : (
+            getInitials(member.name)
+          )}
         </div>
         <span className="text-sm font-semibold flex-1">{member.name}</span>
         {entry.selectedMonths.length > 0 && (
@@ -458,10 +462,16 @@ export function DepositForm({ members, monthlyAmount }: { members: Member[]; mon
                   </div>
                 )}
                 <div
-                  className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                  className="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold shrink-0 border border-border"
                   style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length], color: "#fff" }}
                 >
-                  {isLoading ? <Loader2 size={14} className="animate-spin" /> : getInitials(m.name)}
+                  {isLoading ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : m.photo ? (
+                    <img src={m.photo} alt={m.name} className="h-full w-full object-cover" />
+                  ) : (
+                    getInitials(m.name)
+                  )}
                 </div>
                 <span className="text-xs font-medium text-center leading-tight" style={{ color: isSelected ? "var(--teal)" : "hsl(var(--muted-foreground))" }}>
                   {m.name.split(" ").slice(0, 2).join(" ")}

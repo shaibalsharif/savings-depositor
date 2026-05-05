@@ -6,17 +6,25 @@ import { SlideModal } from "@/components/ui/slide-modal";
 import { desc } from "drizzle-orm";
 import { format } from "date-fns";
 
+import { formatPhoneNumber } from "@/lib/utils/format-phone";
+
 export default async function NewDepositPage() {
   await requireManager();
 
-  const members = await db
+  const rawMembers = await db
     .select({
       id: personalInfo.userId,
       name: personalInfo.name,
       mobile: personalInfo.mobile,
+      photo: personalInfo.photo,
       position: personalInfo.position,
     })
     .from(personalInfo);
+
+  const members = rawMembers.map(m => ({
+    ...m,
+    mobile: formatPhoneNumber(m.mobile)
+  }));
 
   // Get the active monthly amount from settings
   const settings = await db

@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ColumnConfigurator } from "@/components/ui/column-configurator";
 import { MemberListTable } from "./MemberListTable";
 import { getMemberFullProfile } from "@/lib/queries/members";
+import { formatPhoneNumber } from "@/lib/utils/format-phone";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,14 @@ export default async function MembersPage() {
   const profilesWithNominees = await Promise.all(
     allMembers.map(async (m) => {
       const full = await getMemberFullProfile(m.userId);
-      const photoClean = m.photo && m.photo.startsWith("blob:") ? "" : m.photo;
       return {
         ...m,
-        photo: photoClean,
-        nominee: full.nominee,
+        mobile: formatPhoneNumber(m.mobile),
+        photo: m.photo || "",
+        nominee: full.nominee ? {
+          ...full.nominee,
+          mobile: formatPhoneNumber(full.nominee.mobile)
+        } : null,
       };
     })
   );

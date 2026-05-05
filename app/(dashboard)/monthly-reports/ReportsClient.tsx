@@ -529,10 +529,22 @@ export function ReportsClient({
                             </td>
                           </tr>
                         ))}
-                        {selectedReport.details.payments.length === 0 && (
+                        {/* Members who failed to deposit anything in this month */}
+                        {(() => {
+                          const payers = new Set(selectedReport.details.payments.map((p: any) => p.memberId));
+                          const nonPayers = selectedReport.details.dueList.filter((m: any) => !payers.has(m.userId));
+                          return nonPayers.map((m: any) => (
+                            <tr key={m.userId} className="bg-red-50/50 text-red-600 print:text-red-700">
+                              <td className="px-3 py-1.5 font-bold">{m.name}</td>
+                              <td className="px-3 py-1.5 font-bold italic">—</td>
+                              <td className="px-3 py-1.5 font-extrabold text-right">৳0</td>
+                            </tr>
+                          ));
+                        })()}
+                        {selectedReport.details.payments.length === 0 && selectedReport.details.dueList.length === 0 && (
                           <tr>
                             <td colSpan={3} className="px-3 py-4 text-center text-muted-foreground font-bold">
-                              No deposits submitted.
+                              No data available.
                             </td>
                           </tr>
                         )}
@@ -543,7 +555,7 @@ export function ReportsClient({
 
                 {/* Outstanding Dues list */}
                 <div className="space-y-2 page-break-avoid pt-2">
-                  <div className="text-xs font-bold text-muted-foreground">Outstanding dues for <span className="font-bold">{getFriendlyMonthName(selectedReport.month)}</span></div>
+                  <div className="text-xs font-bold text-muted-foreground">Outstanding dues till <span className="font-bold">{getFriendlyMonthName(selectedReport.month)}</span></div>
                   <div className="overflow-x-auto border rounded-lg max-h-[220px] overflow-y-auto print-all-rows">
                     <table className="w-full text-xs text-left">
                       <thead className="bg-muted/50 sticky top-0 backdrop-blur">
