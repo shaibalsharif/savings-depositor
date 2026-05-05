@@ -1,11 +1,26 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 type HeatmapMember = {
   memberId: string;
   name: string;
   months: { month: string; paid: number; expected: number; pct: number }[];
+};
+
+type TooltipState = {
+  visible: boolean;
+  x: number;
+  y: number;
+  member: string;
+  monthName: string;
+  mKey: string;
+  paid: number;
+  expected: number;
+  pct: number;
+  hasData: boolean;
 };
 
 function getColor(pct: number): string {
@@ -24,17 +39,201 @@ function getLabel(pct: number): string {
   return "Full";
 }
 
+const TOOLTIP_WIDTH = 200;
+
+function HeatmapTooltip({ tooltip }: { tooltip: TooltipState }) {
+  if (!tooltip.visible) return null;
+
+  // Clamp horizontally so tooltip never goes off screen
+  const left = Math.max(8, Math.min(tooltip.x - TOOLTIP_WIDTH / 2, window.innerWidth - TOOLTIP_WIDTH - 8));
+  // Place above the cursor by default
+  const top = tooltip.y - 8;
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed",
+        left,
+        top,
+        transform: "translateY(-100%)",
+        zIndex: 9999,
+        width: TOOLTIP_WIDTH,
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          background: "hsl(var(--popover))",
+          border: "1px solid hsl(var(--border))",
+          borderRadius: 10,
+          padding: "10px 12px",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+          backdropFilter: "blur(12px)",
+          fontSize: 11,
+          lineHeight: 1.6,
+          color: "hsl(var(--foreground))",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            fontWeight: 700,
+            marginBottom: 6,
+            paddingBottom: 6,
+            borderBottom: "1px solid hsl(var(--border))",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {tooltip.monthName}
+          </span>
+          <span
+            style={{
+              fontSize: 9,
+              padding: "1px 6px",
+              borderRadius: 4,
+              background: "hsl(var(--muted))",
+              fontFamily: "monospace",
+              flexShrink: 0,
+            }}
+          >
+            {tooltip.mKey}
+          </span>
+        </div>
+
+        {/* Content */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "hsl(var(--muted-foreground))" }}>Member:</span>
+            <span style={{ fontWeight: 600, textAlign: "right", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {tooltip.member}
+            </span>
+          </div>
+          {tooltip.hasData ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "hsl(var(--muted-foreground))" }}>Paid:</span>
+                <span style={{ color: "#34d399", fontFamily: "monospace", fontWeight: 600 }}>
+                  ৳{tooltip.paid.toLocaleString()}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "hsl(var(--muted-foreground))" }}>Expected:</span>
+                <span style={{ fontFamily: "monospace" }}>৳{tooltip.expected.toLocaleString()}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  paddingTop: 6,
+                  marginTop: 2,
+                  borderTop: "1px solid hsl(var(--border))",
+                }}
+              >
+                <span style={{ color: "hsl(var(--muted-foreground))" }}>Status:</span>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color:
+                      tooltip.pct >= 1
+                        ? "#2dd4bf"
+                        : tooltip.pct > 0
+                        ? "#fb923c"
+                        : "#f87171",
+                  }}
+                >
+                  {getLabel(tooltip.pct)} ({Math.round(tooltip.pct * 100)}%)
+                </span>
+              </div>
+            </>
+          ) : (
+            <span style={{ color: "#f87171", fontStyle: "italic" }}>No record found</span>
+          )}
+        </div>
+
+        {/* Arrow */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: -5,
+            left: "50%",
+            transform: "translateX(-50%) rotate(45deg)",
+            width: 8,
+            height: 8,
+            background: "hsl(var(--popover))",
+            borderRight: "1px solid hsl(var(--border))",
+            borderBottom: "1px solid hsl(var(--border))",
+          }}
+        />
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function PaymentHeatmap({ data, months }: { data: HeatmapMember[]; months: string[] }) {
-  // Reverse so latest month is on the LEFT
-  const reversedMonths = [...months].reverse().filter(m => m <= format(new Date(), "yyyy-MM"));
+  const reversedMonths = [...months].reverse().filter((m) => m <= format(new Date(), "yyyy-MM"));
+
+  const [tooltip, setTooltip] = useState<TooltipState>({
+    visible: false,
+    x: 0,
+    y: 0,
+    member: "",
+    monthName: "",
+    mKey: "",
+    paid: 0,
+    expected: 0,
+    pct: 0,
+    hasData: false,
+  });
+
+  const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showTooltip(
+    e: React.MouseEvent,
+    member: string,
+    mKey: string,
+    cell: { paid: number; expected: number; pct: number } | undefined
+  ) {
+    if (hideTimeout.current) clearTimeout(hideTimeout.current);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({
+      visible: true,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+      member,
+      monthName: format(parseISO(mKey + "-01"), "MMMM yyyy"),
+      mKey,
+      paid: cell?.paid ?? 0,
+      expected: cell?.expected ?? 0,
+      pct: cell?.pct ?? 0,
+      hasData: !!cell,
+    });
+  }
+
+  function hideTooltip() {
+    hideTimeout.current = setTimeout(() => {
+      setTooltip((prev) => ({ ...prev, visible: false }));
+    }, 100);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (hideTimeout.current) clearTimeout(hideTimeout.current);
+    };
+  }, []);
 
   return (
     <div className="relative">
-      {/* Outer container: sticky name col + scrollable month grid */}
+      <HeatmapTooltip tooltip={tooltip} />
+
+      {/* Outer container */}
       <div className="flex overflow-hidden">
         {/* Sticky left column — member names */}
         <div className="flex-shrink-0 min-w-[130px] z-10 bg-background/50 backdrop-blur-sm border-r pr-2">
-          {/* header spacer */}
           <div className="h-[30px] flex items-center px-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
             Member
           </div>
@@ -74,14 +273,15 @@ export function PaymentHeatmap({ data, months }: { data: HeatmapMember[]; months
                 {reversedMonths.map((mKey) => {
                   const cell = lookup[mKey];
                   const color = cell ? getColor(cell.pct) : "hsl(222 47% 12%)";
-                  const monthName = format(parseISO(mKey + "-01"), "MMMM yyyy");
-                  
+
                   return (
                     <div
                       key={mKey}
-                      className="w-[50px] flex-shrink-0 flex justify-center items-center group relative"
+                      className="w-[50px] flex-shrink-0 flex justify-center items-center"
                     >
                       <div
+                        onMouseEnter={(e) => showTooltip(e, member.name, mKey, cell)}
+                        onMouseLeave={hideTooltip}
                         style={{
                           width: 34,
                           height: 24,
@@ -89,47 +289,17 @@ export function PaymentHeatmap({ data, months }: { data: HeatmapMember[]; months
                           background: color,
                           border: "1px solid rgba(255,255,255,0.05)",
                           cursor: "default",
+                          transition: "transform 0.15s ease, box-shadow 0.15s ease",
                         }}
-                        className="transition-transform duration-200 group-hover:scale-110 group-hover:z-20"
+                        onMouseOver={(e) => {
+                          (e.currentTarget as HTMLElement).style.transform = "scale(1.15)";
+                          (e.currentTarget as HTMLElement).style.boxShadow = "0 0 8px rgba(45,212,191,0.3)";
+                        }}
+                        onMouseOut={(e) => {
+                          (e.currentTarget as HTMLElement).style.transform = "scale(1)";
+                          (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                        }}
                       />
-                      
-                      {/* Custom Tooltip */}
-                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
-                        <div className="bg-popover/95 backdrop-blur-md border border-border shadow-2xl rounded-lg p-2.5 min-w-[180px] text-[11px] leading-relaxed">
-                          <div className="font-bold text-foreground mb-1 border-b border-border/50 pb-1 flex justify-between items-center">
-                            <span>{monthName}</span>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted font-mono">{mKey}</span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Member:</span>
-                              <span className="font-semibold">{member.name}</span>
-                            </div>
-                            {cell ? (
-                              <>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Paid:</span>
-                                  <span className="text-green-400 font-mono">৳{cell.paid.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Expected:</span>
-                                  <span className="font-mono">৳{cell.expected.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between pt-1 border-t border-border/30 mt-1">
-                                  <span className="text-muted-foreground">Status:</span>
-                                  <span className={`font-bold ${cell.pct >= 1 ? "text-teal-400" : cell.pct > 0 ? "text-orange-400" : "text-red-400"}`}>
-                                    {getLabel(cell.pct)} ({Math.round(cell.pct * 100)}%)
-                                  </span>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="text-red-400 italic">No record found</div>
-                            )}
-                          </div>
-                          {/* Pointer arrow */}
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-popover border-r border-b border-border rotate-45 -mt-1"></div>
-                        </div>
-                      </div>
                     </div>
                   );
                 })}
@@ -140,7 +310,7 @@ export function PaymentHeatmap({ data, months }: { data: HeatmapMember[]; months
       </div>
 
       {/* Legend */}
-      <div className="flex items-center flex-wrap gap-4 mt-6 px-2 text-[10px] text-muted-foreground font-medium">
+      <div className="flex items-center flex-wrap gap-3 mt-6 px-2 text-[10px] text-muted-foreground font-medium">
         <span className="uppercase tracking-widest opacity-70">Payment Legend:</span>
         {[
           { color: "hsl(222 47% 14%)", label: "Unpaid" },
