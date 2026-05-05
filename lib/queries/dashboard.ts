@@ -150,21 +150,33 @@ export async function getManagerDashboardStats() {
 
   // ── Member payment heatmap data (current year × all members) ────────────────
   const currentYearNum = new Date().getFullYear();
-  const monthsInYear = Array.from({ length: 12 }, (_, i) => 
+  const monthsInYear = Array.from({ length: 12 }, (_, i) =>
     `${currentYearNum}-${String(i + 1).padStart(2, "0")}`
+  );
+
+  // paymentId → paymentDate lookup (allPayments already fetched above)
+  const paymentDateByPaymentId = Object.fromEntries(
+    allPayments.map((p) => [p.paymentId, p.paymentDate])
   );
 
   const heatmapData = allMembers.map((member) => {
     const memAllocs = allAllocations.filter((a) => a.memberId === member.userId);
-    const paidByMonth = memAllocs.reduce((acc, a) => {
-      acc[a.forMonth] = (acc[a.forMonth] || 0) + Number(a.amountAllocated);
-      return acc;
-    }, {} as Record<string, number>);
+
+    const byMonth: Record<string, { paid: number; lastDate: string | null }> = {};
+    for (const a of memAllocs) {
+      const date = paymentDateByPaymentId[a.paymentId] ?? null;
+      if (!byMonth[a.forMonth]) byMonth[a.forMonth] = { paid: 0, lastDate: null };
+      byMonth[a.forMonth].paid += Number(a.amountAllocated);
+      if (date && (!byMonth[a.forMonth].lastDate || date > byMonth[a.forMonth].lastDate!)) {
+        byMonth[a.forMonth].lastDate = date;
+      }
+    }
+
     const months = monthsInYear.map((m) => {
       const exp = getExpectedForMonth(settingsSorted, m);
-      const paid = paidByMonth[m] || 0;
+      const paid = byMonth[m]?.paid ?? 0;
       const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
-      return { month: m, paid, expected: exp, pct };
+      return { month: m, paid, expected: exp, pct, lastPaymentDate: byMonth[m]?.lastDate ?? null };
     });
     return { memberId: member.userId, name: member.name, photo: member.photo, months };
   });
@@ -216,86 +228,94 @@ export async function getManagerDashboardStats() {
 }
 
 export async function getHeatmapData(year: number) {
-  const [allAllocations, allSettings, allMembers] = await Promise.all([
+  const [allAllocations, allPayments, allSettings, allMembers] = await Promise.all([
     db.select().from(depositAllocations),
+    db.select({ paymentId: payments.paymentId, paymentDate: payments.paymentDate }).from(payments),
     db.select().from(depositSettings).orderBy(desc(depositSettings.effectiveMonth)),
     db.select().from(personalInfo),
   ]);
 
+  // Build paymentId → paymentDate lookup
+  const paymentDateByPaymentId = Object.fromEntries(
+    allPayments.map((p) => [p.paymentId, p.paymentDate])
+  );
+
   const settingsSorted = [...allSettings].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth));
-  
+
   // Jan to Dec for the given year
-  const monthsInYear = Array.from({ length: 12 }, (_, i) => 
-    `${year}-${String(i + 1).padStart(2, "0")}`
+  const monthsInYear = Array.from({ length: 12 }, (_, i) =>
+    `${year}-${String(i + 1).padStart(2, "00")}`
   );
 
   const heatmapData = allMembers.map((member) => {
     const memAllocs = allAllocations.filter((a) => a.memberId === member.userId);
-    const paidByMonth = memAllocs.reduce((acc, a) => {
-      acc[a.forMonth] = (acc[a.forMonth] || 0) + Number(a.amountAllocated);
-      return acc;
-    }, {} as Record<string, number>);
+
+    // paid amount + latest payment date per forMonth
+    const byMonth: Record<string, { paid: number; lastDate: string | null }> = {};
+    for (const a of memAllocs) {
+      const date = paymentDateByPaymentId[a.paymentId] ?? null;
+      if (!byMonth[a.forMonth]) byMonth[a.forMonth] = { paid: 0, lastDate: null };
+      byMonth[a.forMonth].paid += Number(a.amountAllocated);
+      if (date && (!byMonth[a.forMonth].lastDate || date > byMonth[a.forMonth].lastDate!)) {
+        byMonth[a.forMonth].lastDate = date;
+      }
+    }
 
     const months = monthsInYear.map((m) => {
       const exp = getExpectedForMonth(settingsSorted, m);
-      const paid = paidByMonth[m] || 0;
+      const paid = byMonth[m]?.paid ?? 0;
       const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
-      return { month: m, paid, expected: exp, pct };
+      return { month: m, paid, expected: exp, pct, lastPaymentDate: byMonth[m]?.lastDate ?? null };
     });
 
-    return { 
-      memberId: member.userId, 
-      name: member.name, 
-      photo: member.photo, 
-      months 
-    };
+    return { memberId: member.userId, name: member.name, photo: member.photo, months };
   });
 
-  return {
-    year,
-    months: monthsInYear,
-    heatmapData
-  };
+  return { year, months: monthsInYear, heatmapData };
 }
 
 export async function getAllTimeHeatmapData() {
-  const [allAllocations, allSettings, allMembers] = await Promise.all([
+  const [allAllocations, allPayments, allSettings, allMembers] = await Promise.all([
     db.select().from(depositAllocations),
+    db.select({ paymentId: payments.paymentId, paymentDate: payments.paymentDate }).from(payments),
     db.select().from(depositSettings).orderBy(desc(depositSettings.effectiveMonth)),
     db.select().from(personalInfo),
   ]);
 
+  const paymentDateByPaymentId = Object.fromEntries(
+    allPayments.map((p) => [p.paymentId, p.paymentDate])
+  );
+
   const settingsSorted = [...allSettings].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth));
 
-  // From the very first settings month to today
   const globalStart = settingsSorted.length > 0 ? settingsSorted[0].effectiveMonth : "2024-01";
   const currentMonth = format(new Date(), "yyyy-MM");
   const allMonths = generateMonthRange(globalStart, currentMonth);
 
   const heatmapData = allMembers.map((member) => {
     const memAllocs = allAllocations.filter((a) => a.memberId === member.userId);
-    const paidByMonth = memAllocs.reduce((acc, a) => {
-      acc[a.forMonth] = (acc[a.forMonth] || 0) + Number(a.amountAllocated);
-      return acc;
-    }, {} as Record<string, number>);
+
+    const byMonth: Record<string, { paid: number; lastDate: string | null }> = {};
+    for (const a of memAllocs) {
+      const date = paymentDateByPaymentId[a.paymentId] ?? null;
+      if (!byMonth[a.forMonth]) byMonth[a.forMonth] = { paid: 0, lastDate: null };
+      byMonth[a.forMonth].paid += Number(a.amountAllocated);
+      if (date && (!byMonth[a.forMonth].lastDate || date > byMonth[a.forMonth].lastDate!)) {
+        byMonth[a.forMonth].lastDate = date;
+      }
+    }
 
     const months = allMonths.map((m) => {
       const exp = getExpectedForMonth(settingsSorted, m);
-      const paid = paidByMonth[m] || 0;
+      const paid = byMonth[m]?.paid ?? 0;
       const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
-      return { month: m, paid, expected: exp, pct };
+      return { month: m, paid, expected: exp, pct, lastPaymentDate: byMonth[m]?.lastDate ?? null };
     });
 
     return { memberId: member.userId, name: member.name, photo: member.photo, months };
   });
 
-  return {
-    year: null as null,
-    months: allMonths,
-    heatmapData,
-    startMonth: globalStart,
-    endMonth: currentMonth,
-  };
+  return { year: null as null, months: allMonths, heatmapData, startMonth: globalStart, endMonth: currentMonth };
 }
 
 // ─── Member Dashboard Stats ───────────────────────────────────────────────────

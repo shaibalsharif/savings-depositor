@@ -21,6 +21,7 @@ type TooltipState = {
   expected: number;
   pct: number;
   hasData: boolean;
+  lastPaymentDate: string | null;
 };
 
 function getColor(pct: number): string {
@@ -124,6 +125,14 @@ function HeatmapTooltip({ tooltip }: { tooltip: TooltipState }) {
                 <span style={{ color: "hsl(var(--muted-foreground))" }}>Expected:</span>
                 <span style={{ fontFamily: "monospace" }}>৳{tooltip.expected.toLocaleString()}</span>
               </div>
+              {tooltip.lastPaymentDate && (
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "hsl(var(--muted-foreground))" }}>Paid on:</span>
+                  <span style={{ fontFamily: "monospace", color: "hsl(var(--foreground))" }}>
+                    {format(parseISO(tooltip.lastPaymentDate), "dd MMM yyyy")}
+                  </span>
+                </div>
+              )}
               <div
                 style={{
                   display: "flex",
@@ -188,6 +197,7 @@ export function PaymentHeatmap({ data, months }: { data: HeatmapMember[]; months
     expected: 0,
     pct: 0,
     hasData: false,
+    lastPaymentDate: null,
   });
 
   const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -196,7 +206,7 @@ export function PaymentHeatmap({ data, months }: { data: HeatmapMember[]; months
     e: React.MouseEvent,
     member: string,
     mKey: string,
-    cell: { paid: number; expected: number; pct: number } | undefined
+    cell: { paid: number; expected: number; pct: number; lastPaymentDate?: string | null } | undefined
   ) {
     if (hideTimeout.current) clearTimeout(hideTimeout.current);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -211,6 +221,7 @@ export function PaymentHeatmap({ data, months }: { data: HeatmapMember[]; months
       expected: cell?.expected ?? 0,
       pct: cell?.pct ?? 0,
       hasData: !!cell,
+      lastPaymentDate: cell?.lastPaymentDate ?? null,
     });
   }
 
