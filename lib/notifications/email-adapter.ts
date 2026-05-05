@@ -21,14 +21,18 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   }
 
   try {
+    console.log(`[EmailAdapter] Attempting SMTP send: From=${FROM}, To=${to}, PassLen=${process.env.SMTP_PASSWORD?.length}`);
     const info = await transporter.sendMail({
       from: FROM,
       to,
       subject,
       html,
     });
-    console.log(`[EmailAdapter] Sent "${subject}" to ${to}. MessageId: ${info.messageId}`);
+    console.log(`[EmailAdapter] SUCCESS: Sent "${subject}" to ${to}. MessageId: ${info.messageId}`);
   } catch (err: any) {
-    console.error("[EmailAdapter] SMTP Exception:", err.message || err);
+    console.error("[EmailAdapter] SMTP FAILURE:", err.message || err);
+    if (err.message?.includes("Username and Password not accepted")) {
+      console.error("[EmailAdapter] HINT: Check your App Password. If you used spaces, try it exactly as Google showed it.");
+    }
   }
 }

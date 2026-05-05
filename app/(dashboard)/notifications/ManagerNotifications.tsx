@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Send, Users, AlertCircle, Info, Search, Mail, Loader2, Check } from "lucide-react";
+import { Send, Users, AlertCircle, Info, Search, Mail, Loader2, Check, ChevronDown, ChevronUp, BellOff, BellRing } from "lucide-react";
 import { toast } from "sonner";
 import { sendManualNotification } from "@/lib/actions/notifications";
 import Image from "next/image";
+import { useEffect } from "react";
 
 export function ManagerNotifications({ quota, history, allMembers, membersWithDues }: any) {
   const [targetMode, setTargetMode] = useState<"broadcast" | "specific">("broadcast");
@@ -15,6 +16,28 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
   const [customTitle, setCustomTitle] = useState("");
   const [customMessage, setCustomMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isGridExpanded, setIsGridExpanded] = useState(false);
+  const [pushPermission, setPushPermission] = useState<string>("default");
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setPushPermission(Notification.permission);
+    }
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Browser does not support notifications");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setPushPermission(permission);
+    if (permission === "granted") {
+      toast.success("Notifications enabled! You may need to refresh.");
+    } else {
+      toast.error("Notification permission denied");
+    }
+  };
 
   const toggleMemberSelection = (userId: string) => {
     setSelectedUserIds(prev => 
@@ -140,14 +163,22 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
               <div className="animate-in slide-in-from-top-2 fade-in space-y-3">
                 <div className="flex justify-between items-center">
                    <label className="text-xs font-semibold text-muted-foreground uppercase">Select Members ({selectedUserIds.length})</label>
-                   <button 
-                     onClick={() => setSelectedUserIds([])}
-                     className="text-[10px] text-primary hover:underline"
-                   >
-                     Clear Selection
-                   </button>
+                   <div className="flex gap-3">
+                     <button 
+                       onClick={() => setIsGridExpanded(!isGridExpanded)}
+                       className="text-[10px] text-primary hover:underline flex items-center gap-1"
+                     >
+                       {isGridExpanded ? <><ChevronUp size={12}/> Fold</> : <><ChevronDown size={12}/> Unfold</>}
+                     </button>
+                     <button 
+                       onClick={() => setSelectedUserIds([])}
+                       className="text-[10px] text-primary hover:underline"
+                     >
+                       Clear
+                     </button>
+                   </div>
                 </div>
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className={`grid grid-cols-4 sm:grid-cols-5 gap-3 pr-2 custom-scrollbar transition-all duration-300 ${isGridExpanded ? 'max-h-[500px]' : 'max-h-[140px] overflow-hidden'}`}>
                   {allMembers.map((m: any) => {
                     const isSelected = selectedUserIds.includes(m.id);
                     const due = membersWithDues.find((d: any) => d.id === m.id);
@@ -157,19 +188,8 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
                         onClick={() => toggleMemberSelection(m.id)}
                         className={`relative group flex flex-col items-center gap-1.5 p-1 rounded-lg transition-all ${isSelected ? 'bg-primary/10' : 'hover:bg-muted'}`}
                       >
-                        <div className={`relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'}`}>
-                          <Image 
-                            src={m.photo || "/placeholder-user.jpg"} 
-                            alt={m.name} 
-                            width={48} 
-                            height={48} 
-                            className="object-cover w-full h-full"
-                          />
-                          {isSelected && (
-                            <div className="absolute inset-0 bg-primary/40 flex items-center justify-center">
-                              <Check size={20} className="text-white" />
-                            </div>
-                          )}
+                        <div className={`relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent bg-muted'}`}>
+                          <AvatarImage src={m.photo} name={m.name} isSelected={isSelected} />
                         </div>
                         <span className={`text-[10px] truncate w-full text-center font-medium ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
                           {m.name.split(" ")[0]}
@@ -325,6 +345,55 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
           </table>
         </div>
       </div>
+      {/* Push Status Debug */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          onClick={handleEnableNotifications}
+          className={`p-3 rounded-full shadow-lg flex items-center gap-2 transition ${
+            pushPermission === "granted" ? "bg-emerald-500 text-white" : "bg-rose-500 text-white animate-bounce"
+          }`}
+          title={pushPermission === "granted" ? "Notifications Enabled" : "Notifications Disabled - Click to Enable"}
+        >
+          {pushPermission === "granted" ? <BellRing size={20} /> : <BellOff size={20} />}
+          <span className="text-xs font-bold pr-1">{pushPermission === "granted" ? "Active" : "Enable Alerts"}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AvatarImage({ src, name, isSelected }: { src?: string; name: string; isSelected: boolean }) {
+  const [error, setError] = useState(false);
+  const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+
+  if (!src || error) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-xs font-bold">
+        {initials}
+        {isSelected && (
+          <div className="absolute inset-0 bg-primary/40 flex items-center justify-center">
+            <Check size={20} className="text-white" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full">
+      <Image 
+        src={src} 
+        alt={name} 
+        fill
+        className="object-cover"
+        onError={() => setError(true)}
+        unoptimized
+      />
+      {isSelected && (
+        <div className="absolute inset-0 bg-primary/40 flex items-center justify-center">
+          <Check size={20} className="text-white" />
+        </div>
+      )}
     </div>
   );
 }
