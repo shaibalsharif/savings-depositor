@@ -12,11 +12,13 @@ export async function sendPush(
   payload: NotificationPayload
 ): Promise<"ok" | "expired"> {
   try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
     const pushPayload = JSON.stringify({
       title: payload.title,
       body: payload.body,
       url: payload.url ?? "/dashboard",
-      icon: "/icons/icon-192x192.png",
+      icon: baseUrl ? `${baseUrl}/logo.png` : "/logo.png",
+      image: baseUrl ? `${baseUrl}/logo.png` : "/logo.png",
     });
     await webpush.sendNotification(
       {

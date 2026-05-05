@@ -74,18 +74,26 @@ self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data.json(); } catch { data = { title: "Project 13", body: event.data.text() }; }
 
-  const { title = "Project 13", body = "", icon = "/icons/icon-192x192.png", url = "/dashboard" } = data;
+  const { 
+    title = "Project 13", 
+    body = "", 
+    icon = "/icons/icon-192x192.png", 
+    url = "/dashboard",
+    image = null
+  } = data;
 
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
       icon,
-      // badge: "/icons/icon-192x192.png", // Disabled to avoid black block on Android
+      badge: "/icons/icon-192x192.png",
+      image: image,
       data: { url },
-      vibrate: [200, 100, 200],
+      vibrate: [500, 110, 500, 110, 450, 110, 200, 110, 170, 40, 450, 110, 200, 110, 170, 40],
       tag: "project13-notification",
       renotify: true,
       requireInteraction: true,
+      timestamp: Date.now(),
     })
   );
 });

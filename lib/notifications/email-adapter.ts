@@ -1,17 +1,34 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(process.env.RESEND_KEY);
-const FROM = process.env.RESEND_FROM_EMAIL ?? "Project13 <onboarding@resend.dev>";
+// SMTP configuration for sending emails without a verified domain
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || "587"),
+  secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD,
+  },
+});
+
+const FROM = process.env.SMTP_FROM_EMAIL || "Project 13 <notifications@your-email.com>";
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  // If SMTP is not configured, fall back to console logging or skip
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+    console.warn("[EmailAdapter] SMTP not configured. Skipping email to:", to);
+    return;
+  }
+
   try {
-    const { data, error } = await resend.emails.send({ from: FROM, to, subject, html });
-    if (error) {
-      console.error("[EmailAdapter] Resend error:", JSON.stringify(error, null, 2));
-    } else {
-      console.log(`[EmailAdapter] Sent "${subject}" to ${to}. ID: ${data?.id}`);
-    }
+    const info = await transporter.sendMail({
+      from: FROM,
+      to,
+      subject,
+      html,
+    });
+    console.log(`[EmailAdapter] Sent "${subject}" to ${to}. MessageId: ${info.messageId}`);
   } catch (err: any) {
-    console.error("[EmailAdapter] Exception:", err.message || err);
+    console.error("[EmailAdapter] SMTP Exception:", err.message || err);
   }
 }
