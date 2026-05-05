@@ -16,10 +16,9 @@ const transporter = nodemailer.createTransport({
 const FROM = process.env.SMTP_FROM_EMAIL || "Project 13 <notifications@your-email.com>";
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  // If SMTP is not configured, fall back to console logging or skip
+  // If SMTP is not configured, throw an error so the UI/Logs can catch it
   if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-    console.warn("[EmailAdapter] SMTP not configured. Skipping email to:", to);
-    return;
+    throw new Error("SMTP credentials (USER/PASSWORD) are missing in environment variables.");
   }
 
   try {

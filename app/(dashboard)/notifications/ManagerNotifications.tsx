@@ -412,8 +412,12 @@ function AvatarImage({ src, name, isSelected }: { src?: string; name: string; is
         alt={name} 
         fill
         className="object-cover"
-        onError={() => setError(true)}
+        onError={() => {
+          console.error(`[AvatarImage] Failed to load: ${src}`);
+          setError(true);
+        }}
         unoptimized
+        referrerPolicy="no-referrer"
       />
       {isSelected && (
         <div className="absolute inset-0 bg-primary/40 flex items-center justify-center">
