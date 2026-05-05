@@ -47,12 +47,6 @@ export default async function SyncDashboardPage() {
         >
           Google Sheets Sync
         </Link>
-        <Link
-          href="/settings/reports"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          Monthly Reports
-        </Link>
       </div>
 
       <Breadcrumbs

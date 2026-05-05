@@ -27,12 +27,6 @@ export default async function DepositSettingsPage() {
         >
           Google Sheets Sync
         </Link>
-        <Link
-          href="/settings/reports"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          Monthly Reports
-        </Link>
       </div>
 
       <h1 className="text-2xl font-bold tracking-tight">Deposit Settings</h1>

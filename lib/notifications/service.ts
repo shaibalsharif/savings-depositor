@@ -34,13 +34,33 @@ async function pushToUser(userId: string, payload: NotificationPayload): Promise
   }
 }
 
+import { sentNotifications } from "@/db/schema";
+
+// Helper to log notifications
+async function logNotification(
+  senderId: string,
+  userId: string,
+  type: string,
+  title: string,
+  message: string,
+  channels: string[]
+) {
+  await db.insert(sentNotifications).values({
+    senderId,
+    userId,
+    type,
+    title,
+    message,
+    channels,
+  });
+}
+
 // ── High-level notification functions ─────────────────────────────────────
 
 export async function notifyDepositConfirmed(
   userId: string,
   data: DepositNotificationData
 ): Promise<void> {
-  // Check member preferences + get notification email
   const rows = await db.execute<{
     notify_on_deposit: boolean;
     notification_email: string | null;
@@ -53,19 +73,21 @@ export async function notifyDepositConfirmed(
   if (!prefs?.notify_on_deposit) return;
 
   const toEmail = prefs.notification_email ?? prefs.email;
+  const channels: string[] = [];
 
-  // Push notification
-  await pushToUser(userId, {
-    title: "✅ Deposit Recorded — Project 13",
-    body: `৳${data.amount.toLocaleString()} for ${data.forMonth} confirmed. Your balance: ৳${data.memberBalance.toLocaleString()}`,
-    url: "/dashboard",
-  });
+  const title = "✅ Deposit Recorded — Project 13";
+  const body = `৳${data.amount.toLocaleString()} for ${data.forMonth} confirmed. Your balance: ৳${data.memberBalance.toLocaleString()}`;
 
-  // Email notification
+  await pushToUser(userId, { title, body, url: "/dashboard" });
+  channels.push("push");
+
   if (toEmail) {
     const { subject, html } = depositConfirmedEmail(data);
     await sendEmail(toEmail, subject, html);
+    channels.push("email");
   }
+
+  await logNotification("system", userId, "deposit", title, body, channels);
 }
 
 export async function notifyDepositReminder(
@@ -84,17 +106,21 @@ export async function notifyDepositReminder(
   if (!prefs?.notify_on_reminder) return;
 
   const toEmail = prefs.notification_email ?? prefs.email;
+  const channels: string[] = [];
 
-  await pushToUser(userId, {
-    title: "⚠️ Deposit Reminder",
-    body: `${data.forMonth} deposit of ৳${data.amountDue.toLocaleString()} is still pending!`,
-    url: "/dashboard",
-  });
+  const title = "⚠️ Deposit Reminder";
+  const body = `${data.forMonth} deposit of ৳${data.amountDue.toLocaleString()} is still pending!`;
+
+  await pushToUser(userId, { title, body, url: "/dashboard" });
+  channels.push("push");
 
   if (toEmail) {
     const { subject, html } = depositReminderEmail(data);
     await sendEmail(toEmail, subject, html);
+    channels.push("email");
   }
+
+  await logNotification("system", userId, "reminder", title, body, channels);
 }
 
 export async function notifyMonthlySummary(
@@ -113,18 +139,65 @@ export async function notifyMonthlySummary(
   if (!prefs?.notify_on_summary) return;
 
   const toEmail = prefs.notification_email ?? prefs.email;
+  const channels: string[] = [];
+  
   const pct = data.totalExpected > 0
     ? Math.round((data.totalCollected / data.totalExpected) * 100)
     : 0;
 
-  await pushToUser(userId, {
-    title: `📊 ${data.forMonth} Summary — Project 13`,
-    body: `Collected ৳${data.totalCollected.toLocaleString()} of ৳${data.totalExpected.toLocaleString()} (${pct}%). Fund: ৳${data.fundBalance.toLocaleString()}`,
-    url: "/dashboard",
-  });
+  const title = `📊 ${data.forMonth} Summary — Project 13`;
+  const body = `Collected ৳${data.totalCollected.toLocaleString()} of ৳${data.totalExpected.toLocaleString()} (${pct}%). Fund: ৳${data.fundBalance.toLocaleString()}`;
+
+  await pushToUser(userId, { title, body, url: "/dashboard" });
+  channels.push("push");
 
   if (toEmail) {
     const { subject, html } = monthlySummaryEmail(data);
     await sendEmail(toEmail, subject, html);
+    channels.push("email");
   }
+
+  await logNotification("system", userId, "summary", title, body, channels);
+}
+
+export async function notifyCustom(
+  senderId: string,
+  userId: string,
+  title: string,
+  message: string,
+  type: string = "info"
+): Promise<void> {
+  const rows = await db.execute<{
+    notification_email: string | null;
+    email: string | null;
+  }>(
+    sql`SELECT notification_email, email FROM personal_info WHERE user_id = ${userId} LIMIT 1`
+  );
+
+  const prefs = rows.rows[0];
+  if (!prefs) return;
+
+  const toEmail = prefs.notification_email ?? prefs.email;
+  const channels: string[] = [];
+
+  await pushToUser(userId, { title, body: message, url: "/notifications" });
+  channels.push("push");
+
+  if (toEmail) {
+    // Basic custom email template
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #0f172a;">${title}</h2>
+        <p style="color: #334155; line-height: 1.6; font-size: 16px;">
+          ${message.replace(/\n/g, "<br/>")}
+        </p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+        <p style="color: #94a3b8; font-size: 12px;">Sent via Project 13 Notification System.</p>
+      </div>
+    `;
+    await sendEmail(toEmail, title, html);
+    channels.push("email");
+  }
+
+  await logNotification(senderId, userId, type, title, message, channels);
 }

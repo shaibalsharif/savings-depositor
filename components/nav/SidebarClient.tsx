@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   FileText,
+  Bell,
 } from "lucide-react";
 import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
 
@@ -180,6 +181,28 @@ export function SidebarClient({
 
         {/* Footer */}
         <div className={`py-4 border-t space-y-1 ${isCollapsed ? "px-2" : "px-3"}`} style={{ borderColor: "hsl(var(--border))" }}>
+          <Link
+            href="/notifications"
+            title={isCollapsed ? "Notifications" : undefined}
+            className={`relative flex items-center rounded-md text-sm font-medium transition-all group mb-1 ${
+              isCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
+            } ${
+              isActive("/notifications")
+                ? "nav-link-active"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            <span style={{ opacity: isActive("/notifications") ? 1 : 0.7 }}>
+              <Bell size={17} />
+            </span>
+            {!isCollapsed && <span>Notifications</span>}
+            {isCollapsed && (
+              <div className="absolute left-14 bg-popover text-popover-foreground text-xs font-semibold px-3 py-2 rounded-md border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none whitespace-nowrap z-50">
+                Notifications
+              </div>
+            )}
+          </Link>
+
           <LogoutLink className={`relative flex w-full items-center rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-all group ${isCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"}`}>
             <LogOut size={17} style={{ opacity: 0.7 }} />
             {!isCollapsed && <span>Sign Out</span>}

@@ -211,3 +211,15 @@ export const logs = pgTable("logs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const sentNotifications = pgTable("sent_notifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  senderId: varchar("sender_id", { length: 255 }).notNull(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  channels: jsonb("channels").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
