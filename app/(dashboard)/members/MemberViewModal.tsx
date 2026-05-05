@@ -80,8 +80,11 @@ export function MemberViewModal({
             <div className="font-medium text-foreground">{member.mother || "—"}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground mb-0.5">Mobile Contact</div>
-            <div className="font-medium text-foreground font-mono text-xs">{member.mobile}</div>
+            <div className="text-xs text-muted-foreground mb-0.5">Contact Info</div>
+            <div className="flex flex-col">
+              <span className="font-medium text-foreground font-mono text-xs">{member.mobile}</span>
+              <span className="text-[11px] text-muted-foreground lowercase">{member.email || "no-email@set.com"}</span>
+            </div>
           </div>
           <div>
             <div className="text-xs text-muted-foreground mb-0.5">Date of Birth</div>

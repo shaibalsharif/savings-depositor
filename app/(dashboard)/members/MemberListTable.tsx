@@ -55,7 +55,7 @@ export function MemberListTable({
                 <th className="col-id">ID</th>
                 <th className="col-name">Name</th>
                 <th className="col-profession max-w-[120px]">Profession</th>
-                <th className="col-mobile">Mobile</th>
+                <th className="col-mobile">Contact</th>
                 <th className="col-position">Position</th>
                 <th className="col-joined">Joined Date</th>
                 <th className="col-actions">Actions</th>
@@ -89,7 +89,14 @@ export function MemberListTable({
                         {m.profession || "—"}
                       </span>
                     </td>
-                    <td className="col-mobile font-mono text-sm">{m.mobile}</td>
+                    <td className="col-mobile">
+                      <div className="flex flex-col">
+                        <span className="font-mono text-sm">{m.mobile}</span>
+                        <span className="text-[10px] text-muted-foreground lowercase truncate max-w-[150px]" title={m.email || ""}>
+                          {m.email || "no-email@set.com"}
+                        </span>
+                      </div>
+                    </td>
                     <td className="col-position">
                       <div className="flex flex-col justify-center min-h-[44px] gap-1 relative select-none">
                         <span

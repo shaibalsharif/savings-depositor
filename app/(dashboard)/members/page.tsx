@@ -31,15 +31,17 @@ export default async function MembersPage() {
 
   // Get full member information
   const allMembers = await db.select().from(personalInfo);
+  console.log(`[MembersPage] Fetched ${allMembers.length} members. Photos present: ${allMembers.filter(m => m.photo).length}`);
 
   // Read full profiles including nominees for all members
   const profilesWithNominees = await Promise.all(
     allMembers.map(async (m) => {
       const full = await getMemberFullProfile(m.userId);
+      const photo = m.photo?.startsWith("blob:") ? "" : (m.photo || "");
       return {
         ...m,
         mobile: formatPhoneNumber(m.mobile),
-        photo: m.photo || "",
+        photo,
         nominee: full.nominee ? {
           ...full.nominee,
           mobile: formatPhoneNumber(full.nominee.mobile)
@@ -52,7 +54,7 @@ export default async function MembersPage() {
     { id: "id", label: "ID", defaultHidden: true },
     { id: "name", label: "Name" },
     { id: "profession", label: "Profession" },
-    { id: "mobile", label: "Mobile" },
+    { id: "mobile", label: "Contact" },
     { id: "position", label: "Position" },
     { id: "joined", label: "Joined Date" },
     { id: "actions", label: "Actions" },

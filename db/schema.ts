@@ -160,6 +160,7 @@ export const personalInfo = pgTable("personal_info", {
   presentAddress: text("present_address").notNull(),
   permanentAddress: text("permanent_address").notNull(),
   mobile: varchar("mobile", { length: 20 }).notNull(),
+  email: varchar("email", { length: 255 }),
   nidNumber: varchar("nid_number", { length: 17 }).notNull(),
   nidFront: text("nid_front"),
   nidBack: text("nid_back"),

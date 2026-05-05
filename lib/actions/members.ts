@@ -43,6 +43,7 @@ export async function updateMemberFullProfile(
     presentAddress?: string;
     permanentAddress?: string;
     mobile?: string;
+    email?: string;
     nidNumber?: string;
     photo?: string;
   },
@@ -70,6 +71,7 @@ export async function updateMemberFullProfile(
   if (personal.presentAddress !== undefined) pUpdates.presentAddress = personal.presentAddress;
   if (personal.permanentAddress !== undefined) pUpdates.permanentAddress = personal.permanentAddress;
   if (personal.mobile !== undefined) pUpdates.mobile = personal.mobile;
+  if (personal.email !== undefined) pUpdates.email = personal.email;
   if (personal.nidNumber !== undefined) pUpdates.nidNumber = personal.nidNumber;
   if (personal.photo !== undefined) pUpdates.photo = personal.photo;
 

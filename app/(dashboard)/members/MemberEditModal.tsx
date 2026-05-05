@@ -24,6 +24,7 @@ export function MemberEditModal({
     presentAddress: "",
     permanentAddress: "",
     mobile: "",
+    email: "",
     nidNumber: "",
     photo: "",
   });
@@ -54,6 +55,7 @@ export function MemberEditModal({
         presentAddress: member.presentAddress || "",
         permanentAddress: member.permanentAddress || "",
         mobile: member.mobile || "",
+        email: member.email || "",
         nidNumber: member.nidNumber || "",
         photo: member.photo || "",
       });
@@ -198,6 +200,16 @@ export function MemberEditModal({
                     value={personal.mobile}
                     onChange={(e) => setPersonal({ ...personal, mobile: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold">Email Address</label>
+                  <input
+                    type="email"
+                    value={personal.email}
+                    onChange={(e) => setPersonal({ ...personal, email: e.target.value })}
+                    className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground lowercase"
+                    placeholder="email@example.com"
                   />
                 </div>
                 <div>
