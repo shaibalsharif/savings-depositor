@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { X, Search, Filter, SortDesc, SortAsc } from "lucide-react";
 
@@ -23,6 +24,11 @@ export function OutstandingPendingsSection({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<"due-desc" | "due-asc" | "name">("due-desc");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Get all unique months from breakdowns to offer as filters
   const allMonths = Array.from(
@@ -124,10 +130,10 @@ export function OutstandingPendingsSection({
         </div>
       )}
 
-      {/* See All Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-background border border-border rounded-xl shadow-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden max-h-[800px] transform animate-in scale-in-95">
+      {/* See All Modal - Portaled to body to escape containment by .glass parent */}
+      {modalOpen && mounted && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-background border border-border rounded-xl shadow-2xl max-w-6xl w-full h-[85vh] flex flex-col overflow-hidden max-h-[800px] transform animate-in scale-in-95">
             {/* Header */}
             <div className="p-4 sm:px-6 sm:py-4 border-b border-border flex items-center justify-between flex-shrink-0">
               <div>
@@ -212,7 +218,7 @@ export function OutstandingPendingsSection({
                   No matching members found.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredMembers.map((m) => {
                     const pct = totalOutstanding > 0 ? (m.due / totalOutstanding) * 100 : 0;
                     return (
@@ -273,7 +279,8 @@ export function OutstandingPendingsSection({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
