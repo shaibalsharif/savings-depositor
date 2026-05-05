@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { X, Search, Filter, SortDesc, SortAsc } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type MemberPending = {
   memberId: string;
@@ -130,14 +130,14 @@ export function OutstandingPendingsSection({
         </div>
       )}
 
-      {/* See All Modal - Portaled to body to escape containment by .glass parent */}
-      {modalOpen && mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-background border border-border rounded-xl shadow-2xl max-w-6xl w-full h-[85vh] flex flex-col overflow-hidden max-h-[800px] transform animate-in scale-in-95">
+      {/* See All Modal - Using UI Dialog for reliable portaling and full-body width */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col p-0 overflow-hidden sm:max-w-7xl border-none shadow-2xl bg-background">
+          <div className="flex flex-col h-full overflow-hidden">
             {/* Header */}
-            <div className="p-4 sm:px-6 sm:py-4 border-b border-border flex items-center justify-between flex-shrink-0">
+            <div className="p-4 sm:px-6 sm:py-4 border-b border-border flex items-center justify-between flex-shrink-0 bg-background">
               <div>
-                <h3 className="text-base sm:text-lg font-bold">Outstanding Dues Breakdown</h3>
+                <DialogTitle className="text-base sm:text-lg font-bold">Outstanding Dues Breakdown</DialogTitle>
                 <p className="text-xs text-muted-foreground">Detailed allocation status and contribution impact for each member.</p>
               </div>
               <button
@@ -279,9 +279,8 @@ export function OutstandingPendingsSection({
               )}
             </div>
           </div>
-        </div>,
-        document.body
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
