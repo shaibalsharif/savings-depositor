@@ -6,6 +6,7 @@ import { PaymentHeatmap } from "@/components/charts/PaymentHeatmap";
 import { format } from "date-fns";
 import { formatLocalDate } from "@/lib/format-date";
 import Link from "next/link";
+import { PaymentPatternSection } from "./PaymentPatternSection";
 import { ProjectionTrigger } from "../projection/ProjectionTrigger";
 import { OutstandingPendingsSection } from "./OutstandingPendingsSection";
 
@@ -191,19 +192,7 @@ async function ManagerDash() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Heatmap */}
         <div className="lg:col-span-3">
-          <SectionBox title="Member Payment Pattern (Last 12 Months)">
-            <div className="px-4 pb-4 sm:px-5 sm:pb-5 overflow-x-auto">
-              <PaymentHeatmap
-                data={stats.heatmapData}
-                months={stats.monthlyChart.map((_, i) => {
-                  const d = new Date();
-                  d.setDate(1);
-                  d.setMonth(d.getMonth() - 11 + i);
-                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-                })}
-              />
-            </div>
-          </SectionBox>
+          <PaymentPatternSection initialData={stats.heatmapData} />
         </div>
 
         {/* Outstanding Pendings Section Component */}

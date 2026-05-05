@@ -148,14 +148,19 @@ export async function getManagerDashboardStats() {
     };
   });
 
-  // ── Member payment heatmap data (last 12 months × all members) ──────────────
+  // ── Member payment heatmap data (current year × all members) ────────────────
+  const currentYearNum = new Date().getFullYear();
+  const monthsInYear = Array.from({ length: 12 }, (_, i) => 
+    `${currentYearNum}-${String(i + 1).padStart(2, "0")}`
+  );
+
   const heatmapData = allMembers.map((member) => {
     const memAllocs = allAllocations.filter((a) => a.memberId === member.userId);
     const paidByMonth = memAllocs.reduce((acc, a) => {
       acc[a.forMonth] = (acc[a.forMonth] || 0) + Number(a.amountAllocated);
       return acc;
     }, {} as Record<string, number>);
-    const months = last12.map((m) => {
+    const months = monthsInYear.map((m) => {
       const exp = getExpectedForMonth(settingsSorted, m);
       const paid = paidByMonth[m] || 0;
       const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
@@ -201,8 +206,55 @@ export async function getManagerDashboardStats() {
     currentMonthAllocated: currentAllocated,
     memberPendings,
     monthlyChart,
-    heatmapData,
+    heatmapData: {
+      year: currentYearNum,
+      months: monthsInYear,
+      heatmapData,
+    },
     trendChart,
+  };
+}
+
+export async function getHeatmapData(year: number) {
+  const [allAllocations, allSettings, allMembers] = await Promise.all([
+    db.select().from(depositAllocations),
+    db.select().from(depositSettings).orderBy(desc(depositSettings.effectiveMonth)),
+    db.select().from(personalInfo),
+  ]);
+
+  const settingsSorted = [...allSettings].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth));
+  
+  // Jan to Dec for the given year
+  const monthsInYear = Array.from({ length: 12 }, (_, i) => 
+    `${year}-${String(i + 1).padStart(2, "0")}`
+  );
+
+  const heatmapData = allMembers.map((member) => {
+    const memAllocs = allAllocations.filter((a) => a.memberId === member.userId);
+    const paidByMonth = memAllocs.reduce((acc, a) => {
+      acc[a.forMonth] = (acc[a.forMonth] || 0) + Number(a.amountAllocated);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const months = monthsInYear.map((m) => {
+      const exp = getExpectedForMonth(settingsSorted, m);
+      const paid = paidByMonth[m] || 0;
+      const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
+      return { month: m, paid, expected: exp, pct };
+    });
+
+    return { 
+      memberId: member.userId, 
+      name: member.name, 
+      photo: member.photo, 
+      months 
+    };
+  });
+
+  return {
+    year,
+    months: monthsInYear,
+    heatmapData
   };
 }
 
