@@ -102,6 +102,10 @@ export async function sendManualNotification(data: {
     return { success: true, count: targets.length };
   } catch (error: any) {
     console.error("[NotificationAction] Failed to send notifications:", error);
-    return { success: false, error: error.message };
+    // Return a more descriptive error for the UI to show
+    return { 
+      success: false, 
+      error: error.message || "Failed to send notification. Check server logs for SMTP details." 
+    };
   }
 }
