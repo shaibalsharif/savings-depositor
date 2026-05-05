@@ -258,6 +258,46 @@ export async function getHeatmapData(year: number) {
   };
 }
 
+export async function getAllTimeHeatmapData() {
+  const [allAllocations, allSettings, allMembers] = await Promise.all([
+    db.select().from(depositAllocations),
+    db.select().from(depositSettings).orderBy(desc(depositSettings.effectiveMonth)),
+    db.select().from(personalInfo),
+  ]);
+
+  const settingsSorted = [...allSettings].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth));
+
+  // From the very first settings month to today
+  const globalStart = settingsSorted.length > 0 ? settingsSorted[0].effectiveMonth : "2024-01";
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const allMonths = generateMonthRange(globalStart, currentMonth);
+
+  const heatmapData = allMembers.map((member) => {
+    const memAllocs = allAllocations.filter((a) => a.memberId === member.userId);
+    const paidByMonth = memAllocs.reduce((acc, a) => {
+      acc[a.forMonth] = (acc[a.forMonth] || 0) + Number(a.amountAllocated);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const months = allMonths.map((m) => {
+      const exp = getExpectedForMonth(settingsSorted, m);
+      const paid = paidByMonth[m] || 0;
+      const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
+      return { month: m, paid, expected: exp, pct };
+    });
+
+    return { memberId: member.userId, name: member.name, photo: member.photo, months };
+  });
+
+  return {
+    year: null as null,
+    months: allMonths,
+    heatmapData,
+    startMonth: globalStart,
+    endMonth: currentMonth,
+  };
+}
+
 // ─── Member Dashboard Stats ───────────────────────────────────────────────────
 export async function getMemberDashboardStats(memberId: string) {
   const [allAllocations, allSettings, myPayments] = await Promise.all([
