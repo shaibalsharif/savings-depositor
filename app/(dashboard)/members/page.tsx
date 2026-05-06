@@ -37,10 +37,12 @@ export default async function MembersPage() {
   const profilesWithNominees = await Promise.all(
     allMembers.map(async (m) => {
       const full = await getMemberFullProfile(m.userId);
-      const photo = m.photo?.startsWith("blob:") ? "" : (m.photo || "");
+      const profile = full.profile || m;
+      const photo = profile.photo?.startsWith("blob:") ? "" : (profile.photo || "");
+      
       return {
-        ...m,
-        mobile: formatPhoneNumber(m.mobile),
+        ...profile,
+        mobile: formatPhoneNumber(profile.mobile),
         photo,
         nominee: full.nominee ? {
           ...full.nominee,

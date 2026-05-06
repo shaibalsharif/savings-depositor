@@ -46,7 +46,6 @@ export function MemberViewModal({
           <div className="flex items-center gap-4">
             <UserAvatar src={member.photo} name={member.name} className="w-16 h-16 text-xl" />
             <div>
-            <div>
               <h2 className="text-xl font-bold tracking-tight">{member.name}</h2>
               <p className="text-xs text-muted-foreground capitalize">{member.position || "Member"}</p>
             </div>
@@ -132,7 +131,6 @@ export function MemberViewModal({
         <div className="border-t pt-4 space-y-3">
           <div className="flex items-center gap-4 mb-2">
             <UserAvatar src={member.nominee?.photo} name={member.nominee?.name || "Nominee"} className="w-14 h-14 text-lg" />
-            <div>
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Nominee Info</h3>
               <p className="text-xs text-muted-foreground">{member.nominee?.relation || "Nominee"}</p>
