@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Send, Users, AlertCircle, Info, Search, Mail, Loader2, Check, ChevronDown, ChevronUp, BellOff, BellRing } from "lucide-react";
+import { Send, Users, AlertCircle, Info, Search, Mail, Loader2, Check, ChevronDown, ChevronUp, Bell, CheckCircle2, Inbox } from "lucide-react";
 import { toast } from "sonner";
-import { sendManualNotification } from "@/lib/actions/notifications";
+import { sendManualNotification, markNotificationAsRead } from "@/lib/actions/notifications";
 import Image from "next/image";
-import { useEffect } from "react";
 
-export function ManagerNotifications({ quota, history, allMembers, membersWithDues }: any) {
+export function ManagerNotifications({ quota, history, allMembers, membersWithDues, myNotifications }: any) {
   const [targetMode, setTargetMode] = useState<"broadcast" | "specific">("broadcast");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [msgType, setMsgType] = useState<"info" | "reminder">("info");
@@ -18,6 +17,8 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
   const [loading, setLoading] = useState(false);
   const [isGridExpanded, setIsGridExpanded] = useState(false);
   const [pushPermission, setPushPermission] = useState<string>("default");
+  const [activeTab, setActiveTab] = useState<"compose" | "inbox">("compose");
+  const [myNotifsState, setMyNotifsState] = useState<any[]>(myNotifications || []);
 
   useEffect(() => {
     if ("Notification" in window) {
@@ -33,10 +34,40 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
     const permission = await Notification.requestPermission();
     setPushPermission(permission);
     if (permission === "granted") {
-      toast.success("Notifications enabled! You may need to refresh.");
+      // Subscribe THIS device so the manager receives push on Mac Chrome too
+      try {
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (vapidKey && "serviceWorker" in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          const existing = await reg.pushManager.getSubscription();
+          let sub = existing;
+          if (!sub) {
+            const padding = "=".repeat((4 - vapidKey.length % 4) % 4);
+            const b64 = (vapidKey + padding).replace(/-/g, "+").replace(/_/g, "/");
+            const raw = window.atob(b64);
+            const key = Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+          }
+          const json = sub.toJSON();
+          await fetch("/api/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+          });
+          toast.success("Push notifications enabled for this device!");
+        }
+      } catch (e) {
+        console.warn("Push subscription failed:", e);
+        toast.success("Permission granted — reload to activate push on this device.");
+      }
     } else {
       toast.error("Notification permission denied");
     }
+  };
+
+  const handleMarkRead = async (id: number) => {
+    await markNotificationAsRead(id);
+    setMyNotifsState(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
   };
 
   const toggleMemberSelection = (userId: string) => {
@@ -117,6 +148,7 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
   };
 
   const pctUsed = Math.min(100, Math.round((quota.used / quota.total) * 100));
+  const unreadCount = myNotifsState.filter((n: any) => !n.isRead).length;
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-20">
@@ -172,7 +204,95 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      {/* Tab switcher: Compose vs My Inbox */}
+      <div className="flex gap-1 bg-muted/30 border p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveTab("compose")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === "compose"
+              ? "bg-card shadow text-foreground border"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Send size={14} /> Compose
+        </button>
+        <button
+          onClick={() => setActiveTab("inbox")}
+          className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === "inbox"
+              ? "bg-card shadow text-foreground border"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Inbox size={14} /> My Notifications
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* My Received Notifications (Manager's own inbox) */}
+      {activeTab === "inbox" && (
+        <div className="space-y-4">
+          {myNotifsState.length === 0 ? (
+            <div className="glass p-12 rounded-xl border flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
+                <Bell size={32} />
+              </div>
+              <h3 className="text-lg font-bold">No Notifications Yet</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mt-2">
+                When deposit confirmations, reminders, or updates are sent to you, they will appear here.
+              </p>
+            </div>
+          ) : (
+            myNotifsState.map((n: any) => (
+              <div
+                key={n.id}
+                className={`glass p-5 rounded-xl border transition-all ${
+                  n.isRead ? "opacity-70 bg-card/50" : "border-primary/30 shadow-md bg-card/80"
+                }`}
+              >
+                <div className="flex gap-4 items-start">
+                  <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center mt-1 ${
+                    n.type === "deposit" ? "bg-emerald-500/10 text-emerald-500" :
+                    n.type === "reminder" ? "bg-rose-500/10 text-rose-500" :
+                    n.type === "summary" ? "bg-purple-500/10 text-purple-500" :
+                    "bg-blue-500/10 text-blue-500"
+                  }`}>
+                    {n.type === "deposit" ? <CheckCircle2 size={20} /> :
+                     n.type === "reminder" ? <AlertCircle size={20} /> :
+                     n.type === "summary" ? <Bell size={20} /> :
+                     <Info size={20} />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start gap-4">
+                      <h3 className={`font-bold ${!n.isRead ? "text-foreground" : "text-foreground/80"}`}>{n.title}</h3>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {format(new Date(n.createdAt), "MMM d, h:mm a")}
+                      </div>
+                    </div>
+                    <div className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                      {n.message}
+                    </div>
+                    {!n.isRead && (
+                      <button
+                        onClick={() => handleMarkRead(n.id)}
+                        className="mt-3 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                      >
+                        Mark as read
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === "compose" && <div className="grid lg:grid-cols-2 gap-8">
         {/* Compose Panel */}
         <div className="glass p-6 rounded-xl border space-y-6">
           <h2 className="text-lg font-bold border-b pb-2">Compose Notification</h2>
@@ -321,10 +441,12 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
             {loading ? "Sending..." : targetMode === "broadcast" ? "Broadcast to All Members" : `Send to ${selectedUserIds.length} Members`}
           </button>
         </div>
-      </div>
+      </div>}
 
-      {/* History Table */}
-      <div className="glass rounded-xl border overflow-hidden">
+      {activeTab === "compose" && (
+        <>
+          {/* History Table */}
+          <div className="glass rounded-xl border overflow-hidden">
         <div className="p-4 border-b bg-muted/20 flex justify-between items-center">
           <h2 className="font-bold">Sent History (Last 100)</h2>
         </div>
@@ -383,7 +505,9 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
             </tbody>
           </table>
         </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -7,31 +7,45 @@ on:
   # Also allows manual trigger from GitHub UI → Actions tab → "Run workflow"
   workflow_dispatch:
 
+# Prevent overlapping runs — if a previous run is still going, cancel it.
+# This is the main cause of "All jobs were cancelled" emails.
+concurrency:
+  group: sheets-sync-retry
+  cancel-in-progress: true
+
 jobs:
   retry-sync:
     name: Retry pending sheet syncs
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5  # Increased from 2 to handle Vercel cold starts (~1-3s)
 
     steps:
       - name: Call retry-sync endpoint
         run: |
           if [ -z "${{ secrets.APP_URL }}" ] || [ -z "${{ secrets.CRON_SECRET }}" ]; then
-            echo "⚠️ Secrets APP_URL or CRON_SECRET are not set in GitHub repository secrets. Exiting gracefully."
+            echo "⚠️ Secrets APP_URL or CRON_SECRET are not set in GitHub repository secrets."
+            echo "   Go to: github.com/shaibalsharif/savings-depositor → Settings → Secrets and variables → Actions"
+            echo "   Required secrets: APP_URL (e.g. https://savings-depositor.vercel.app) and CRON_SECRET"
             exit 0
           fi
 
+          echo "Calling: ${{ secrets.APP_URL }}/api/cron/retry-sync"
+
           HTTP_STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            --max-time 60 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.APP_URL }}/api/cron/retry-sync")
 
-          BODY=$(cat /tmp/response.json || echo "")
-          echo "Status: $HTTP_STATUS"
+          BODY=$(cat /tmp/response.json 2>/dev/null || echo "")
+          echo "HTTP Status: $HTTP_STATUS"
           echo "Response: $BODY"
 
-          if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "⚠️ Retry endpoint returned non-200 status: $HTTP_STATUS. (Handled gracefully to prevent workflow notification emails)."
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✅ Sync retry completed successfully"
+          elif [ "$HTTP_STATUS" -eq 401 ]; then
+            echo "⚠️ Unauthorized — CRON_SECRET may be wrong. Exiting gracefully."
+            exit 0
+          else
+            echo "⚠️ Unexpected status $HTTP_STATUS — exiting gracefully (no failure email)."
             exit 0
           fi
-
-          echo "✅ Sync retry completed successfully"

@@ -2,6 +2,7 @@
 const nextConfig = {
   images: {
     remotePatterns: [
+      // UploadThing CDN domains (utfs.io is legacy, ufs.sh is the newer CDN)
       {
         protocol: 'https',
         hostname: 'utfs.io',
@@ -9,6 +10,19 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'uploadthing.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.ufs.sh', // UploadThing's newer CDN subdomain — fixes avatar 400s on Vercel
+      },
+      {
+        protocol: 'https',
+        hostname: 'ufs.sh',
+      },
+      // Google OAuth profile photos (Kinde users with Google accounts)
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
       },
     ],
   },

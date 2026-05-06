@@ -11,10 +11,14 @@ export default async function NotificationsPage() {
   const manager = await isManager();
 
   if (manager) {
-    const quota = await getNotificationQuota();
-    const history = await getManagerNotificationHistory();
-    const stats = await getManagerDashboardStats();
-    
+    // Fetch both manager tools AND the manager's own received notifications
+    const [quota, history, myNotifications, stats] = await Promise.all([
+      getNotificationQuota(),
+      getManagerNotificationHistory(),
+      getMemberNotifications(), // manager is also a member — fetch their inbox
+      getManagerDashboardStats(),
+    ]);
+
     const membersWithDues = stats.memberPendings.map((m: any) => {
        const totalDue = m.breakdown.reduce((sum: number, b: any) => sum + b.due, 0);
        return { id: m.memberId, name: m.name, totalDue, breakdown: m.breakdown };
@@ -29,10 +33,12 @@ export default async function NotificationsPage() {
              quota={quota} 
              history={history} 
              allMembers={allMembers}
-             membersWithDues={membersWithDues} 
+             membersWithDues={membersWithDues}
+             myNotifications={myNotifications}
            />;
   } else {
     const notifications = await getMemberNotifications();
     return <MemberNotifications notifications={notifications} />;
   }
 }
+

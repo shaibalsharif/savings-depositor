@@ -1,119 +1,352 @@
-const CACHE_NAME = "project13-cache-v1";
-const ASSETS_TO_CACHE = [
-  "/",
+// ═══════════════════════════════════════════════════════════════════════════
+// Project 13 — Service Worker v3
+// Strategy:
+//   SHELL   → cache-first  (app shell, icons, fonts, CSS/JS bundles)
+//   PAGES   → stale-while-revalidate  (HTML navigations get cached copy
+//              instantly, then refreshed in background)
+//   API     → network-first with cache fallback (fresh when online, cached
+//              when offline — for the data routes we care about)
+//   PUSH    → handled directly (no fetch strategy)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SW_VERSION = "v3.1";
+const SHELL_CACHE   = `p13-shell-${SW_VERSION}`;
+const PAGES_CACHE   = `p13-pages-${SW_VERSION}`;
+const API_CACHE     = `p13-api-${SW_VERSION}`;
+const IMAGE_CACHE   = `p13-images-${SW_VERSION}`;
+const ALL_CACHES    = [SHELL_CACHE, PAGES_CACHE, API_CACHE, IMAGE_CACHE];
+
+// ── Assets to pre-cache on install ──────────────────────────────────────────
+const SHELL_ASSETS = [
+  "/offline.html",          // our offline fallback page
   "/manifest.json",
+  "/logo.png",
   "/icons/icon-192x192.png",
-  "/icons/icon-512x512.png"
+  "/icons/icon-512x512.png",
 ];
 
+// ── App pages to warm-cache on install (stale-while-revalidate candidates) ──
+const PAGE_WARMUP = [
+  "/dashboard",
+  "/my-deposits",
+  "/expenses",
+  "/investments",
+  "/my-profile",
+  "/settings/deposits",
+];
+
+// ── API routes to cache (network-first, offline fallback) ───────────────────
+// These produce JSON that we want accessible offline.
+const CACHEABLE_API_PATTERNS = [
+  /\/api\/offline-cache\/.*/,   // our dedicated cache-warming endpoint
+];
+
+// ────────────────────────────────────────────────────────────────────────────
+// INSTALL — pre-cache shell + attempt page warmup
+// ────────────────────────────────────────────────────────────────────────────
 self.addEventListener("install", (event) => {
+  console.log(`[SW ${SW_VERSION}] Installing…`);
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+    (async () => {
+      // 1. Cache shell assets (must succeed)
+      const shellCache = await caches.open(SHELL_CACHE);
+      await shellCache.addAll(SHELL_ASSETS);
+      console.log(`[SW ${SW_VERSION}] Shell assets cached`);
+
+      // 2. Warm page cache (best-effort, failures are OK at install time)
+      const pagesCache = await caches.open(PAGES_CACHE);
+      await Promise.allSettled(
+        PAGE_WARMUP.map(url =>
+          fetch(url, { credentials: "include" })
+            .then(res => {
+              if (res.ok) return pagesCache.put(url, res);
+            })
+            .catch(() => {}) // not authenticated yet — that's fine
+        )
+      );
+    })()
   );
+  // Take over immediately without waiting for existing tabs to close
   self.skipWaiting();
 });
 
+// ────────────────────────────────────────────────────────────────────────────
+// ACTIVATE — prune old caches
+// ────────────────────────────────────────────────────────────────────────────
 self.addEventListener("activate", (event) => {
+  console.log(`[SW ${SW_VERSION}] Activating…`);
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(k => !ALL_CACHES.includes(k))
+          .map(k => {
+            console.log(`[SW ${SW_VERSION}] Deleting old cache: ${k}`);
+            return caches.delete(k);
+          })
       );
-    })
+      await self.clients.claim();
+      console.log(`[SW ${SW_VERSION}] Active and controlling all clients`);
+    })()
   );
-  self.clients.claim();
 });
 
+// ────────────────────────────────────────────────────────────────────────────
+// FETCH — tiered strategy
+// ────────────────────────────────────────────────────────────────────────────
 self.addEventListener("fetch", (event) => {
-  // Only intercept HTTP/HTTPS GET requests
-  if (event.request.method !== "GET") return;
+  const req = event.request;
+  const url = new URL(req.url);
 
-  const url = new URL(event.request.url);
-  // Do not intercept auth-related routes or API routes needing fresh data
-  if (url.pathname.startsWith("/api/auth") || url.pathname.includes("kinde")) return;
+  // Only handle same-origin or HTTPS requests; skip chrome-extension, etc.
+  if (!url.protocol.startsWith("http")) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => cachedResponse);
+  // ── Skip Kinde/auth flows entirely — must always go to network ──────────
+  if (
+    url.pathname.startsWith("/api/auth") ||
+    url.hostname.includes("kinde.com") ||
+    url.pathname.includes("/kinde")
+  ) return;
 
-      // Cache first for static assets, network first for pages/dynamic
-      if (
-        url.pathname.startsWith("/_next/") ||
-        url.pathname.includes(".png") ||
-        url.pathname.includes(".svg")
-      ) {
-        return cachedResponse || fetchPromise;
-      }
+  // ── Non-GET: pass through (POST/PUT mutations must hit network) ──────────
+  if (req.method !== "GET") return;
 
-      return fetchPromise || cachedResponse;
-    })
-  );
+  // ── 1. Next.js static chunks & fonts → cache-first (SHELL) ─────────────
+  if (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/_next/image") ||
+    url.pathname.endsWith(".woff2") ||
+    url.pathname.endsWith(".woff") ||
+    url.pathname.endsWith(".ico")
+  ) {
+    event.respondWith(cacheFirst(req, SHELL_CACHE));
+    return;
+  }
+
+  // ── 2. Static public assets (icons, logo, manifest) → cache-first ───────
+  if (
+    url.pathname === "/manifest.json" ||
+    url.pathname === "/logo.png" ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname === "/offline.html"
+  ) {
+    event.respondWith(cacheFirst(req, SHELL_CACHE));
+    return;
+  }
+
+  // ── 3. Remote images (UploadThing CDN, Google avatars) → cache with TTL ─
+  if (
+    url.hostname.endsWith("ufs.sh") ||
+    url.hostname === "utfs.io" ||
+    url.hostname === "uploadthing.com" ||
+    url.hostname === "lh3.googleusercontent.com"
+  ) {
+    event.respondWith(cacheFirstWithExpiry(req, IMAGE_CACHE, 7 * 24 * 60 * 60));
+    return;
+  }
+
+  // ── 4. Cacheable API routes → network-first with JSON fallback ───────────
+  if (
+    url.pathname.startsWith("/api/") &&
+    CACHEABLE_API_PATTERNS.some(p => p.test(url.pathname))
+  ) {
+    event.respondWith(networkFirstAPI(req, API_CACHE));
+    return;
+  }
+
+  // ── 5. Skip all other API routes (must be fresh) ─────────────────────────
+  if (url.pathname.startsWith("/api/")) return;
+
+  // ── 6. HTML page navigations → stale-while-revalidate with offline shell ─
+  if (req.headers.get("accept")?.includes("text/html")) {
+    event.respondWith(staleWhileRevalidatePage(req));
+    return;
+  }
 });
 
-// ── Push Notification Handler ────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// STRATEGY HELPERS
+// ════════════════════════════════════════════════════════════════════════════
 
+/** Cache-first: serve from cache, fall back to network and cache result. */
+async function cacheFirst(req, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(req);
+  if (cached) return cached;
+  try {
+    const fresh = await fetch(req);
+    if (fresh.ok) cache.put(req, fresh.clone());
+    return fresh;
+  } catch {
+    return new Response("Offline — resource unavailable", { status: 503 });
+  }
+}
+
+/**
+ * Cache-first with TTL via Date header stored in cache.
+ * Expired entries fall through to network.
+ */
+async function cacheFirstWithExpiry(req, cacheName, maxAgeSeconds) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(req);
+  if (cached) {
+    const date = cached.headers.get("sw-cached-at");
+    const age  = date ? (Date.now() - Number(date)) / 1000 : Infinity;
+    if (age < maxAgeSeconds) return cached;
+  }
+  try {
+    const fresh = await fetch(req);
+    if (fresh.ok) {
+      // Inject our timestamp header
+      const headers = new Headers(fresh.headers);
+      headers.set("sw-cached-at", String(Date.now()));
+      const toStore = new Response(await fresh.clone().blob(), { headers, status: fresh.status });
+      cache.put(req, toStore);
+    }
+    return fresh;
+  } catch {
+    return cached || new Response("Offline — image unavailable", { status: 503 });
+  }
+}
+
+/**
+ * Network-first: try network, store in cache. On failure serve cached JSON.
+ * Returns a synthetic offline-error JSON if nothing is cached.
+ */
+async function networkFirstAPI(req, cacheName) {
+  const cache = await caches.open(cacheName);
+  try {
+    const fresh = await fetch(req);
+    if (fresh.ok) cache.put(req, fresh.clone());
+    return fresh;
+  } catch {
+    const cached = await cache.match(req);
+    if (cached) return cached;
+    return new Response(
+      JSON.stringify({ error: "offline", message: "No cached data available" }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+/**
+ * Stale-while-revalidate for HTML pages.
+ * Serve cached page instantly. Update cache in background.
+ * On complete miss + offline → serve /offline.html from shell cache.
+ */
+async function staleWhileRevalidatePage(req) {
+  const pagesCache  = await caches.open(PAGES_CACHE);
+  const shellCache  = await caches.open(SHELL_CACHE);
+  const cached      = await pagesCache.match(req);
+
+  // Start background revalidation regardless
+  const revalidate = fetch(req, { credentials: "include" })
+    .then(fresh => {
+      if (fresh && fresh.ok) pagesCache.put(req, fresh.clone());
+      return fresh;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    // Return stale immediately; update in background
+    revalidate; // fire and forget
+    return cached;
+  }
+
+  // No cache — wait for network
+  try {
+    const fresh = await revalidate;
+    if (fresh && fresh.ok) return fresh;
+    throw new Error("Not ok");
+  } catch {
+    // Truly offline AND no cache — serve the beautiful offline page
+    const offline = await shellCache.match("/offline.html");
+    return offline || new Response("<h1>You are offline</h1>", {
+      headers: { "Content-Type": "text/html" }
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MESSAGE — triggered by PwaInit to pre-warm caches after auth
+// ════════════════════════════════════════════════════════════════════════════
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "CACHE_PAGES") {
+    const urls = event.data.urls || [];
+    caches.open(PAGES_CACHE).then(cache => {
+      Promise.allSettled(
+        urls.map(url =>
+          fetch(url, { credentials: "include" })
+            .then(res => { if (res.ok) cache.put(url, res); })
+            .catch(() => {})
+        )
+      ).then(() => console.log(`[SW ${SW_VERSION}] Warmed ${urls.length} page(s) after auth`));
+    });
+  }
+
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// PUSH NOTIFICATION HANDLER
+// ════════════════════════════════════════════════════════════════════════════
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
   let data = {};
-  try { data = event.data.json(); } catch { data = { title: "Project 13", body: event.data.text() }; }
+  try { data = event.data.json(); }
+  catch { data = { title: "Project 13", body: event.data.text() }; }
 
-  const { 
-    title = "Project 13", 
-    body = "", 
-    icon = "/icons/icon-192x192.png", 
-    url = "/dashboard",
-    image = null
+  const {
+    title   = "Project 13",
+    body    = "",
+    icon    = "/icons/icon-192x192.png",
+    url     = "/dashboard",
+    image   = null,
   } = data;
 
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
       icon,
-      badge: "/icons/icon-192x192.png",
-      image: image,
-      data: { url },
-      vibrate: [500, 110, 500, 110, 450, 110, 200, 110, 170, 40, 450, 110, 200, 110, 170, 40],
-      tag: "project13-notification",
-      renotify: true,
-      requireInteraction: true,
-      timestamp: Date.now(),
+      badge:             "/icons/icon-192x192.png",
+      image:             image,
+      data:              { url },
+      vibrate:           [200, 100, 200],
+      tag:               "project13-notification",
+      renotify:          true,
+      requireInteraction: false,
+      timestamp:         Date.now(),
       actions: [
-        { action: "view", title: "View Details" },
-        { action: "close", title: "Dismiss" }
-      ]
+        { action: "view",  title: "View" },
+        { action: "close", title: "Dismiss" },
+      ],
     })
   );
 });
 
-// ── Notification Click Handler ───────────────────────────────────────────────
-
+// ════════════════════════════════════════════════════════════════════════════
+// NOTIFICATION CLICK HANDLER
+// ════════════════════════════════════════════════════════════════════════════
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url ?? "/dashboard";
+  const targetUrl = event.notification.data?.url ?? "/dashboard";
+
+  if (event.action === "close") return;
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(url) && "focus" in client) return client.focus();
-      }
-      if (clients.openWindow) return clients.openWindow(url);
-    })
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then(clientList => {
+        for (const client of clientList) {
+          if (client.url.includes(targetUrl) && "focus" in client) {
+            return client.focus();
+          }
+        }
+        if (clients.openWindow) return clients.openWindow(targetUrl);
+      })
   );
 });
