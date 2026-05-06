@@ -9,7 +9,7 @@
 //   PUSH    → handled directly (no fetch strategy)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = "v3.1";
+const SW_VERSION = "v3.2";
 const SHELL_CACHE   = `p13-shell-${SW_VERSION}`;
 const PAGES_CACHE   = `p13-pages-${SW_VERSION}`;
 const API_CACHE     = `p13-api-${SW_VERSION}`;
@@ -27,6 +27,8 @@ const SHELL_ASSETS = [
 
 // ── App pages to warm-cache on install (stale-while-revalidate candidates) ──
 const PAGE_WARMUP = [
+  "/",
+  "/login",
   "/dashboard",
   "/my-deposits",
   "/expenses",
@@ -135,14 +137,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // ── 3. Remote images (UploadThing CDN, Google avatars) → cache with TTL ─
+  // ── 3. Remote images & fonts (UploadThing, Google) → cache with TTL ──────
   if (
     url.hostname.endsWith("ufs.sh") ||
     url.hostname === "utfs.io" ||
     url.hostname === "uploadthing.com" ||
-    url.hostname === "lh3.googleusercontent.com"
+    url.hostname === "lh3.googleusercontent.com" ||
+    url.hostname === "fonts.googleapis.com" ||
+    url.hostname === "fonts.gstatic.com"
   ) {
-    event.respondWith(cacheFirstWithExpiry(req, IMAGE_CACHE, 7 * 24 * 60 * 60));
+    event.respondWith(cacheFirstWithExpiry(req, IMAGE_CACHE, 30 * 24 * 60 * 60)); // 30 days
     return;
   }
 
@@ -158,9 +162,10 @@ self.addEventListener("fetch", (event) => {
   // ── 5. Skip all other API routes (must be fresh) ─────────────────────────
   if (url.pathname.startsWith("/api/")) return;
 
-  // ── 6. HTML page navigations → stale-while-revalidate with offline shell ─
-  if (req.headers.get("accept")?.includes("text/html")) {
-    event.respondWith(staleWhileRevalidatePage(req));
+  // ── 6. Page navigations (HTML or RSC) → stale-while-revalidate ──────────
+  const isRscRequest = req.headers.get("rsc") === "1" || req.headers.get("x-rsc") === "1";
+  if (req.headers.get("accept")?.includes("text/html") || isRscRequest) {
+    event.respondWith(staleWhileRevalidatePage(req, isRscRequest));
     return;
   }
 });
@@ -231,11 +236,11 @@ async function networkFirstAPI(req, cacheName) {
 }
 
 /**
- * Stale-while-revalidate for HTML pages.
+ * Stale-while-revalidate for HTML pages and RSC data.
  * Serve cached page instantly. Update cache in background.
  * On complete miss + offline → serve /offline.html from shell cache.
  */
-async function staleWhileRevalidatePage(req) {
+async function staleWhileRevalidatePage(req, isRsc = false) {
   const pagesCache  = await caches.open(PAGES_CACHE);
   const shellCache  = await caches.open(SHELL_CACHE);
   const cached      = await pagesCache.match(req);
@@ -260,7 +265,19 @@ async function staleWhileRevalidatePage(req) {
     if (fresh && fresh.ok) return fresh;
     throw new Error("Not ok");
   } catch {
-    // Truly offline AND no cache — serve the beautiful offline page
+    // Truly offline AND no cache
+    
+    // If it's an RSC request, we can't just return offline.html (it expects JSON/RSC)
+    // We return a 503 so the client knows it's offline.
+    if (isRsc) {
+      return new Response("Offline", { 
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: { "Content-Type": "text/plain", "x-p13-offline": "1" }
+      });
+    }
+
+    // Serve the beautiful offline page for full HTML navigations
     const offline = await shellCache.match("/offline.html");
     return offline || new Response("<h1>You are offline</h1>", {
       headers: { "Content-Type": "text/html" }

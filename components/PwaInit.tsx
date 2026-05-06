@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
  */
 
 const PAGES_TO_CACHE = [
+  "/",
+  "/login",
   "/dashboard",
   "/my-deposits",
   "/expenses",
