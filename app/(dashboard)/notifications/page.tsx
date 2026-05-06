@@ -26,7 +26,8 @@ export default async function NotificationsPage() {
 
     const allMembers = stats.heatmapData.heatmapData?.map((m: any) => ({
        id: m.memberId,
-       name: m.name
+       name: m.name,
+       email: m.email // Ensure email is included for lookup
     })) || [];
 
     return <ManagerNotifications 
@@ -35,6 +36,7 @@ export default async function NotificationsPage() {
              allMembers={allMembers}
              membersWithDues={membersWithDues}
              myNotifications={myNotifications}
+             currentUserId={user.id}
            />;
   } else {
     const notifications = await getMemberNotifications();

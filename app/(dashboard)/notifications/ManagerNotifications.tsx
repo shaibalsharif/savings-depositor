@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { sendManualNotification, markNotificationAsRead } from "@/lib/actions/notifications";
 import Image from "next/image";
 
-export function ManagerNotifications({ quota, history, allMembers, membersWithDues, myNotifications }: any) {
+export function ManagerNotifications({ quota, history, allMembers, membersWithDues, myNotifications, currentUserId }: any) {
   const [targetMode, setTargetMode] = useState<"broadcast" | "specific">("broadcast");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [msgType, setMsgType] = useState<"info" | "reminder">("info");
@@ -100,7 +100,7 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
     setLoading(true);
     try {
       const res = await sendManualNotification({
-        userIds: [allMembers.find((m: any) => m.email === "shaibalsharif@gmail.com")?.id].filter(Boolean) as string[],
+        userIds: [currentUserId],
         type: "info",
         title: "🔔 Test Notification",
         message: "This is a test notification to verify delivery on this device.",

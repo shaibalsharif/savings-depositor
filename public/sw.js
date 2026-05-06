@@ -294,11 +294,21 @@ self.addEventListener("message", (event) => {
 // PUSH NOTIFICATION HANDLER
 // ════════════════════════════════════════════════════════════════════════════
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
+  console.log(`[SW ${SW_VERSION}] Push event received`);
+  if (!event.data) {
+    console.warn(`[SW ${SW_VERSION}] Push event received but no data`);
+    return;
+  }
 
   let data = {};
-  try { data = event.data.json(); }
-  catch { data = { title: "Project 13", body: event.data.text() }; }
+  try {
+    data = event.data.json();
+    console.log(`[SW ${SW_VERSION}] Push data parsed:`, data);
+  } catch (err) {
+    const text = event.data.text();
+    console.warn(`[SW ${SW_VERSION}] Push data parse failed, using text:`, text);
+    data = { title: "Project 13", body: text };
+  }
 
   const {
     title   = "Project 13",
@@ -324,6 +334,10 @@ self.addEventListener("push", (event) => {
         { action: "view",  title: "View" },
         { action: "close", title: "Dismiss" },
       ],
+    }).then(() => {
+      console.log(`[SW ${SW_VERSION}] Notification shown: ${title}`);
+    }).catch(err => {
+      console.error(`[SW ${SW_VERSION}] Failed to show notification:`, err);
     })
   );
 });
@@ -332,6 +346,7 @@ self.addEventListener("push", (event) => {
 // NOTIFICATION CLICK HANDLER
 // ════════════════════════════════════════════════════════════════════════════
 self.addEventListener("notificationclick", (event) => {
+  console.log(`[SW ${SW_VERSION}] Notification clicked:`, event.action);
   event.notification.close();
   const targetUrl = event.notification.data?.url ?? "/dashboard";
 
@@ -343,10 +358,14 @@ self.addEventListener("notificationclick", (event) => {
       .then(clientList => {
         for (const client of clientList) {
           if (client.url.includes(targetUrl) && "focus" in client) {
+            console.log(`[SW ${SW_VERSION}] Focusing existing tab: ${client.url}`);
             return client.focus();
           }
         }
-        if (clients.openWindow) return clients.openWindow(targetUrl);
+        if (clients.openWindow) {
+          console.log(`[SW ${SW_VERSION}] Opening new window: ${targetUrl}`);
+          return clients.openWindow(targetUrl);
+        }
       })
   );
 });
