@@ -42,7 +42,7 @@ export default function RootLayout({
           <AuthProvider>
             <PwaInit />
             {children}
-            <Toaster />
+            <Toaster position="top-right" expand={false} richColors />
           </AuthProvider>
         </ThemeProvider>
       </body>
