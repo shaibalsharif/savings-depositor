@@ -13,6 +13,10 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '38y39fcx57.ufs.sh',
+      },
+      {
+        protocol: 'https',
         hostname: '*.ufs.sh', // UploadThing's newer CDN subdomain — fixes avatar 400s on Vercel
       },
       {

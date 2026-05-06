@@ -2,6 +2,7 @@ import { getMemberFullProfile } from "@/lib/queries/members";
 import { requireMember, isManager } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ProfilePhotoUploader } from "./ProfilePhotoUploader";
+import { ImagePreview } from "@/components/ui/image-preview";
 import { NotificationSettings } from "./NotificationSettings";
 import { formatLocalDate } from "@/lib/format-date";
 import { formatPhoneNumber } from "@/lib/utils/format-phone";
@@ -90,27 +91,13 @@ export default async function MyProfilePage() {
                 {profile.nidFront && (
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">NID Front</div>
-                    <a
-                      href={profile.nidFront}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block overflow-hidden rounded-lg border hover:opacity-80 transition bg-muted/40 aspect-[3/2] flex items-center justify-center"
-                    >
-                      <img src={profile.nidFront} alt="NID Front" className="w-full h-full object-cover" />
-                    </a>
+                    <ImagePreview src={profile.nidFront} alt="NID Front" className="aspect-[3/2]" />
                   </div>
                 )}
                 {profile.nidBack && (
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">NID Back</div>
-                    <a
-                      href={profile.nidBack}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block overflow-hidden rounded-lg border hover:opacity-80 transition bg-muted/40 aspect-[3/2] flex items-center justify-center"
-                    >
-                      <img src={profile.nidBack} alt="NID Back" className="w-full h-full object-cover" />
-                    </a>
+                    <ImagePreview src={profile.nidBack} alt="NID Back" className="aspect-[3/2]" />
                   </div>
                 )}
               </div>

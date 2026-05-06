@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { formatLocalDate } from "@/lib/format-date";
+import { ImagePreview } from "@/components/ui/image-preview";
 
 export function MemberViewModal({
   isOpen,
@@ -110,12 +111,33 @@ export function MemberViewModal({
           </div>
         </div>
 
+        {/* NID Documents */}
+        {(member.nidFront || member.nidBack) && (
+          <div className="border-t pt-4 space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">NID Documents</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {member.nidFront && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase">Front Side</span>
+                  <ImagePreview src={member.nidFront} alt="NID Front" className="aspect-video" />
+                </div>
+              )}
+              {member.nidBack && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase">Back Side</span>
+                  <ImagePreview src={member.nidBack} alt="NID Back" className="aspect-video" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Nominee Info */}
         <div className="border-t pt-4 space-y-3">
           <div className="flex items-center gap-4 mb-2">
             <div className="w-14 h-14 rounded-full overflow-hidden border bg-muted/30 flex items-center justify-center font-bold text-lg text-foreground flex-shrink-0">
               {member.nominee?.photo ? (
-                <img src={member.nominee.photo} alt={member.nominee.name} className="w-full h-full object-cover" />
+                <ImagePreview src={member.nominee.photo} alt={member.nominee.name} className="w-full h-full" />
               ) : (
                 <span>{member.nominee?.name ? member.nominee.name.charAt(0) : "N"}</span>
               )}
