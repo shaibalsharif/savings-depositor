@@ -336,8 +336,18 @@ self.addEventListener("push", (event) => {
       ],
     }).then(() => {
       console.log(`[SW ${SW_VERSION}] Notification shown: ${title}`);
+      
+      // NEW: Broadcast to all open tabs so they can show an in-app toast
+      return clients.matchAll({ type: "window", includeUncontrolled: true });
+    }).then(clientList => {
+      clientList.forEach(client => {
+        client.postMessage({
+          type: "PUSH_RECEIVED",
+          payload: { title, body, url, icon }
+        });
+      });
     }).catch(err => {
-      console.error(`[SW ${SW_VERSION}] Failed to show notification:`, err);
+      console.error(`[SW ${SW_VERSION}] Failed to show notification or broadcast:`, err);
     })
   );
 });

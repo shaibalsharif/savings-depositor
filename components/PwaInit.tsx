@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { toast } from "sonner";
+import { Bell, Info } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 /**
  * PwaInit — runs once after the user is authenticated.
- *
- * 1. Registers the service worker (sw.js).
- * 2. Subscribes the current device to push notifications (if permission granted).
- *    → Saves subscription to DB via POST /api/push/subscribe.
- *    → This must run on EVERY device/browser independently.
- * 3. After SW is active, tells it to warm-cache the key data pages so they
- *    are available offline even on the first authenticated session.
+ * ...
  */
 
 const PAGES_TO_CACHE = [
@@ -25,6 +22,7 @@ const PAGES_TO_CACHE = [
 
 export function PwaInit() {
   const registered = useRef(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (registered.current) return;
@@ -33,6 +31,28 @@ export function PwaInit() {
 
     registered.current = true;
     initPwa();
+
+    // Listen for messages from the Service Worker (e.g. In-App Toasts)
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "PUSH_RECEIVED") {
+        const { title, body, url } = event.data.payload;
+        
+        toast(title, {
+          description: body,
+          icon: <Bell className="w-4 h-4 text-primary" />,
+          action: {
+            label: "View",
+            onClick: () => {
+              if (url) router.push(url);
+            }
+          },
+          duration: 6000,
+        });
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", handleMessage);
   }, []);
 
   return null;
