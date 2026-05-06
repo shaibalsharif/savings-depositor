@@ -3,6 +3,7 @@ import { requireMember, isManager } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ProfilePhotoUploader } from "./ProfilePhotoUploader";
 import { ImagePreview } from "@/components/ui/image-preview";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { NotificationSettings } from "./NotificationSettings";
 import { formatLocalDate } from "@/lib/format-date";
 import { formatPhoneNumber } from "@/lib/utils/format-phone";
@@ -56,19 +57,7 @@ export default async function MyProfilePage() {
         {/* Left Column: Avatar & Photo */}
         <div className="lg:col-span-1 space-y-6">
           <div className="glass p-6 rounded-xl flex flex-col items-center text-center space-y-4">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-primary/20 bg-muted/30 flex items-center justify-center">
-              {profile.photo ? (
-                <img
-                  src={profile.photo}
-                  alt={profile.name}
-                  className="w-full h-full object-cover select-none"
-                />
-              ) : (
-                <span className="text-4xl font-bold text-muted-foreground select-none">
-                  {profile.name.charAt(0)}
-                </span>
-              )}
-            </div>
+            <UserAvatar src={profile.photo} name={profile.name} className="w-32 h-32 text-4xl" />
             <div>
               <h3 className="font-bold text-lg">{profile.name}</h3>
               <p className="text-xs text-muted-foreground capitalize">{profile.position || "Member"}</p>
@@ -198,16 +187,13 @@ export default async function MyProfilePage() {
                   <div className="text-xs text-muted-foreground mb-0.5">Address</div>
                   <div className="font-medium text-foreground">{nominee.address || "—"}</div>
                 </div>
-                <div className="sm:col-span-2 pt-2 border-t mt-2">
-                  <div className="text-xs text-muted-foreground mb-1">Nominee Photo</div>
-                  <div className="w-24 h-24 rounded-lg overflow-hidden border bg-muted/40 flex items-center justify-center">
-                    {nominee.photo ? (
-                      <img src={nominee.photo} alt="Nominee" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-3xl font-bold text-muted-foreground select-none">
-                        {nominee.name ? nominee.name.charAt(0) : "N"}
-                      </span>
-                    )}
+                <div className="sm:col-span-2 pt-4 border-t mt-2">
+                  <div className="flex items-center gap-4 mb-2">
+                    <UserAvatar src={nominee.photo} name={nominee.name} className="w-14 h-14 text-lg" />
+                    <div>
+                      <div className="text-sm font-semibold">Nominee Photo</div>
+                      <div className="text-xs text-muted-foreground">Attached identification photo</div>
+                    </div>
                   </div>
                 </div>
               </div>

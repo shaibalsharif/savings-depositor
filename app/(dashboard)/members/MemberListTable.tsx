@@ -6,6 +6,7 @@ import { Pencil, Eye } from "lucide-react";
 import { toggleMemberRole } from "@/lib/actions/members";
 import { MemberEditModal } from "./MemberEditModal";
 import { MemberViewModal } from "./MemberViewModal";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 export function MemberListTable({
   members,
@@ -69,13 +70,7 @@ export function MemberListTable({
                     <td className="col-id font-mono text-xs text-muted-foreground">#{m.id}</td>
                     <td className="col-name font-medium">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden border bg-muted/30 flex items-center justify-center text-xs font-bold select-none flex-shrink-0">
-                          {m.photo ? (
-                            <img src={m.photo} alt={m.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{m.name.charAt(0)}</span>
-                          )}
-                        </div>
+                        <UserAvatar src={m.photo} name={m.name} className="w-8 h-8" />
                         <span
                           className="line-clamp-2 overflow-hidden text-ellipsis leading-tight max-h-[2.5rem]"
                           title={m.name}

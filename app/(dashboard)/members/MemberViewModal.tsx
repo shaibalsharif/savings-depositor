@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { formatLocalDate } from "@/lib/format-date";
 import { ImagePreview } from "@/components/ui/image-preview";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 export function MemberViewModal({
   isOpen,
@@ -43,13 +44,8 @@ export function MemberViewModal({
       <div className="bg-card glass border p-6 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full overflow-hidden border bg-muted/30 flex items-center justify-center font-bold text-xl text-foreground flex-shrink-0">
-              {member.photo ? (
-                <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
-              ) : (
-                <span>{member.name.charAt(0)}</span>
-              )}
-            </div>
+            <UserAvatar src={member.photo} name={member.name} className="w-16 h-16 text-xl" />
+            <div>
             <div>
               <h2 className="text-xl font-bold tracking-tight">{member.name}</h2>
               <p className="text-xs text-muted-foreground capitalize">{member.position || "Member"}</p>
@@ -135,13 +131,8 @@ export function MemberViewModal({
         {/* Nominee Info */}
         <div className="border-t pt-4 space-y-3">
           <div className="flex items-center gap-4 mb-2">
-            <div className="w-14 h-14 rounded-full overflow-hidden border bg-muted/30 flex items-center justify-center font-bold text-lg text-foreground flex-shrink-0">
-              {member.nominee?.photo ? (
-                <ImagePreview src={member.nominee.photo} alt={member.nominee.name} className="w-full h-full" />
-              ) : (
-                <span>{member.nominee?.name ? member.nominee.name.charAt(0) : "N"}</span>
-              )}
-            </div>
+            <UserAvatar src={member.nominee?.photo} name={member.nominee?.name || "Nominee"} className="w-14 h-14 text-lg" />
+            <div>
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Nominee Info</h3>
               <p className="text-xs text-muted-foreground">{member.nominee?.relation || "Nominee"}</p>
