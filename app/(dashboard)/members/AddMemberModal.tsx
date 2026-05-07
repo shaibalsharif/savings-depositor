@@ -1,33 +1,51 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Plus,
-  X,
-  User,
-  Mail,
-  Phone,
-  Calendar,
-  Loader2,
-  CheckCircle2,
-  AlertCircle
+import { useState, useEffect } from "react";
+import { 
+  Plus, 
+  X, 
+  User, 
+  Mail, 
+  Phone, 
+  Calendar as CalendarIcon, 
+  Loader2, 
+  CheckCircle2, 
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, addMonths, subMonths, startOfMonth } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, addYears, subYears, setMonth } from "date-fns";
 
 export function AddMemberModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // Hydration-safe initial state
   const [formData, setFormData] = useState({
     name: "",
     nameBn: "",
     email: "",
     mobile: "",
-    depositStartDate: format(new Date(), "yyyy-MM"),
+    depositStartDate: "", // Will be set on mount
   });
+
+  // Calendar state
+  const [viewDate, setViewDate] = useState(new Date());
+
+  useEffect(() => {
+    setMounted(true);
+    setFormData(prev => ({
+      ...prev,
+      depositStartDate: format(new Date(), "yyyy-MM")
+    }));
+    setViewDate(new Date());
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.depositStartDate) return;
     setLoading(true);
 
     try {
@@ -38,10 +56,7 @@ export function AddMemberModal() {
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to add member");
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to add member");
 
       toast.success("Member Added Successfully", {
         description: `${formData.name} has been synced with Kinde, DB, and Sheets.`,
@@ -56,10 +71,8 @@ export function AddMemberModal() {
         mobile: "",
         depositStartDate: format(new Date(), "yyyy-MM"),
       });
-
-      // Refresh page to show new member
+      
       window.location.reload();
-
     } catch (err: any) {
       toast.error("Operation Failed", {
         description: err.message,
@@ -70,33 +83,16 @@ export function AddMemberModal() {
     }
   };
 
-  // Generate month options: Last 8 Months to Current + 3 Months
-  const generateMonthOptions = () => {
-    const options = [];
-    const current = startOfMonth(new Date());
-    
-    // Past: last 8 months
-    let runner = current;
-    for (let i = 0; i < 9; i++) {
-      options.push(format(runner, "yyyy-MM"));
-      runner = subMonths(runner, 1);
-    }
-    
-    // Future: next 3 months
-    runner = addMonths(current, 1);
-    for (let i = 0; i < 3; i++) {
-      options.unshift(format(runner, "yyyy-MM"));
-      runner = addMonths(runner, 1);
-    }
-    
-    return Array.from(new Set(options)).sort();
-  };
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
 
-  const monthOptions = generateMonthOptions();
+  if (!mounted) return null;
 
   if (!isOpen) {
     return (
-      <button
+      <button 
         onClick={() => setIsOpen(true)}
         className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-all shadow-sm"
       >
@@ -108,7 +104,7 @@ export function AddMemberModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div
+      <div 
         className="w-full max-w-md bg-card border rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -118,7 +114,7 @@ export function AddMemberModal() {
             <h2 className="text-xl font-bold tracking-tight">New Member</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Setup Kinde, Sheets, and Financials</p>
           </div>
-          <button
+          <button 
             onClick={() => setIsOpen(false)}
             className="p-2 hover:bg-muted rounded-full transition-colors"
           >
@@ -127,132 +123,136 @@ export function AddMemberModal() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Name */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <User className="w-3 h-3" /> Full Name (English)
-            </label>
-            <input
-              required
-              placeholder="e.g. John Doe"
-              className="w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-          </div>
-
-          {/* Name Bengali */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <User className="w-3 h-3" /> Full Name (Bengali)
-            </label>
-            <input
-              placeholder="উদাঃ জন ডো"
-              className="w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-              value={formData.nameBn}
-              onChange={(e) => setFormData({ ...formData, nameBn: e.target.value })}
-            />
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Mail className="w-3 h-3" /> Email Address
-            </label>
-            <input
-              required
-              type="email"
-              placeholder="john@example.com"
-              className="w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-            <p className="text-[10px] text-muted-foreground italic">Used for Kinde authentication sync</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Mobile */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+          {/* Name & Email Group */}
+          <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Phone className="w-3 h-3" /> Mobile
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <User className="w-3 h-3" /> Full Name (English)
               </label>
               <input
-                placeholder="017..."
-                className="w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                value={formData.mobile}
-                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                required
+                placeholder="John Doe"
+                className="w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
 
-            {/* Deposit Start Month (Custom Calendar View) */}
-            <div className="space-y-3">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Calendar className="w-3 h-3" /> Deposit Start Month
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <Mail className="w-3 h-3" /> Email Address
               </label>
-              
-              <div className="grid grid-cols-3 gap-2 p-3 bg-muted/20 rounded-2xl border border-dashed">
-                {monthOptions.map(opt => {
-                  const isSelected = formData.depositStartDate === opt;
-                  const date = new Date(opt + "-01");
-                  const isFuture = opt > format(new Date(), "yyyy-MM");
-                  const isPast = opt < format(new Date(), "yyyy-MM");
+              <input
+                required
+                type="email"
+                placeholder="john@example.com"
+                className="w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Premium Month Picker */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <CalendarIcon className="w-3 h-3" /> Select Start Month
+            </label>
+            
+            <div className="bg-muted/30 rounded-2xl border p-4 space-y-4">
+              {/* Year Navigation */}
+              <div className="flex items-center justify-between">
+                <button 
+                  type="button" 
+                  disabled={format(viewDate, "yyyy") === "2024"}
+                  onClick={() => setViewDate(subYears(viewDate, 1))}
+                  className="p-1 hover:bg-background rounded-md border shadow-sm transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex flex-col items-center">
+                  <span className="text-sm font-bold tracking-tight">{format(viewDate, "yyyy")}</span>
+                  <span className="text-[9px] uppercase tracking-tighter opacity-50 font-bold">Year Selection</span>
+                </div>
+                <button 
+                  type="button" 
+                  disabled={format(viewDate, "yyyy") === format(addMonths(new Date(), 3), "yyyy")}
+                  onClick={() => setViewDate(addYears(viewDate, 1))}
+                  className="p-1 hover:bg-background rounded-md border shadow-sm transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Month Grid */}
+              <div className="grid grid-cols-4 gap-2">
+                {months.map((month, idx) => {
+                  const currentMonthStr = format(setMonth(viewDate, idx), "yyyy-MM");
+                  const isSelected = formData.depositStartDate === currentMonthStr;
+                  const isToday = currentMonthStr === format(new Date(), "yyyy-MM");
                   
+                  // Restraints: Global Start (2024-01) to Current + 3 Months
+                  const monthDate = startOfMonth(setMonth(viewDate, idx));
+                  const systemStart = startOfMonth(new Date(2024, 0, 1));
+                  const futureLimit = startOfMonth(addMonths(new Date(), 3));
+                  const isDisabled = monthDate < systemStart || monthDate > futureLimit;
+
                   return (
                     <button
-                      key={opt}
+                      key={month}
                       type="button"
-                      onClick={() => setFormData({ ...formData, depositStartDate: opt })}
+                      disabled={isDisabled}
+                      title={isDisabled ? (monthDate < systemStart ? "Before System Start" : "Limit: +3 Months") : ""}
+                      onClick={() => setFormData({ ...formData, depositStartDate: currentMonthStr })}
                       className={`
-                        flex flex-col items-center justify-center py-3 px-1 rounded-xl border transition-all
+                        relative py-3 text-xs font-bold rounded-xl border transition-all
                         ${isSelected 
-                          ? "bg-primary text-primary-foreground border-primary shadow-md scale-[1.02]" 
-                          : "bg-background hover:border-primary/50 text-foreground"
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg scale-[1.05] z-10" 
+                          : isToday 
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "bg-background text-foreground hover:border-primary/40 shadow-sm"
                         }
+                        ${isDisabled ? "opacity-10 cursor-not-allowed bg-muted/50 border-transparent" : "hover:scale-[1.02]"}
                       `}
                     >
-                      <span className="text-[10px] uppercase font-bold opacity-70">
-                        {format(date, "yyyy")}
-                      </span>
-                      <span className="text-sm font-bold">
-                        {format(date, "MMM")}
-                      </span>
-                      {opt === format(new Date(), "yyyy-MM") && (
-                        <div className={`mt-1 h-1 w-1 rounded-full ${isSelected ? "bg-white" : "bg-primary"}`} />
+                      {month}
+                      {isToday && !isSelected && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
                       )}
                     </button>
                   );
                 })}
               </div>
-              <p className="text-[10px] text-muted-foreground text-center">
-                Select the month when this member's first deposit is expected.
-              </p>
+            </div>
+            
+            <div className="flex items-center justify-center gap-2 p-2 bg-primary/5 rounded-lg border border-dashed border-primary/20">
+               <span className="text-[10px] font-semibold text-primary">Selected:</span>
+               <span className="text-xs font-bold text-primary">
+                 {formData.depositStartDate ? format(new Date(formData.depositStartDate + "-01"), "MMMM yyyy") : "None"}
+               </span>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="pt-4 border-t flex flex-col gap-3">
+          {/* Action Button */}
+          <div className="pt-2">
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-md shadow-primary/20"
+              disabled={loading || !formData.depositStartDate}
+              className="w-full py-3.5 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Synchronizing Trinity...
+                  Processing...
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-5 h-5" />
-                  Confirm & Sync All
+                  Complete Sync
                 </>
               )}
             </button>
-            <p className="text-[10px] text-center text-muted-foreground leading-relaxed">
-              This will create a Kinde account, append to Google Sheets, and initialize DB records.
-              Financial dues will be calculated from the selected month.
-            </p>
           </div>
         </form>
       </div>
