@@ -47,11 +47,9 @@ export async function createKindeUser(userData: KindeUserCreateRequest) {
   const orgCode = process.env.KINDE_ORG_CODE;
   const token = await getKindeMgmtToken();
 
-  // We'll use the Passwordless (OTP) connection by default for email identities
-  // ID: conn_0196d7fcb27c328580350fdcafbcd119
-  const connectionId = "conn_0196d7fcb27c328580350fdcafbcd119";
+  console.log(`[KindeMgmt] Inviting user to organization ${orgCode}: ${userData.email}`);
 
-  const response = await fetch(`${domain}/api/v1/user`, {
+  const response = await fetch(`${domain}/api/v1/organization/${orgCode}/invites`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${token}`,
@@ -59,31 +57,27 @@ export async function createKindeUser(userData: KindeUserCreateRequest) {
       "Accept": "application/json",
     },
     body: JSON.stringify({
-      profile: {
-        given_name: userData.first_name,
-        family_name: userData.last_name || "",
-      },
-      organization_code: orgCode,
-      identities: [
-        {
-          type: "email",
-          identity: {
-            email: userData.email,
-          },
-          connection_id: connectionId
-        }
-      ]
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name || "Member",
+      roles: ["member"], // Using the newly created role key
     }),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    console.error("[KindeMgmt] Creation Error Response:", JSON.stringify(errorData));
-    throw new Error(`Kinde User Creation Failed: ${JSON.stringify(errorData)}`);
+    console.error("[KindeMgmt] Invite Error Response:", JSON.stringify(errorData));
+    throw new Error(`Kinde Invitation Failed: ${JSON.stringify(errorData)}`);
   }
 
   const data = await response.json();
-  return data;
+  // Kinde Invite API returns the invitation object. 
+  // We'll return it so the caller has access to the invite link if needed.
+  return {
+    id: data.invite?.id,
+    email: data.invite?.email,
+    invite_link: data.invite?.invite_link
+  };
 }
 
 export async function getKindeUserByEmail(email: string) {
