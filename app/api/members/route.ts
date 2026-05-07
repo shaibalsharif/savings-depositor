@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
       religion = "Islam",
       presentAddress = "",
       permanentAddress = "",
-      nidNumber = ""
+      nidNumber = "",
+      nominee
     } = body;
 
     if (!email || !name || !depositStartDate) {
@@ -113,10 +114,6 @@ export async function POST(req: NextRequest) {
         nidNumber: nominee.nidNumber || "",
       });
     }
-
-    // 5. Initial Dues Calculation
-    const { createInitialDues } = await import("@/lib/queries/deposits");
-    await createInitialDues(userId, depositStartDate);
 
     return NextResponse.json({ 
       success: true, 
