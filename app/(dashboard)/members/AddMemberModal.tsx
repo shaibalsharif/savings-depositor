@@ -70,27 +70,26 @@ export function AddMemberModal() {
     }
   };
 
-  // Generate month options: Global Start (2024-01) to Current + 3 Months
+  // Generate month options: Last 8 Months to Current + 3 Months
   const generateMonthOptions = () => {
     const options = [];
     const current = startOfMonth(new Date());
-
-    // Past: back to 2024-01
+    
+    // Past: last 8 months
     let runner = current;
-    const startLimit = new Date(2024, 0, 1);
-    while (runner >= startLimit) {
+    for (let i = 0; i < 9; i++) {
       options.push(format(runner, "yyyy-MM"));
       runner = subMonths(runner, 1);
     }
-
+    
     // Future: next 3 months
     runner = addMonths(current, 1);
     for (let i = 0; i < 3; i++) {
       options.unshift(format(runner, "yyyy-MM"));
       runner = addMonths(runner, 1);
     }
-
-    return Array.from(new Set(options)).sort().reverse();
+    
+    return Array.from(new Set(options)).sort();
   };
 
   const monthOptions = generateMonthOptions();
@@ -186,22 +185,48 @@ export function AddMemberModal() {
               />
             </div>
 
-            {/* Deposit Start */}
-            <div className="space-y-2">
+            {/* Deposit Start Month (Custom Calendar View) */}
+            <div className="space-y-3">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Calendar className="w-3 h-3" /> Start Month
+                <Calendar className="w-3 h-3" /> Deposit Start Month
               </label>
-              <select
-                className="w-full px-4 py-2.5 rounded-xl border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                value={formData.depositStartDate}
-                onChange={(e) => setFormData({ ...formData, depositStartDate: e.target.value })}
-              >
-                {monthOptions.map(opt => (
-                  <option key={opt} value={opt}>
-                    {format(new Date(opt + "-01"), "MMM yyyy")}
-                  </option>
-                ))}
-              </select>
+              
+              <div className="grid grid-cols-3 gap-2 p-3 bg-muted/20 rounded-2xl border border-dashed">
+                {monthOptions.map(opt => {
+                  const isSelected = formData.depositStartDate === opt;
+                  const date = new Date(opt + "-01");
+                  const isFuture = opt > format(new Date(), "yyyy-MM");
+                  const isPast = opt < format(new Date(), "yyyy-MM");
+                  
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, depositStartDate: opt })}
+                      className={`
+                        flex flex-col items-center justify-center py-3 px-1 rounded-xl border transition-all
+                        ${isSelected 
+                          ? "bg-primary text-primary-foreground border-primary shadow-md scale-[1.02]" 
+                          : "bg-background hover:border-primary/50 text-foreground"
+                        }
+                      `}
+                    >
+                      <span className="text-[10px] uppercase font-bold opacity-70">
+                        {format(date, "yyyy")}
+                      </span>
+                      <span className="text-sm font-bold">
+                        {format(date, "MMM")}
+                      </span>
+                      {opt === format(new Date(), "yyyy-MM") && (
+                        <div className={`mt-1 h-1 w-1 rounded-full ${isSelected ? "bg-white" : "bg-primary"}`} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">
+                Select the month when this member's first deposit is expected.
+              </p>
             </div>
           </div>
 
