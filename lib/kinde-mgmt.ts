@@ -12,7 +12,7 @@ export interface KindeUserCreateRequest {
 }
 
 export async function getKindeMgmtToken(): Promise<string> {
-  const domain = process.env.KINDE_DOMAIN;
+  const domain = process.env.KINDE_ISSUER_URL;
   const clientId = process.env.KINDE_M2M_CLIENT_ID;
   const clientSecret = process.env.KINDE_M2M_CLIENT_SECRET;
 
@@ -43,7 +43,7 @@ export async function getKindeMgmtToken(): Promise<string> {
 }
 
 export async function createKindeUser(userData: KindeUserCreateRequest) {
-  const domain = process.env.KINDE_DOMAIN;
+  const domain = process.env.KINDE_ISSUER_URL;
   const token = await getKindeMgmtToken();
 
   const response = await fetch(`${domain}/api/v1/user`, {
@@ -80,7 +80,7 @@ export async function createKindeUser(userData: KindeUserCreateRequest) {
 }
 
 export async function getKindeUserByEmail(email: string) {
-  const domain = process.env.KINDE_DOMAIN;
+  const domain = process.env.KINDE_ISSUER_URL;
   const token = await getKindeMgmtToken();
 
   const response = await fetch(`${domain}/api/v1/users?email=${encodeURIComponent(email)}`, {
