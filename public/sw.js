@@ -302,6 +302,12 @@ self.addEventListener("message", (event) => {
     });
   }
 
+  if (event.data?.type === "CLEAR_PAGES_CACHE") {
+    caches.delete(PAGES_CACHE).then(() => {
+      console.log(`[SW ${SW_VERSION}] Pages cache cleared`);
+    });
+  }
+
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
   }

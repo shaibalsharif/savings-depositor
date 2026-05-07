@@ -20,7 +20,7 @@ import {
   FileText,
   Bell,
 } from "lucide-react";
-import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
+// Removed LogoutLink as we use a custom logout handler for cache clearing
 
 type NavItem = {
   href: string;
@@ -203,7 +203,15 @@ export function SidebarClient({
             )}
           </Link>
 
-          <LogoutLink className={`relative flex w-full items-center rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-all group ${isCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"}`}>
+          <button 
+            onClick={async () => {
+              if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: "CLEAR_PAGES_CACHE" });
+              }
+              window.location.href = "/api/auth/logout";
+            }}
+            className={`relative flex w-full items-center rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-all group ${isCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"}`}
+          >
             <LogOut size={17} style={{ opacity: 0.7 }} />
             {!isCollapsed && <span>Sign Out</span>}
             {isCollapsed && (
@@ -211,7 +219,7 @@ export function SidebarClient({
                 Sign Out
               </div>
             )}
-          </LogoutLink>
+          </button>
         </div>
       </aside>
 
