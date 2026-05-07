@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { personalInfo, nomineeInfo } from "@/db/schema";
 import { createKindeUser, getKindeUserByEmail } from "@/lib/kinde-mgmt";
 import { appendRow } from "@/lib/sheets";
+import { sendInvitationEmail } from "@/lib/email";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
@@ -117,10 +118,28 @@ export async function POST(req: NextRequest) {
       nidNumber: "",
     });
 
+    // 6. Send Invitation Email if invite_link is present
+    let emailStatus = { success: true };
+    if (kindeUser.invite_link) {
+      console.log(`[API/Members] Sending invitation email to ${email}`);
+      const firstName = name.split(" ")[0];
+      const result = await sendInvitationEmail({
+        email,
+        firstName,
+        inviteLink: kindeUser.invite_link,
+      });
+      emailStatus = result;
+      if (!result.success) {
+        console.error("[API/Members] Email sending failed:", result.error);
+      }
+    }
+
     return NextResponse.json({ 
       success: true, 
       userId, 
-      sheetsRowIndex 
+      sheetsRowIndex,
+      invited: !!kindeUser.invite_link,
+      emailStatus
     });
 
   } catch (err: any) {
