@@ -9,7 +9,7 @@
 //   PUSH    → handled directly (no fetch strategy)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = "v3.2";
+const SW_VERSION = "v4.0";
 const SHELL_CACHE   = `p13-shell-${SW_VERSION}`;
 const PAGES_CACHE   = `p13-pages-${SW_VERSION}`;
 const API_CACHE     = `p13-api-${SW_VERSION}`;
@@ -162,8 +162,15 @@ self.addEventListener("fetch", (event) => {
   // ── 5. Skip all other API routes (must be fresh) ─────────────────────────
   if (url.pathname.startsWith("/api/")) return;
 
-  // ── 6. Page navigations (HTML or RSC) → stale-while-revalidate ──────────
   const isRscRequest = req.headers.get("rsc") === "1" || req.headers.get("x-rsc") === "1";
+
+  // ── 6. Dashboard → Network-First (Ensure auth check happens before cache) ──
+  if (url.pathname === "/dashboard" || url.pathname.startsWith("/dashboard/")) {
+    event.respondWith(networkFirstPage(req, PAGES_CACHE, isRscRequest));
+    return;
+  }
+
+  // ── 7. Other Page navigations (HTML or RSC) → stale-while-revalidate ──────
   if (req.headers.get("accept")?.includes("text/html") || isRscRequest) {
     event.respondWith(staleWhileRevalidatePage(req, isRscRequest));
     return;
@@ -277,11 +284,42 @@ async function staleWhileRevalidatePage(req, isRsc = false) {
       });
     }
 
-    // Serve the beautiful offline page for full HTML navigations
+  // Serve the beautiful offline page for full HTML navigations
+  const offline = await shellCache.match("/offline.html");
+  return offline || new Response("<h1>You are offline</h1>", {
+    headers: { "Content-Type": "text/html" }
+  });
+}
+
+/**
+ * Network-first for pages (Dashboard):
+ * Try network (so auth redirects happen). If network fails/offline, serve from cache.
+ */
+async function networkFirstPage(req, cacheName, isRsc = false) {
+  const cache = await caches.open(cacheName);
+  const shellCache = await caches.open(SHELL_CACHE);
+  
+  try {
+    const fresh = await fetch(req, { credentials: "include" });
+    if (fresh.ok) {
+      cache.put(req, fresh.clone());
+      return fresh;
+    }
+    // If it's a redirect (302) or error (401), return it as-is so app redirects
+    if (fresh.status === 0 || (fresh.status >= 300 && fresh.status < 400) || fresh.status === 401) {
+      return fresh;
+    }
+    throw new Error("Network error");
+  } catch (err) {
+    const cached = await cache.match(req);
+    if (cached) return cached;
+    
+    if (isRsc) {
+      return new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } });
+    }
+    
     const offline = await shellCache.match("/offline.html");
-    return offline || new Response("<h1>You are offline</h1>", {
-      headers: { "Content-Type": "text/html" }
-    });
+    return offline || new Response("<h1>Offline</h1>", { headers: { "Content-Type": "text/html" } });
   }
 }
 
