@@ -9,7 +9,7 @@
 //   PUSH    → handled directly (no fetch strategy)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = "v4.1";
+const SW_VERSION = "v4.2";
 const SHELL_CACHE   = `p13-shell-${SW_VERSION}`;
 const PAGES_CACHE   = `p13-pages-${SW_VERSION}`;
 const API_CACHE     = `p13-api-${SW_VERSION}`;
@@ -303,9 +303,11 @@ async function networkFirstPage(req, cacheName, isRsc = false) {
     // We use a shorter timeout for the network check to keep it snappy
     const fresh = await fetch(req, { credentials: "include" });
     
-    // If the response was redirected (e.g. to Kinde login), return it immediately
-    // so the browser can handle the navigation.
-    if (fresh.redirected || (fresh.status >= 300 && fresh.status < 400) || fresh.status === 401) {
+    // DETECT EXTERNAL REDIRECTS (Kinde, Google, etc.)
+    // If the URL changed to a different domain, it's an auth redirect. 
+    // We MUST return it as-is so the browser can navigate there.
+    const isExternal = !fresh.url.includes(self.location.hostname);
+    if (isExternal || fresh.redirected || (fresh.status >= 300 && fresh.status < 400) || fresh.status === 401) {
       return fresh;
     }
 
