@@ -44,7 +44,12 @@ export async function getKindeMgmtToken(): Promise<string> {
 
 export async function createKindeUser(userData: KindeUserCreateRequest) {
   const domain = process.env.KINDE_ISSUER_URL;
+  const orgCode = process.env.KINDE_ORG_CODE;
   const token = await getKindeMgmtToken();
+
+  // We'll use the Passwordless (OTP) connection by default for email identities
+  // ID: conn_0196d7fcb27c328580350fdcafbcd119
+  const connectionId = "conn_0196d7fcb27c328580350fdcafbcd119";
 
   const response = await fetch(`${domain}/api/v1/user`, {
     method: "POST",
@@ -58,12 +63,14 @@ export async function createKindeUser(userData: KindeUserCreateRequest) {
         given_name: userData.first_name,
         family_name: userData.last_name || "",
       },
+      organization_code: orgCode,
       identities: [
         {
           type: "email",
           identity: {
             email: userData.email,
-          }
+          },
+          connection_id: connectionId
         }
       ]
     }),
@@ -71,11 +78,11 @@ export async function createKindeUser(userData: KindeUserCreateRequest) {
 
   if (!response.ok) {
     const errorData = await response.json();
+    console.error("[KindeMgmt] Creation Error Response:", JSON.stringify(errorData));
     throw new Error(`Kinde User Creation Failed: ${JSON.stringify(errorData)}`);
   }
 
   const data = await response.json();
-  // data.id is the new kp_... user ID
   return data;
 }
 
