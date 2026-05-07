@@ -9,7 +9,7 @@
 //   PUSH    → handled directly (no fetch strategy)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = "v4.0";
+const SW_VERSION = "v4.1";
 const SHELL_CACHE   = `p13-shell-${SW_VERSION}`;
 const PAGES_CACHE   = `p13-pages-${SW_VERSION}`;
 const API_CACHE     = `p13-api-${SW_VERSION}`;
@@ -300,19 +300,31 @@ async function networkFirstPage(req, cacheName, isRsc = false) {
   const shellCache = await caches.open(SHELL_CACHE);
   
   try {
+    // We use a shorter timeout for the network check to keep it snappy
     const fresh = await fetch(req, { credentials: "include" });
+    
+    // If the response was redirected (e.g. to Kinde login), return it immediately
+    // so the browser can handle the navigation.
+    if (fresh.redirected || (fresh.status >= 300 && fresh.status < 400) || fresh.status === 401) {
+      return fresh;
+    }
+
     if (fresh.ok) {
       cache.put(req, fresh.clone());
       return fresh;
     }
-    // If it's a redirect (302) or error (401), return it as-is so app redirects
-    if (fresh.status === 0 || (fresh.status >= 300 && fresh.status < 400) || fresh.status === 401) {
-      return fresh;
-    }
-    throw new Error("Network error");
+
+    // If it's a server error but we're online, we still might want the cache
+    throw new Error("Server error");
   } catch (err) {
+    // Detect if this is a true network failure (offline)
+    const isOffline = !navigator.onLine;
+    
     const cached = await cache.match(req);
-    if (cached) return cached;
+    // Only serve cache if we're actually offline or the network failed
+    if (cached && (isOffline || err.message === "Server error")) {
+      return cached;
+    }
     
     if (isRsc) {
       return new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } });
