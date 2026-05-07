@@ -110,7 +110,6 @@ export async function POST(req: NextRequest) {
         name: nominee.name || "",
         relation: nominee.relation || "",
         mobile: nominee.mobile || "",
-        email: nominee.email || "",
         nidNumber: nominee.nidNumber || "",
       });
     }
