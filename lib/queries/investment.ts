@@ -49,7 +49,12 @@ export async function calculateAndSaveShares(
     db.select().from(investmentShares),
   ]);
 
-  const memberCount = allMembers.length;
+  // Only consider members who have joined by the time of investment
+  // investDate is YYYY-MM-DD, depositStartDate is YYYY-MM
+  const investMonth = investDate.substring(0, 7);
+  const activeMembers = allMembers.filter((m) => m.depositStartDate <= investMonth);
+  const memberCount = activeMembers.length;
+
   if (memberCount === 0) return;
 
   // Global totals (shared equally across all members)

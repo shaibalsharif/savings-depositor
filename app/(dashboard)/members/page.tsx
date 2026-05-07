@@ -7,6 +7,7 @@ import { ColumnConfigurator } from "@/components/ui/column-configurator";
 import { MemberListTable } from "./MemberListTable";
 import { getMemberFullProfile } from "@/lib/queries/members";
 import { formatPhoneNumber } from "@/lib/utils/format-phone";
+import { AddMemberModal } from "./AddMemberModal";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function MembersPage() {
       const full = await getMemberFullProfile(m.userId);
       const profile = full.profile || m;
       const photo = profile.photo?.startsWith("blob:") ? "" : (profile.photo || "");
-      
+
       return {
         ...profile,
         mobile: formatPhoneNumber(profile.mobile),
@@ -65,7 +66,7 @@ export default async function MembersPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <Breadcrumbs crumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Members" }]} />
-      
+
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Members</h1>
@@ -74,6 +75,7 @@ export default async function MembersPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <AddMemberModal />
           <ColumnConfigurator tableId="members-table" columns={tableCols} />
         </div>
       </div>

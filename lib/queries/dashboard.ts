@@ -105,6 +105,9 @@ export async function getManagerDashboardStats() {
     let due = 0;
     const breakdown: { month: string; expected: number; paid: number; due: number }[] = [];
     for (const m of allMonths) {
+      // Skip months before the member joined
+      if (m < member.depositStartDate) continue;
+
       const exp = getExpectedForMonth(settingsSorted, m);
       const paid = paidByMonth[m] || 0;
       const mDue = Math.max(0, exp - paid);
@@ -120,7 +123,8 @@ export async function getManagerDashboardStats() {
   const totalOutstanding = memberPendings.reduce((s, m) => s + m.due, 0);
 
   // Current month collection
-  const currentExpected = getExpectedForMonth(settingsSorted, currentMonth) * allMembers.length;
+  const currentMonthActiveMembers = allMembers.filter(m => m.depositStartDate <= currentMonth);
+  const currentExpected = getExpectedForMonth(settingsSorted, currentMonth) * currentMonthActiveMembers.length;
   const currentAllocated = allAllocations.filter((a) => a.forMonth === currentMonth).reduce((s, a) => s + Number(a.amountAllocated), 0);
 
   // Next return date for active investments
@@ -136,7 +140,8 @@ export async function getManagerDashboardStats() {
     const collected = allAllocations
       .filter((a) => a.forMonth === month)
       .reduce((s, a) => s + Number(a.amountAllocated), 0);
-    const expected = getExpectedForMonth(settingsSorted, month) * allMembers.length;
+    const activeInMonth = allMembers.filter(m => m.depositStartDate <= month).length;
+    const expected = getExpectedForMonth(settingsSorted, month) * activeInMonth;
     const expenseTotal = validExpenses
       .filter((e) => e.expenseDate.startsWith(month))
       .reduce((s, e) => s + Number(e.amount), 0);
@@ -173,10 +178,18 @@ export async function getManagerDashboardStats() {
     }
 
     const months = monthsInYear.map((m) => {
-      const exp = getExpectedForMonth(settingsSorted, m);
+      const isJoined = m >= member.depositStartDate;
+      const exp = isJoined ? getExpectedForMonth(settingsSorted, m) : 0;
       const paid = byMonth[m]?.paid ?? 0;
       const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
-      return { month: m, paid, expected: exp, pct, lastPaymentDate: byMonth[m]?.lastDate ?? null };
+      return { 
+        month: m, 
+        paid, 
+        expected: exp, 
+        pct, 
+        lastPaymentDate: byMonth[m]?.lastDate ?? null,
+        joined: isJoined
+      };
     });
     return { memberId: member.userId, name: member.name, photo: member.photo, months };
   });
@@ -262,10 +275,18 @@ export async function getHeatmapData(year: number) {
     }
 
     const months = monthsInYear.map((m) => {
-      const exp = getExpectedForMonth(settingsSorted, m);
+      const isJoined = m >= member.depositStartDate;
+      const exp = isJoined ? getExpectedForMonth(settingsSorted, m) : 0;
       const paid = byMonth[m]?.paid ?? 0;
       const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
-      return { month: m, paid, expected: exp, pct, lastPaymentDate: byMonth[m]?.lastDate ?? null };
+      return { 
+        month: m, 
+        paid, 
+        expected: exp, 
+        pct, 
+        lastPaymentDate: byMonth[m]?.lastDate ?? null,
+        joined: isJoined
+      };
     });
 
     return { memberId: member.userId, name: member.name, photo: member.photo, months };
@@ -306,10 +327,10 @@ export async function getAllTimeHeatmapData() {
     }
 
     const months = allMonths.map((m) => {
-      const exp = getExpectedForMonth(settingsSorted, m);
+      const exp = m < member.depositStartDate ? 0 : getExpectedForMonth(settingsSorted, m);
       const paid = byMonth[m]?.paid ?? 0;
       const pct = exp > 0 ? Math.min(paid / exp, 1) : 0;
-      return { month: m, paid, expected: exp, pct, lastPaymentDate: byMonth[m]?.lastDate ?? null };
+      return { month: m, paid, expected: exp, pct, lastPaymentDate: byMonth[m]?.lastDate ?? null, joined: m >= member.depositStartDate };
     });
 
     return { memberId: member.userId, name: member.name, photo: member.photo, months };
@@ -320,7 +341,8 @@ export async function getAllTimeHeatmapData() {
 
 // ─── Member Dashboard Stats ───────────────────────────────────────────────────
 export async function getMemberDashboardStats(memberId: string) {
-  const [allAllocations, allSettings, myPayments] = await Promise.all([
+  const [member, allAllocations, allSettings, myPayments] = await Promise.all([
+    db.query.personalInfo.findFirst({ where: eq(personalInfo.userId, memberId) }),
     db.select().from(depositAllocations).where(eq(depositAllocations.memberId, memberId)),
     db.select().from(depositSettings).orderBy(desc(depositSettings.effectiveMonth)),
     db.select().from(payments)
@@ -328,6 +350,8 @@ export async function getMemberDashboardStats(memberId: string) {
       .orderBy(desc(payments.paymentDate))
       .limit(10),
   ]);
+
+  if (!member) throw new Error("Member not found");
 
   const settingsSorted = [...allSettings].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth));
   const globalStart = settingsSorted.length > 0 ? settingsSorted[0].effectiveMonth : "2024-01";
@@ -342,11 +366,12 @@ export async function getMemberDashboardStats(memberId: string) {
   let totalExpected = 0;
   let totalPaid = 0;
   const monthBreakdown = allMonths.map((m) => {
-    const exp = getExpectedForMonth(settingsSorted, m);
+    const isJoined = m >= (member as any).depositStartDate;
+    const exp = isJoined ? getExpectedForMonth(settingsSorted, m) : 0;
     const paid = paidByMonth[m] || 0;
     totalExpected += exp;
     totalPaid += Math.min(paid, exp);
-    return { month: m, expected: exp, paid, due: Math.max(0, exp - paid) };
+    return { month: m, expected: exp, paid, due: Math.max(0, exp - paid), joined: isJoined };
   });
 
   const totalDue = Math.max(0, totalExpected - totalPaid);
