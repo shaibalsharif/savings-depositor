@@ -59,15 +59,25 @@ export async function POST(req: NextRequest) {
     // 2. Add to Google Sheets
     let sheetsRowIndex: number | null = null;
     try {
-      const { syncMemberToSheets } = await import("@/lib/sheets-sync");
-      sheetsRowIndex = await syncMemberToSheets({
+      const { appendRow } = await import("@/lib/sheets");
+      
+      // Row mapping: User ID, Full Name, Name (Bengali), Mobile, Position, Date of Birth, Profession, Religion, NID Number, Present Address, Permanent Address, Email
+      const rowData = [
+        userId,
         name,
-        email,
+        nameBn || "",
+        mobile || "",
         position,
-        mobile,
+        dob,
+        profession,
+        religion,
+        nidNumber,
         presentAddress,
-        depositStartDate,
-      });
+        permanentAddress,
+        email
+      ];
+
+      sheetsRowIndex = await appendRow("Members", rowData);
     } catch (err) {
       console.error("Failed to sync to Google Sheets:", err);
     }
