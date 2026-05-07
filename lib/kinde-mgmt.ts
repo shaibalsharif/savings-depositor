@@ -1,101 +1,83 @@
 /**
- * Kinde Management API Utility
- * Used for creating and managing users via Machine-to-Machine (M2M) authentication.
+ * Kinde Management API Utility (M2M)
+ * Used for administrative actions like searching for users.
  */
 
-export interface KindeUserCreateRequest {
-  email: string;
-  first_name: string;
-  last_name?: string;
-  connection_id?: string;
-  is_suspended?: boolean;
-}
-
-export async function getKindeMgmtToken(): Promise<string> {
+async function getKindeMgmtToken(): Promise<string> {
   const domain = process.env.KINDE_ISSUER_URL;
   const clientId = process.env.KINDE_M2M_CLIENT_ID;
   const clientSecret = process.env.KINDE_M2M_CLIENT_SECRET;
 
-  if (!domain || !clientId || !clientSecret) {
-    throw new Error("Missing Kinde M2M credentials in environment variables");
-  }
-
   const response = await fetch(`${domain}/oauth2/token`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: clientId!,
+      client_secret: clientSecret!,
       audience: `${domain}/api`,
     }),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to fetch Kinde M2M token: ${response.status} - ${errorText}`);
-  }
-
   const data = await response.json();
+  if (!response.ok) {
+    throw new Error(`Failed to get Kinde M2M token: ${JSON.stringify(data)}`);
+  }
   return data.access_token;
 }
 
-export async function createKindeUser(userData: KindeUserCreateRequest) {
+/**
+ * Finds a user in Kinde by email.
+ * Checks both the active user list and the organization's invitation list.
+ */
+export async function getKindeUserByEmail(email: string) {
+  const token = await getKindeMgmtToken();
   const domain = process.env.KINDE_ISSUER_URL;
   const orgCode = process.env.KINDE_ORG_CODE;
-  const token = await getKindeMgmtToken();
 
-  console.log(`[KindeMgmt] Inviting user to organization ${orgCode}: ${userData.email}`);
+  console.log(`[KindeMgmt] Searching for user by email: ${email}`);
 
-  const response = await fetch(`${domain}/api/v1/organization/${orgCode}/invites`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    },
-    body: JSON.stringify({
-      email: userData.email,
-      first_name: userData.first_name,
-      last_name: userData.last_name || "Member",
-      roles: ["member"], // Using the newly created role key
-    }),
+  // 1. Search Active Users
+  const userRes = await fetch(`${domain}/api/v1/users?email=${encodeURIComponent(email)}`, {
+    headers: { "Authorization": `Bearer ${token}` }
   });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error("[KindeMgmt] Invite Error Response:", JSON.stringify(errorData));
-    throw new Error(`Kinde Invitation Failed: ${JSON.stringify(errorData)}`);
+  
+  if (!userRes.ok) {
+    const errorData = await userRes.json();
+    console.error("[KindeMgmt] User search failed:", errorData);
+    throw new Error(`Kinde API Error: ${errorData.message || userRes.statusText}`);
   }
 
-  const data = await response.json();
-  // Kinde Invite API returns the invitation object. 
-  // We'll return it so the caller has access to the invite link if needed.
-  return {
-    id: data.invite?.id,
-    email: data.invite?.email,
-    invite_link: data.invite?.invite_link
-  };
-}
-
-export async function getKindeUserByEmail(email: string) {
-  const domain = process.env.KINDE_ISSUER_URL;
-  const token = await getKindeMgmtToken();
-
-  const response = await fetch(`${domain}/api/v1/users?email=${encodeURIComponent(email)}`, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Accept": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    return null;
+  const userData = await userRes.json();
+  if (userData.users && userData.users.length > 0) {
+    const user = userData.users[0];
+    console.log(`[KindeMgmt] Found active user: ${user.id}`);
+    return {
+      id: user.id,
+      email: user.email,
+      status: "active" as const
+    };
   }
 
-  const data = await response.json();
-  return data.users?.[0] || null;
+  // 2. Search Invitations (in case they haven't accepted yet)
+  console.log(`[KindeMgmt] User not found in active list. Searching invitations...`);
+  const inviteRes = await fetch(`${domain}/api/v1/organization/${orgCode}/invites`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+  
+  if (inviteRes.ok) {
+    const inviteData = await inviteRes.json();
+    const invite = inviteData.invites?.find((i: any) => i.email.toLowerCase() === email.toLowerCase());
+    if (invite) {
+      console.log(`[KindeMgmt] Found pending invitation: ${invite.id}`);
+      return {
+        id: invite.id, // Using invite ID as the temporary userId
+        email: invite.email,
+        status: "invited" as const
+      };
+    }
+  }
+
+  console.log(`[KindeMgmt] No user or invitation found for: ${email}`);
+  return null;
 }

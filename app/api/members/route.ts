@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { db } from "@/db/client";
 import { personalInfo, nomineeInfo } from "@/db/schema";
-import { createKindeUser, getKindeUserByEmail } from "@/lib/kinde-mgmt";
-import { appendRow } from "@/lib/sheets";
-import { sendInvitationEmail } from "@/lib/email";
+import { getKindeUserByEmail } from "@/lib/kinde-mgmt";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
@@ -47,99 +45,74 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Member with this email already exists" }, { status: 409 });
     }
 
-    // 2. Kinde Sync: Try to find existing Kinde user first, otherwise create
-    let kindeUser = await getKindeUserByEmail(email);
+    // 1. Check if user exists in Kinde (Manual Add requirement)
+    const kindeUser = await getKindeUserByEmail(email);
+    
     if (!kindeUser) {
-      console.log(`[API/Members] Creating new Kinde user for ${email}`);
-      const names = name.split(" ");
-      const firstName = names[0];
-      const lastName = names.slice(1).join(" ") || "";
-      kindeUser = await createKindeUser({
-        email,
-        first_name: firstName,
-        last_name: lastName,
-      });
-    } else {
-      console.log(`[API/Members] Found existing Kinde user ${kindeUser.id} for ${email}`);
+      return NextResponse.json({ 
+        error: "Member not found in Kinde. Please add this user to your Kinde Dashboard first so they can sign in." 
+      }, { status: 404 });
     }
 
     const userId = kindeUser.id;
 
-    // 3. Google Sheets Sync: Append row to "Members"
-    // Row mapping: User ID, Full Name, Name (Bengali), Mobile, Position, Date of Birth, Profession, Religion, NID Number, Present Address, Permanent Address
-    const rowData = [
-      userId,
-      name,
-      nameBn || "",
-      mobile || "",
-      position,
-      dob,
-      profession,
-      religion,
-      nidNumber,
-      presentAddress,
-      permanentAddress
-    ];
-
+    // 2. Add to Google Sheets
     let sheetsRowIndex: number | null = null;
     try {
-      sheetsRowIndex = await appendRow("Members", rowData);
-    } catch (sheetErr) {
-      console.error("[API/Members] Google Sheets sync failed:", sheetErr);
-      // We continue even if sheet sync fails, but log it
+      const { syncMemberToSheets } = await import("@/lib/sheets-sync");
+      sheetsRowIndex = await syncMemberToSheets({
+        name,
+        email,
+        position,
+        mobile,
+        presentAddress,
+        depositStartDate,
+      });
+    } catch (err) {
+      console.error("Failed to sync to Google Sheets:", err);
     }
 
-    // 4. Neon DB Sync: Insert into personal_info
+    // 3. Database Insert (Personal Info)
     await db.insert(personalInfo).values({
       userId,
       name,
       nameBn: nameBn || "",
-      father,
-      mother,
-      dob,
-      profession,
-      religion,
-      presentAddress,
-      permanentAddress,
+      father: father || "",
+      mother: mother || "",
+      dob: dob || "1990-01-01",
+      profession: profession || "Private Service",
+      religion: religion || "Islam",
+      presentAddress: presentAddress || "",
+      permanentAddress: permanentAddress || "",
       mobile: mobile || "",
       email,
-      nidNumber,
-      position,
+      nidNumber: nidNumber || "",
+      position: position as any || "member",
       depositStartDate,
       sheetsRowIndex,
     });
 
-    // 5. Initialize Nominee Info (placeholder)
-    await db.insert(nomineeInfo).values({
-      userId,
-      name: "TBD",
-      relation: "TBD",
-      mobile: "",
-      nidNumber: "",
-    });
-
-    // 6. Send Invitation Email if invite_link is present
-    let emailStatus = { success: true };
-    if (kindeUser.invite_link) {
-      console.log(`[API/Members] Sending invitation email to ${email}`);
-      const firstName = name.split(" ")[0];
-      const result = await sendInvitationEmail({
-        email,
-        firstName,
-        inviteLink: kindeUser.invite_link,
+    // 4. Database Insert (Nominee Info)
+    if (nominee) {
+      await db.insert(nomineeInfo).values({
+        userId,
+        name: nominee.name || "",
+        relation: nominee.relation || "",
+        mobile: nominee.mobile || "",
+        email: nominee.email || "",
+        nidNumber: nominee.nidNumber || "",
       });
-      emailStatus = result;
-      if (!result.success) {
-        console.error("[API/Members] Email sending failed:", result.error);
-      }
     }
+
+    // 5. Initial Dues Calculation
+    const { createInitialDues } = await import("@/lib/queries/deposits");
+    await createInitialDues(userId, depositStartDate);
 
     return NextResponse.json({ 
       success: true, 
       userId, 
       sheetsRowIndex,
-      invited: !!kindeUser.invite_link,
-      emailStatus
+      status: kindeUser.status
     });
 
   } catch (err: any) {
