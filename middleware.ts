@@ -6,6 +6,7 @@ export default function middleware(req: Request) {
 
 export const config = {
   matcher: [
+    "/dashboard",
     "/dashboard/:path*",
     "/deposits/:path*",
     "/expenses/:path*",

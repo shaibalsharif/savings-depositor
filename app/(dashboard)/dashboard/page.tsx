@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { requireMember, isManager } from "@/lib/auth";
 import { getManagerDashboardStats, getMemberDashboardStats } from "@/lib/queries/dashboard";
 import { MonthlyCollectionChart, MemberCollectionChart } from "@/components/charts/CollectionCharts";
