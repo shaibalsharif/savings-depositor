@@ -87,6 +87,7 @@ export function PaymentPatternSection({ initialData }: { initialData: HeatmapDat
           {/* Show All / Back button */}
           {isAllTime ? (
             <button
+              type="button"
               onClick={handleExitAllTime}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-card hover:bg-muted text-xs font-semibold transition disabled:opacity-50"
@@ -97,6 +98,7 @@ export function PaymentPatternSection({ initialData }: { initialData: HeatmapDat
             </button>
           ) : (
             <button
+              type="button"
               onClick={handleShowAll}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-card hover:bg-muted text-xs font-semibold transition disabled:opacity-50"
@@ -112,6 +114,7 @@ export function PaymentPatternSection({ initialData }: { initialData: HeatmapDat
           {!isAllTime && (
             <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={handlePrevYear}
                 disabled={loading}
                 className="p-1.5 rounded-lg hover:bg-muted border bg-card transition disabled:opacity-50"
@@ -123,6 +126,7 @@ export function PaymentPatternSection({ initialData }: { initialData: HeatmapDat
                 {loading ? <Loader2 size={14} className="animate-spin mx-auto" /> : year}
               </div>
               <button
+                type="button"
                 onClick={handleNextYear}
                 disabled={loading || year >= new Date().getFullYear()}
                 className="p-1.5 rounded-lg hover:bg-muted border bg-card transition disabled:opacity-50"

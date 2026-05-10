@@ -33,7 +33,7 @@ export function InvestmentsTable({
                 <th className="col-actual-return">Actual Return</th>
                 <th className="col-days">Days</th>
                 <th className="col-status">Status</th>
-                {manager && <th className="col-actions text-right">Actions</th>}
+                <th className="col-actions text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -73,25 +73,25 @@ export function InvestmentsTable({
                         {inv.status}
                       </span>
                     </td>
-                    {manager && (
-                      <td className="col-actions text-right">
-                        <div className="flex items-center justify-end gap-2">
+                    <td className="col-actions text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {manager && (
                           <button
                             onClick={() => setSelectedInvestment(inv)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-muted/60 border bg-muted/30 transition text-foreground"
                           >
                             <Edit2 size={12} /> Edit
                           </button>
-                          <Link
-                            href={`/investments/${inv.entryId}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all border border-teal/20 hover:bg-teal/10"
-                            style={{ color: "var(--teal)" }}
-                          >
-                            View
-                          </Link>
-                        </div>
-                      </td>
-                    )}
+                        )}
+                        <Link
+                          href={`/investments/${inv.entryId}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all border border-teal/20 hover:bg-teal/10"
+                          style={{ color: "var(--teal)" }}
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}

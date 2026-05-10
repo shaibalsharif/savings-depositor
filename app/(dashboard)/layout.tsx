@@ -9,11 +9,14 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireMember();
+  const user = await requireMember();
   const managerRole = await isManager();
 
   return (
-    <CollapsibleLayout isManagerRole={managerRole}>
+    <CollapsibleLayout 
+      isManagerRole={managerRole} 
+      user={{ name: user.given_name || "Member", picture: user.picture }}
+    >
       <SessionGuard />
       <PushPermissionBanner />
       {children}

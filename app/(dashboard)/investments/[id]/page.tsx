@@ -1,4 +1,4 @@
-import { requireManager } from "@/lib/auth";
+import { requireMember } from "@/lib/auth";
 import { getInvestmentWithShares } from "@/lib/queries/investment";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -13,7 +13,7 @@ export default async function InvestmentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireManager();
+  await requireMember();
   const { id } = await params;
   const data = await getInvestmentWithShares(id);
 

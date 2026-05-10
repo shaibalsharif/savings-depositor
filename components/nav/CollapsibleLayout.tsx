@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { SidebarClient } from "./SidebarClient";
+import Link from "next/link";
 
 export function CollapsibleLayout({
   isManagerRole,
+  user,
   children,
 }: {
   isManagerRole: boolean;
+  user: { name: string; picture: string | null };
   children: React.ReactNode;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -33,13 +36,35 @@ export function CollapsibleLayout({
         isManagerRole={isManagerRole}
         isCollapsed={isCollapsed}
         toggleCollapse={toggleCollapse}
+        user={user}
       />
       <main
-        className={`flex-1 overflow-x-hidden overflow-y-auto pt-14 md:pt-0 w-full min-h-screen transition-all duration-300 ml-0 ${
+        className={`flex-1 overflow-x-hidden overflow-y-auto w-full min-h-screen transition-all duration-300 ml-0 ${
           isMounted && isCollapsed ? "md:ml-[72px]" : "md:ml-[260px]"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8 transition-all duration-300">
+        {/* Top Header Bar (Desktop/Tablet) */}
+        <div className="hidden md:flex sticky top-0 z-30 h-16 w-full items-center backdrop-blur-md bg-background/60 border-b border-border/40">
+          <div className="max-w-7xl mx-auto w-full px-6 sm:px-10 flex items-center justify-end">
+            <div className="flex items-center gap-4">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-semibold text-foreground">{user.name}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{isManagerRole ? "Manager" : "Member"}</p>
+              </div>
+              <Link href="/my-profile" className="transition-transform hover:scale-105 active:scale-95">
+                {user.picture ? (
+                  <img src={user.picture} alt={user.name} className="w-9 h-9 rounded-full ring-2 ring-teal/20" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-teal-dim flex items-center justify-center text-xs font-bold text-teal ring-2 ring-teal/20">
+                    {user.name.charAt(0)}
+                  </div>
+                )}
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8 transition-all duration-300 pt-20 md:pt-8">
           {children}
         </div>
       </main>

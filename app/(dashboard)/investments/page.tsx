@@ -50,7 +50,7 @@ export default async function InvestmentsPage(props: { searchParams: SearchParam
     { id: "actual-return", label: "Actual Return" },
     { id: "days", label: "Days" },
     { id: "status", label: "Status" },
-    ...(manager ? [{ id: "actions", label: "Actions" }] : []),
+    { id: "actions", label: "Actions" },
   ];
 
   return (

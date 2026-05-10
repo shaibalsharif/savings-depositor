@@ -1,14 +1,14 @@
 "use server";
 
-import { requireManager } from "@/lib/auth";
+import { requireMember } from "@/lib/auth";
 import { getHeatmapData, getAllTimeHeatmapData } from "@/lib/queries/dashboard";
 
 export async function getHeatmapDataAction(year: number) {
-  await requireManager();
+  await requireMember();
   return await getHeatmapData(year);
 }
 
 export async function getAllTimeHeatmapDataAction() {
-  await requireManager();
+  await requireMember();
   return await getAllTimeHeatmapData();
 }

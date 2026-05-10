@@ -54,10 +54,12 @@ export function SidebarClient({
   isManagerRole,
   isCollapsed,
   toggleCollapse,
+  user,
 }: {
   isManagerRole: boolean;
   isCollapsed: boolean;
   toggleCollapse: () => void;
+  user: { name: string; picture: string | null };
 }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -78,7 +80,7 @@ export function SidebarClient({
     <>
       {/* Mobile Top App Bar */}
       <div
-        className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4 no-print"
+        className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-6 no-print"
         style={{ background: "hsl(222 47% 8%)", borderBottom: "1px solid hsl(var(--border))" }}
       >
         <div className="flex items-center gap-2.5">
@@ -87,12 +89,23 @@ export function SidebarClient({
             Project 13
           </span>
         </div>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-1.5 -mr-1.5 rounded-md text-muted-foreground hover:bg-accent"
-        >
-          {isOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        <div className="flex items-center gap-3">
+          <Link href="/my-profile" className="flex items-center">
+            {user.picture ? (
+              <Image src={user.picture} alt={user.name} width={28} height={28} className="rounded-full ring-1 ring-border" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-teal-dim flex items-center justify-center text-[10px] font-bold text-teal ring-1 ring-border">
+                {user.name.charAt(0)}
+              </div>
+            )}
+          </Link>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1.5 rounded-md text-muted-foreground hover:bg-accent"
+          >
+            {isOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </div>
 
       {/* Sidebar Drawer */}
