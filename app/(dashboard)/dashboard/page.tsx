@@ -11,6 +11,8 @@ import Link from "next/link";
 import { PaymentPatternSection } from "./PaymentPatternSection";
 import { ProjectionTrigger } from "../projection/ProjectionTrigger";
 import { OutstandingPendingsSection } from "./OutstandingPendingsSection";
+import { DashboardTabs } from "./DashboardTabs";
+import { Suspense } from "react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function StatCard({
@@ -41,6 +43,27 @@ function SectionBox({ title, action, children }: { title: string; action?: React
       </div>
       <div className="flex-1">
         {children}
+      </div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="glass h-[110px]" />
+        ))}
+      </div>
+      <div className="flex flex-row gap-4 h-[200px]">
+        <div className="glass flex-1" />
+        <div className="glass w-[35%]" />
+      </div>
+      <div className="glass h-[300px]" />
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 glass h-[350px]" />
+        <div className="lg:col-span-2 glass h-[350px]" />
       </div>
     </div>
   );
@@ -211,7 +234,7 @@ async function ManagerDash() {
 }
 
 // ─── Member Dashboard ─────────────────────────────────────────────────────────
-async function MemberDash({ userId }: { userId: string }) {
+async function MemberDash({ userId, hideRecentPayments }: { userId: string; hideRecentPayments?: boolean }) {
   const stats = await getMemberDashboardStats(userId);
   const currentPct = stats.currentMonth.expected > 0
     ? (stats.currentMonth.paid / stats.currentMonth.expected) * 100
@@ -227,15 +250,15 @@ async function MemberDash({ userId }: { userId: string }) {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard
           label="My Balance Paid"
-          value={`৳${stats.totalPaid.toLocaleString()}`}
+          value={`৳${stats.liquidBalance.toLocaleString()}`}
           accent="var(--teal)"
-          sub={`of ৳${stats.totalExpected.toLocaleString()} required`}
+          sub={`+ ৳${stats.totalInvested.toLocaleString()} in investment`}
         />
         <StatCard
           label="Outstanding Balance"
           value={`৳${stats.totalDue.toLocaleString()}`}
           accent={stats.totalDue > 0 ? "var(--red)" : "var(--green)"}
-          sub={stats.totalDue > 0 ? "Please clear your dues" : "Fully paid up ✓"}
+          sub={`of ৳${stats.totalExpected.toLocaleString()} required`}
         />
         <div className="col-span-2 md:col-span-1">
           <StatCard
@@ -247,28 +270,6 @@ async function MemberDash({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {/* ── This Month Progress ── */}
-      <div className="glass p-4 sm:p-5 space-y-4 select-none">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            {format(new Date(), "MMMM yyyy")} — My Deposit Progress
-          </div>
-          <span className="text-xs font-medium" style={{ color: currentPct >= 100 ? "var(--green)" : "var(--amber)" }}>
-            {Math.round(currentPct)}% complete
-          </span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-bold" style={{ color: currentPct >= 100 ? "var(--green)" : "var(--teal)" }}>
-            ৳{stats.currentMonth.paid.toLocaleString()}
-          </span>
-          <span className="text-xs sm:text-sm text-muted-foreground">
-            of ৳{stats.currentMonth.expected.toLocaleString()} required this month
-          </span>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-bar-fill" style={{ width: `${Math.min(currentPct, 100)}%`, background: currentPct >= 100 ? "var(--green)" : "var(--teal)" }} />
-        </div>
-      </div>
 
       {/* ── My Payment Chart ── */}
       <SectionBox title="My Payments — Last 12 Months">
@@ -312,40 +313,42 @@ async function MemberDash({ userId }: { userId: string }) {
           </div>
         </SectionBox>
 
-        {/* Recent Payments */}
-        <SectionBox
-          title="Recent Payments"
-          action={<Link href="/my-deposits" className="text-xs font-medium text-[var(--teal)]">View All →</Link>}
-        >
-          {stats.recentPayments.length === 0 ? (
-            <div className="p-4 sm:p-5 text-center text-sm text-muted-foreground">
-              No payments yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Note</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.recentPayments.map((p) => (
-                    <tr key={p.id}>
-                      <td className="text-muted-foreground text-xs">{formatLocalDate(p.paymentDate)}</td>
-                      <td className="font-semibold text-xs text-[var(--teal)]">
-                        +৳{Number(p.amountReceived).toLocaleString()}
-                      </td>
-                      <td className="text-muted-foreground text-xs truncate max-w-[120px]">{p.note || "—"}</td>
+        {/* Recent Payments - hidden if requested */}
+        {!hideRecentPayments && (
+          <SectionBox
+            title="Recent Payments"
+            action={<Link href="/my-deposits" className="text-xs font-medium text-[var(--teal)]">View All →</Link>}
+          >
+            {stats.recentPayments.length === 0 ? (
+              <div className="p-4 sm:p-5 text-center text-sm text-muted-foreground">
+                No payments yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Amount</th>
+                      <th>Note</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </SectionBox>
+                  </thead>
+                  <tbody>
+                    {stats.recentPayments.map((p) => (
+                      <tr key={p.id}>
+                        <td className="text-muted-foreground text-xs">{formatLocalDate(p.paymentDate)}</td>
+                        <td className="font-semibold text-xs text-[var(--teal)]">
+                          +৳{Number(p.amountReceived).toLocaleString()}
+                        </td>
+                        <td className="text-muted-foreground text-xs truncate max-w-[120px]">{p.note || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </SectionBox>
+        )}
       </div>
 
     </div>
@@ -353,36 +356,47 @@ async function MemberDash({ userId }: { userId: string }) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const user = await requireMember();
   const manager = await isManager();
+
+  // Handle default tab logic
+  const activeTab = tab || (manager ? "all" : "own");
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-            {manager ? "Manager Dashboard" : "My Dashboard"}
+            {activeTab === "all" ? "Fund Dashboard" : "My Dashboard"}
           </h1>
           <p className="text-xs sm:text-sm mt-0.5 text-muted-foreground">
-            {manager
+            {activeTab === "all"
               ? "Full fund overview • member tracking • financial analytics"
               : `Welcome back, ${user.given_name ?? "Member"} — your deposit summary`}
           </p>
         </div>
-        {manager && (
-          <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <DashboardTabs activeTab={activeTab} />
+          {manager && (
             <Link
               href="/deposits/new"
               className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap bg-[var(--teal)] text-[hsl(222 47% 7%)] hover:opacity-90 transition shadow flex-shrink-0 text-center"
             >
               + Record Deposit
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {manager ? <ManagerDash /> : <MemberDash userId={user.id} />}
+      <Suspense key={activeTab} fallback={<DashboardSkeleton />}>
+        {activeTab === "all" ? <ManagerDash /> : <MemberDash userId={user.id} hideRecentPayments={activeTab === "own"} />}
+      </Suspense>
     </div>
   );
 }

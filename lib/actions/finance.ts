@@ -6,7 +6,7 @@ import { generateExpenseId, generateInvestmentId, generateRevenueId } from "@/li
 import { appendRow, updateRow, markVoided, clearRowRange } from "@/lib/sheets";
 import { requireManager } from "@/lib/auth";
 import { ExpenseSchema, InvestmentSchema, RevenueLossSchema, UpdateInvestmentSchema, UpdateRevenueLossSchema } from "../validators/finance";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { eq } from "drizzle-orm";
 import { calculateAndSaveShares } from "@/lib/queries/investment";
 
@@ -41,6 +41,7 @@ export async function createExpense(data: any) {
 
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true, entryId };
 }
 
@@ -82,6 +83,7 @@ export async function createInvestment(data: any) {
 
   revalidatePath("/investments");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true, entryId };
 }
 
@@ -113,6 +115,7 @@ export async function markInvestmentMatured(entryId: string, actualReturnDate: s
 
   revalidatePath("/investments");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -158,6 +161,7 @@ export async function createRevenue(data: any) {
 
   revalidatePath("/revenue");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true, entryId };
 }
 
@@ -195,6 +199,7 @@ export async function updateExpense(entryId: string, data: any) {
 
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -226,6 +231,7 @@ export async function voidExpense(entryId: string) {
 
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -281,6 +287,7 @@ export async function updateInvestment(entryId: string, data: any) {
 
   revalidatePath("/investments");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -319,6 +326,7 @@ export async function deleteInvestment(entryId: string) {
 
   revalidatePath("/investments");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -364,6 +372,7 @@ export async function updateRevenue(entryId: string, data: any) {
 
   revalidatePath("/revenue");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -393,6 +402,7 @@ export async function voidRevenue(entryId: string) {
 
   revalidatePath("/revenue");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -422,5 +432,6 @@ export async function deleteRevenue(entryId: string) {
 
   revalidatePath("/revenue");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }

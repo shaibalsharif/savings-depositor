@@ -42,7 +42,7 @@ export function DepositsViewTabs({
   const tabs: { id: ViewMode; label: string }[] = [
     { id: "month", label: "📅 This Month" },
     { id: "mine", label: "👤 My Deposits" },
-    ...(isManager ? [{ id: "all" as ViewMode, label: "🌐 All Members" }] : []),
+    { id: "all", label: isManager ? "🌐 All Members" : "🌐 All Deposits" },
   ];
 
   return (

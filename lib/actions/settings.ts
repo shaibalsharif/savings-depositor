@@ -3,7 +3,7 @@
 import { db } from "@/db/client";
 import { depositSettings, logs } from "@/db/schema";
 import { requireManager } from "@/lib/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function createDepositSetting(monthlyAmount: number, effectiveMonth: string) {
   const user = await requireManager();
@@ -26,5 +26,6 @@ export async function createDepositSetting(monthlyAmount: number, effectiveMonth
   });
 
   revalidatePath("/settings/deposits");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }

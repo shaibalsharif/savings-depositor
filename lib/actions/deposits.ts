@@ -7,7 +7,7 @@ import { appendRow, updateRow, markVoided } from "@/lib/sheets";
 import { requireManager } from "@/lib/auth";
 import { z } from "zod";
 import { CreateDepositSchema } from "../validators/deposit";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { eq } from "drizzle-orm";
 import { getManagerDashboardStats } from "@/lib/queries/dashboard";
 import { notifyDepositConfirmed } from "@/lib/notifications/service";
@@ -136,6 +136,8 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
 
   revalidatePath("/deposits");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
+  revalidateTag("dashboard-stats");
   return { success: true, paymentId };
 }
 
@@ -241,6 +243,8 @@ export async function createBatchPayments(
 
   revalidatePath("/deposits");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
+  revalidateTag("dashboard-stats");
   return { success: true, paymentIds: results };
 }
 
@@ -312,6 +316,8 @@ export async function updatePayment(
 
   revalidatePath("/deposits");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -349,6 +355,7 @@ export async function voidPayment(paymentId: string) {
 
   revalidatePath("/deposits");
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 

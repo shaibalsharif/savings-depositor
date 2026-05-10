@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { personalInfo, nomineeInfo } from "@/db/schema";
 import { requireManager, requireMember } from "@/lib/auth";
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function toggleMemberRole(userId: string, currentPosition: string) {
   const currentUser = await requireManager();
@@ -27,6 +27,7 @@ export async function toggleMemberRole(userId: string, currentPosition: string) 
     .where(eq(personalInfo.userId, userId));
 
   revalidatePath("/members");
+  revalidateTag("dashboard-stats");
   return { success: true, newPosition };
 }
 
@@ -112,6 +113,7 @@ export async function updateMemberFullProfile(
 
   revalidatePath("/members");
   revalidatePath("/my-profile");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
 
@@ -140,5 +142,6 @@ export async function updateSelfPhoto(photo: string) {
   }
 
   revalidatePath("/my-profile");
+  revalidateTag("dashboard-stats");
   return { success: true };
 }
