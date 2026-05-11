@@ -41,6 +41,10 @@ export function MemberEditModal({
 
   const [isPending, setIsPending] = useState(false);
   const [message, setMessage] = useState("");
+  const [personalPhotoPreview, setPersonalPhotoPreview] = useState<string | null>(null);
+  const [nomineePhotoPreview, setNomineePhotoPreview] = useState<string | null>(null);
+  const [isUploadingPersonal, setIsUploadingPersonal] = useState(false);
+  const [isUploadingNominee, setIsUploadingNominee] = useState(false);
 
   useEffect(() => {
     if (member) {
@@ -127,7 +131,6 @@ export function MemberEditModal({
                   <label className="text-xs font-semibold">Full Name (English)</label>
                   <input
                     type="text"
-                    required
                     value={personal.name}
                     onChange={(e) => setPersonal({ ...personal, name: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
@@ -137,7 +140,6 @@ export function MemberEditModal({
                   <label className="text-xs font-semibold">Name (Bengali)</label>
                   <input
                     type="text"
-                    required
                     value={personal.nameBn}
                     onChange={(e) => setPersonal({ ...personal, nameBn: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
@@ -147,7 +149,6 @@ export function MemberEditModal({
                   <label className="text-xs font-semibold">Father's Name</label>
                   <input
                     type="text"
-                    required
                     value={personal.father}
                     onChange={(e) => setPersonal({ ...personal, father: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
@@ -166,7 +167,6 @@ export function MemberEditModal({
                   <label className="text-xs font-semibold">Date of Birth</label>
                   <input
                     type="date"
-                    required
                     value={personal.dob}
                     onChange={(e) => setPersonal({ ...personal, dob: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
@@ -176,7 +176,6 @@ export function MemberEditModal({
                   <label className="text-xs font-semibold">Profession</label>
                   <input
                     type="text"
-                    required
                     value={personal.profession}
                     onChange={(e) => setPersonal({ ...personal, profession: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
@@ -186,7 +185,6 @@ export function MemberEditModal({
                   <label className="text-xs font-semibold">Religion</label>
                   <input
                     type="text"
-                    required
                     value={personal.religion}
                     onChange={(e) => setPersonal({ ...personal, religion: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
@@ -196,7 +194,6 @@ export function MemberEditModal({
                   <label className="text-xs font-semibold">Mobile</label>
                   <input
                     type="text"
-                    required
                     value={personal.mobile}
                     onChange={(e) => setPersonal({ ...personal, mobile: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
@@ -216,7 +213,6 @@ export function MemberEditModal({
                   <label className="text-xs font-semibold">NID Number</label>
                   <input
                     type="text"
-                    required
                     value={personal.nidNumber}
                     onChange={(e) => setPersonal({ ...personal, nidNumber: e.target.value })}
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground font-mono"
@@ -231,20 +227,55 @@ export function MemberEditModal({
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
                   />
                 </div>
-                <div className="sm:col-span-2 border-t pt-3 flex flex-col items-center gap-2">
-                  <label className="text-xs font-semibold text-muted-foreground self-start select-none">Or Upload New Image</label>
-                  <UploadThingButton
-                    endpoint="userImage"
-                    onComplete={(url) => {
-                      setPersonal({ ...personal, photo: url });
-                      setMessage("✓ Member Photo uploaded!");
-                    }}
-                  />
+                <div className="sm:col-span-2 border-t pt-3 space-y-3">
+                  <label className="text-xs font-semibold text-muted-foreground self-start select-none">Member Photo</label>
+                  
+                  {!personalPhotoPreview ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <UploadThingButton
+                        endpoint="userImage"
+                        onUploadStart={() => setIsUploadingPersonal(true)}
+                        onComplete={(url) => {
+                          setPersonalPhotoPreview(url);
+                          setIsUploadingPersonal(false);
+                        }}
+                        onUploadError={() => setIsUploadingPersonal(false)}
+                      />
+                      {isUploadingPersonal && <span className="text-[10px] animate-pulse text-teal font-bold uppercase tracking-widest">Uploading...</span>}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4 bg-muted/10 p-3 rounded-xl border border-dashed border-teal/30">
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-teal flex-shrink-0">
+                        <img src={personalPhotoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-[10px] font-bold text-teal uppercase">New Photo Ready</p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPersonal({ ...personal, photo: personalPhotoPreview });
+                              setPersonalPhotoPreview(null);
+                            }}
+                            className="bg-teal text-[10px] font-bold px-3 py-1 rounded text-white uppercase tracking-wider"
+                          >
+                            Use This
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPersonalPhotoPreview(null)}
+                            className="bg-red-500/10 text-red-500 text-[10px] font-bold px-3 py-1 rounded uppercase tracking-wider border border-red-500/20"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold">Present Address</label>
                   <textarea
-                    required
                     rows={2}
                     value={personal.presentAddress}
                     onChange={(e) => setPersonal({ ...personal, presentAddress: e.target.value })}
@@ -254,7 +285,6 @@ export function MemberEditModal({
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold">Permanent Address</label>
                   <textarea
-                    required
                     rows={2}
                     value={personal.permanentAddress}
                     onChange={(e) => setPersonal({ ...personal, permanentAddress: e.target.value })}
@@ -324,15 +354,51 @@ export function MemberEditModal({
                     className="w-full mt-1 p-2 text-xs border rounded-lg bg-muted/20 text-foreground"
                   />
                 </div>
-                <div className="sm:col-span-2 border-t pt-3 flex flex-col items-center gap-2">
-                  <label className="text-xs font-semibold text-muted-foreground self-start select-none">Or Upload Nominee Image</label>
-                  <UploadThingButton
-                    endpoint="nomineePhoto"
-                    onComplete={(url) => {
-                      setNominee({ ...nominee, photo: url });
-                      setMessage("✓ Nominee Photo uploaded!");
-                    }}
-                  />
+                <div className="sm:col-span-2 border-t pt-3 space-y-3">
+                  <label className="text-xs font-semibold text-muted-foreground self-start select-none">Nominee Photo</label>
+                  
+                  {!nomineePhotoPreview ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <UploadThingButton
+                        endpoint="nomineePhoto"
+                        onUploadStart={() => setIsUploadingNominee(true)}
+                        onComplete={(url) => {
+                          setNomineePhotoPreview(url);
+                          setIsUploadingNominee(false);
+                        }}
+                        onUploadError={() => setIsUploadingNominee(false)}
+                      />
+                      {isUploadingNominee && <span className="text-[10px] animate-pulse text-teal font-bold uppercase tracking-widest">Uploading...</span>}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4 bg-muted/10 p-3 rounded-xl border border-dashed border-teal/30">
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-teal flex-shrink-0">
+                        <img src={nomineePhotoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-[10px] font-bold text-teal uppercase">New Nominee Photo</p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNominee({ ...nominee, photo: nomineePhotoPreview });
+                              setNomineePhotoPreview(null);
+                            }}
+                            className="bg-teal text-[10px] font-bold px-3 py-1 rounded text-white uppercase tracking-wider"
+                          >
+                            Use This
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNomineePhotoPreview(null)}
+                            className="bg-red-500/10 text-red-500 text-[10px] font-bold px-3 py-1 rounded uppercase tracking-wider border border-red-500/20"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold">Nominee Address</label>

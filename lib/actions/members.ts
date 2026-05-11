@@ -75,6 +75,9 @@ export async function updateMemberFullProfile(
   if (personal.email !== undefined) pUpdates.email = personal.email;
   if (personal.nidNumber !== undefined) pUpdates.nidNumber = personal.nidNumber;
   if (personal.photo !== undefined) pUpdates.photo = personal.photo;
+  
+  // Clean up date strings
+  if (pUpdates.dob === "") pUpdates.dob = null;
 
   if (Object.keys(pUpdates).length > 0) {
     await db.update(personalInfo).set(pUpdates).where(eq(personalInfo.userId, userId));
@@ -94,6 +97,9 @@ export async function updateMemberFullProfile(
   if (nominee.address !== undefined) nUpdates.address = nominee.address;
   if (nominee.photo !== undefined) nUpdates.photo = nominee.photo;
 
+  // Clean up date strings
+  if (nUpdates.dob === "") nUpdates.dob = null;
+
   if (Object.keys(nUpdates).length > 0) {
     if (existingNominee) {
       await db.update(nomineeInfo).set(nUpdates).where(eq(nomineeInfo.userId, userId));
@@ -102,7 +108,7 @@ export async function updateMemberFullProfile(
         userId,
         name: nominee.name ?? "",
         relation: nominee.relation ?? "",
-        dob: nominee.dob ?? null,
+        dob: nominee.dob && nominee.dob !== "" ? nominee.dob : null,
         mobile: nominee.mobile ?? null,
         nidNumber: nominee.nidNumber ?? null,
         address: nominee.address ?? null,
