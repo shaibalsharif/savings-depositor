@@ -2,7 +2,7 @@
 
 import { db } from "@/db/client";
 import { personalInfo, nomineeInfo } from "@/db/schema";
-import { requireManager, requireMember } from "@/lib/auth";
+import { requireManager, requireMember, isManager } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { revalidatePath, revalidateTag } from "next/cache";
 
@@ -143,5 +143,40 @@ export async function updateSelfPhoto(photo: string) {
 
   revalidatePath("/my-profile");
   revalidateTag("dashboard-stats");
+  return { success: true };
+}
+
+export async function updateMemberDocument(userId: string, type: "nidFront" | "nidBack" | "nomineePhoto", url: string) {
+  const currentUser = await requireMember();
+  const manager = await isManager();
+
+  // Security: If not a manager, can only update own profile
+  if (!manager && currentUser.id !== userId) {
+    throw new Error("Unauthorized: You can only update your own documents.");
+  }
+  
+  if (type === "nomineePhoto") {
+    // Check if nominee record exists first
+    const existing = await db.query.nomineeInfo.findFirst({
+      where: eq(nomineeInfo.userId, userId),
+    });
+    
+    if (!existing) {
+      // Create a skeleton nominee record if it doesn't exist
+      await db.insert(nomineeInfo).values({
+        userId,
+        name: "Pending", // Default value
+        relation: "Pending",
+        photo: url,
+      });
+    } else {
+      await db.update(nomineeInfo).set({ photo: url }).where(eq(nomineeInfo.userId, userId));
+    }
+  } else {
+    await db.update(personalInfo).set({ [type]: url }).where(eq(personalInfo.userId, userId));
+  }
+
+  revalidatePath("/my-profile");
+  revalidatePath(`/members/${userId}`);
   return { success: true };
 }

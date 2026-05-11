@@ -71,7 +71,7 @@ export function OutstandingPendingsSection({
   );
   const recoveryRate = totalExpected > 0 ? (totalPaid / totalExpected) * 100 : 100;
   
-  const totalDelinquentMonths = filteredMembers.reduce((sum, m) => sum + m.breakdown.length, 0);
+  const uniqueDelinquentMonths = new Set(filteredMembers.flatMap(m => m.breakdown.map(b => b.month))).size;
   const avgDuePerMember = filteredMembers.length > 0 ? filteredTotalDue / filteredMembers.length : 0;
 
   // Find heaviest month and year
@@ -215,7 +215,7 @@ export function OutstandingPendingsSection({
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex gap-2 lg:items-center">
                   {[
                     { label: "Total Due", value: `৳${filteredTotalDue.toLocaleString()}`, color: "var(--red)" },
-                    { label: "Months", value: `${totalDelinquentMonths}`, color: "var(--amber)" },
+                    { label: "Unique Months", value: `${uniqueDelinquentMonths}`, color: "var(--amber)" },
                     { label: "Bad Year", value: badYear, color: "var(--purple)" },
                     { label: "Heaviest", value: heaviestMonth, color: "var(--teal)" },
                     { label: "Recovery", value: `${recoveryRate.toFixed(1)}%`, color: "var(--green)" },

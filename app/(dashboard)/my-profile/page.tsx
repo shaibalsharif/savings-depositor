@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ProfilePhotoUploader } from "./ProfilePhotoUploader";
 import { ImagePreview } from "@/components/ui/image-preview";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { ProfileDocumentUploader } from "./ProfileDocumentUploader";
 import { NotificationSettings } from "./NotificationSettings";
 import { formatLocalDate } from "@/lib/format-date";
 import { formatPhoneNumber } from "@/lib/utils/format-phone";
@@ -77,17 +78,21 @@ export default async function MyProfilePage() {
                 <div className="text-sm font-mono font-medium mt-0.5">{profile.nidNumber}</div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {profile.nidFront && (
+                {profile.nidFront ? (
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">NID Front</div>
                     <ImagePreview src={profile.nidFront} alt="NID Front" className="aspect-[3/2]" />
                   </div>
+                ) : (
+                  <ProfileDocumentUploader userId={user.id} type="nidFront" label="NID Front" />
                 )}
-                {profile.nidBack && (
+                {profile.nidBack ? (
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">NID Back</div>
                     <ImagePreview src={profile.nidBack} alt="NID Back" className="aspect-[3/2]" />
                   </div>
+                ) : (
+                  <ProfileDocumentUploader userId={user.id} type="nidBack" label="NID Back" />
                 )}
               </div>
               {profile.signature && (
@@ -190,15 +195,24 @@ export default async function MyProfilePage() {
                 <div className="sm:col-span-2 pt-4 border-t mt-2">
                   <div className="flex items-center gap-4 mb-2">
                     <UserAvatar src={nominee.photo} name={nominee.name} className="w-14 h-14 text-lg" />
-                    <div>
+                    <div className="flex-1">
                       <div className="text-sm font-semibold">Nominee Photo</div>
-                      <div className="text-xs text-muted-foreground">Attached identification photo</div>
+                      <div className="text-xs text-muted-foreground mb-3">Attached identification photo</div>
+                      
+                      {!nominee.photo && (
+                        <ProfileDocumentUploader userId={user.id} type="nomineePhoto" label="Nominee Photo" />
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">No nominee information saved.</p>
+              <div className="space-y-4">
+                <p className="text-muted-foreground text-sm italic">No nominee information saved yet. You can start by uploading a photo.</p>
+                <div className="max-w-xs">
+                  <ProfileDocumentUploader userId={user.id} type="nomineePhoto" label="Nominee Photo" />
+                </div>
+              </div>
             )}
           </div>
           

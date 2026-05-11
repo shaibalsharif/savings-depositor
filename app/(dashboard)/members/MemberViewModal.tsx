@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { formatLocalDate } from "@/lib/format-date";
 import { ImagePreview } from "@/components/ui/image-preview";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { ProfileDocumentUploader } from "../my-profile/ProfileDocumentUploader";
 
 export function MemberViewModal({
   isOpen,
@@ -106,26 +107,31 @@ export function MemberViewModal({
           </div>
         </div>
 
-        {/* NID Documents */}
-        {(member.nidFront || member.nidBack) && (
           <div className="border-t pt-4 space-y-3">
             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">NID Documents</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {member.nidFront && (
-                <div className="space-y-1">
-                  <span className="text-[10px] font-medium text-muted-foreground uppercase">Front Side</span>
+              <div className="space-y-1">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Front Side</span>
+                {member.nidFront ? (
                   <ImagePreview src={member.nidFront} alt="NID Front" className="aspect-video" />
-                </div>
-              )}
-              {member.nidBack && (
-                <div className="space-y-1">
-                  <span className="text-[10px] font-medium text-muted-foreground uppercase">Back Side</span>
+                ) : (
+                  <div className="mt-1">
+                    <ProfileDocumentUploader userId={member.userId} type="nidFront" label="NID Front" />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">Back Side</span>
+                {member.nidBack ? (
                   <ImagePreview src={member.nidBack} alt="NID Back" className="aspect-video" />
-                </div>
-              )}
+                ) : (
+                  <div className="mt-1">
+                    <ProfileDocumentUploader userId={member.userId} type="nidBack" label="NID Back" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        )}
 
         {/* Nominee Info */}
         <div className="border-t pt-4 space-y-3">
@@ -138,30 +144,42 @@ export function MemberViewModal({
           </div>
 
           {member.nominee ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm">
-              <div>
-                <div className="text-xs text-muted-foreground mb-0.5">Nominee Name</div>
-                <div className="font-medium text-foreground">{member.nominee.name}</div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-0.5">Nominee Name</div>
+                  <div className="font-medium text-foreground">{member.nominee.name}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-0.5">Relationship</div>
+                  <div className="font-medium text-foreground">{member.nominee.relation}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-0.5">Mobile Contact</div>
+                  <div className="font-medium font-mono text-xs text-foreground">{member.nominee.mobile || "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-0.5">NID Number</div>
+                  <div className="font-medium font-mono text-xs text-foreground">{member.nominee.nidNumber || "—"}</div>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="text-xs text-muted-foreground mb-0.5">Address</div>
+                  <div className="font-medium text-foreground">{member.nominee.address || "—"}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-0.5">Relationship</div>
-                <div className="font-medium text-foreground">{member.nominee.relation}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-0.5">Mobile Contact</div>
-                <div className="font-medium font-mono text-xs text-foreground">{member.nominee.mobile || "—"}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-0.5">NID Number</div>
-                <div className="font-medium font-mono text-xs text-foreground">{member.nominee.nidNumber || "—"}</div>
-              </div>
-              <div className="sm:col-span-2">
-                <div className="text-xs text-muted-foreground mb-0.5">Address</div>
-                <div className="font-medium text-foreground">{member.nominee.address || "—"}</div>
-              </div>
+              {!member.nominee.photo && (
+                <div className="max-w-xs pt-2">
+                  <ProfileDocumentUploader userId={member.userId} type="nomineePhoto" label="Nominee Photo" />
+                </div>
+              )}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">No nominee information saved.</p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground italic">No nominee information saved.</p>
+              <div className="max-w-xs">
+                <ProfileDocumentUploader userId={member.userId} type="nomineePhoto" label="Nominee Photo" />
+              </div>
+            </div>
           )}
         </div>
 
