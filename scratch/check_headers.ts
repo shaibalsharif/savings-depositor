@@ -1,26 +1,16 @@
-import { google } from "googleapis";
-import * as dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+import { readSheet } from "../lib/sheets";
 
-const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
-
-async function run() {
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: privateKey,
-    },
-    scopes: SCOPES,
-  });
-  const sheets = google.sheets({ version: "v4", auth });
-  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: "Members!1:1",
-  });
-  console.log("Headers:", res.data.values?.[0]);
+async function checkHeaders() {
+  try {
+    const rows = await readSheet("Payments");
+    if (rows.length > 0) {
+      console.log("Headers found:", Object.keys(rows[0]));
+    } else {
+      console.log("Sheet is empty.");
+    }
+  } catch (err) {
+    console.error("Error:", err);
+  }
 }
 
-run().catch(console.error);
+checkHeaders().then(() => process.exit(0));

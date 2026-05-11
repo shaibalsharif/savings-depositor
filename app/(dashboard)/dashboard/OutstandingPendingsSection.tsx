@@ -61,6 +61,33 @@ export function OutstandingPendingsSection({
       return a.name.localeCompare(b.name);
     });
 
+  // --- Calculate Metrics for the Metrics Ribbon ---
+  const filteredTotalDue = filteredMembers.reduce((sum, m) => sum + m.due, 0);
+  const totalExpected = filteredMembers.reduce((sum, m) => 
+    sum + m.breakdown.reduce((bSum, b) => bSum + b.expected, 0), 0
+  );
+  const totalPaid = filteredMembers.reduce((sum, m) => 
+    sum + m.breakdown.reduce((bSum, b) => bSum + b.paid, 0), 0
+  );
+  const recoveryRate = totalExpected > 0 ? (totalPaid / totalExpected) * 100 : 100;
+  
+  const totalDelinquentMonths = filteredMembers.reduce((sum, m) => sum + m.breakdown.length, 0);
+  const avgDuePerMember = filteredMembers.length > 0 ? filteredTotalDue / filteredMembers.length : 0;
+
+  // Find heaviest month and year
+  const monthMap: Record<string, number> = {};
+  const yearMap: Record<string, number> = {};
+  filteredMembers.forEach(m => {
+    m.breakdown.forEach(b => {
+      monthMap[b.month] = (monthMap[b.month] || 0) + b.due;
+      const yr = b.month.split("-")[0];
+      yearMap[yr] = (yearMap[yr] || 0) + b.due;
+    });
+  });
+
+  const heaviestMonth = Object.entries(monthMap).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+  const badYear = Object.entries(yearMap).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+
   // Color grade based on proportion of total outstanding dues
   const getColorGrade = (due: number) => {
     const pct = totalOutstanding > 0 ? (due / totalOutstanding) * 100 : 0;
@@ -140,72 +167,93 @@ export function OutstandingPendingsSection({
                 <DialogTitle className="text-base sm:text-lg font-bold">Outstanding Dues Breakdown</DialogTitle>
                 <p className="text-xs text-muted-foreground">Detailed allocation status and contribution impact for each member.</p>
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-2 -mr-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition select-none"
-              >
-                <X size={20} />
-              </button>
             </div>
 
             {/* Filters */}
-            <div className="p-4 sm:px-6 border-b border-border bg-muted/20 space-y-3 flex-shrink-0 select-none">
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Search */}
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3 top-2.5 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search by member name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-background border border-border text-foreground text-xs sm:text-sm pl-9 pr-3 py-2 rounded-lg h-9 outline-none focus:border-teal-500/50"
-                  />
+            <div className="p-4 sm:px-6 border-b border-border bg-muted/20 space-y-4 flex-shrink-0 select-none">
+              <div className="flex flex-col lg:flex-row gap-4">
+                {/* Search & Sort */}
+                <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                  {/* Search */}
+                  <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-2.5 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search by member name..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-background border border-border text-foreground text-xs sm:text-sm pl-9 pr-3 py-2 rounded-lg h-9 outline-none focus:border-teal-500/50"
+                    />
+                  </div>
+
+                  {/* Sorting */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Sort:</span>
+                    <div className="flex gap-1 bg-background border border-border p-0.5 rounded-lg">
+                      {[
+                        { id: "due-desc", icon: <SortDesc size={14} />, label: "Due High" },
+                        { id: "due-asc", icon: <SortAsc size={14} />, label: "Due Low" },
+                      ].map((btn) => (
+                        <button
+                          key={btn.id}
+                          onClick={() => setSortBy(btn.id as any)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] sm:text-xs rounded-md font-medium capitalize select-none transition ${
+                            sortBy === btn.id
+                              ? "bg-[var(--teal)] text-[hsl(222 47% 7%)]"
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                          }`}
+                        >
+                          {btn.icon}
+                          <span>{btn.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Sorting */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Sort:</span>
-                  <div className="flex gap-1 bg-background border border-border p-0.5 rounded-lg">
-                    {[
-                      { id: "due-desc", icon: <SortDesc size={14} />, label: "Due High" },
-                      { id: "due-asc", icon: <SortAsc size={14} />, label: "Due Low" },
-                    ].map((btn) => (
-                      <button
-                        key={btn.id}
-                        onClick={() => setSortBy(btn.id as any)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] sm:text-xs rounded-md font-medium capitalize select-none transition ${
-                          sortBy === btn.id
-                            ? "bg-[var(--teal)] text-[hsl(222 47% 7%)]"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                        }`}
-                      >
-                        {btn.icon}
-                        <span>{btn.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                {/* Metrics Ribbon */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex gap-2 lg:items-center">
+                  {[
+                    { label: "Total Due", value: `৳${filteredTotalDue.toLocaleString()}`, color: "var(--red)" },
+                    { label: "Months", value: `${totalDelinquentMonths}`, color: "var(--amber)" },
+                    { label: "Bad Year", value: badYear, color: "var(--purple)" },
+                    { label: "Heaviest", value: heaviestMonth, color: "var(--teal)" },
+                    { label: "Recovery", value: `${recoveryRate.toFixed(1)}%`, color: "var(--green)" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="bg-background/60 border border-border/50 px-3 py-1.5 rounded-lg flex flex-col min-w-[80px]">
+                      <span className="text-[9px] uppercase tracking-tighter text-muted-foreground font-bold">{stat.label}</span>
+                      <span className="text-xs sm:text-sm font-extrabold truncate" style={{ color: stat.color }}>{stat.value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {/* Month Multi-Select */}
               {allMonths.length > 0 && (
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted-foreground">Filter by Months:</span>
+                <div className="flex flex-col gap-1.5 pt-1">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80">Select Target Months:</span>
                   <div className="flex gap-1 overflow-x-auto pb-1 flex-wrap">
                     {allMonths.map((month) => (
                       <button
                         key={month}
                         onClick={() => toggleMonth(month)}
-                        className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-medium transition select-none flex-shrink-0 ${
+                        className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-medium transition select-none flex-shrink-0 border ${
                           selectedMonths.includes(month)
-                            ? "bg-[var(--teal)] text-[hsl(222 47% 7%)] border border-transparent"
-                            : "border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+                            ? "bg-[var(--teal)] text-[hsl(222 47% 7%)] border-[var(--teal)]"
+                            : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
                         }`}
                       >
                         {month}
                       </button>
                     ))}
+                    {selectedMonths.length > 0 && (
+                      <button 
+                        onClick={() => setSelectedMonths([])}
+                        className="text-[10px] px-2 py-1 text-red-400 hover:text-red-300 font-bold uppercase tracking-tighter"
+                      >
+                        Clear All
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
