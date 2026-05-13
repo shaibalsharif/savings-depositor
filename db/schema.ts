@@ -225,3 +225,13 @@ export const sentNotifications = pgTable("sent_notifications", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const pendingNotifications = pgTable("pending_notifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  paymentId: varchar("payment_id", { length: 64 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  payload: jsonb("payload").notNull(),
+  scheduledFor: timestamp("scheduled_for", { withTimezone: true }).notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // pending | sent | cancelled
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

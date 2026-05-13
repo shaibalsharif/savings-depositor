@@ -13,6 +13,7 @@ export type NotificationPayload = {
 };
 
 export type DepositNotificationData = {
+  paymentId: string;
   memberName: string;
   amount: number;
   forMonth: string; // YYYY-MM

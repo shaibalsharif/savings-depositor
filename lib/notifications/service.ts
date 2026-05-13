@@ -34,7 +34,8 @@ async function pushToUser(userId: string, payload: NotificationPayload): Promise
   }
 }
 
-import { sentNotifications } from "@/db/schema";
+import { sentNotifications, pendingNotifications, payments } from "@/db/schema";
+import { eq, lte, and } from "drizzle-orm";
 
 // Helper to log notifications
 async function logNotification(
@@ -61,33 +62,75 @@ export async function notifyDepositConfirmed(
   userId: string,
   data: DepositNotificationData
 ): Promise<void> {
-  const rows = await db.execute<{
-    notify_on_deposit: boolean;
-    notification_email: string | null;
-    email: string | null;
-  }>(
-    sql`SELECT notify_on_deposit, notification_email, email FROM personal_info WHERE user_id = ${userId} LIMIT 1`
+  const scheduledFor = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+
+  await db.insert(pendingNotifications).values({
+    userId,
+    paymentId: data.paymentId,
+    type: "deposit",
+    payload: data,
+    scheduledFor,
+    status: "pending",
+  });
+}
+
+export async function processPendingNotifications() {
+  const pending = await db.select().from(pendingNotifications).where(
+    and(
+      eq(pendingNotifications.status, "pending"),
+      lte(pendingNotifications.scheduledFor, new Date())
+    )
   );
 
-  const prefs = rows.rows[0];
-  if (!prefs?.notify_on_deposit) return;
+  for (const job of pending) {
+    try {
+      // Check if payment was voided
+      const paymentRow = await db.select({ voided: payments.voided }).from(payments).where(eq(payments.paymentId, job.paymentId)).limit(1);
+      
+      if (!paymentRow.length || paymentRow[0].voided) {
+        await db.update(pendingNotifications).set({ status: "cancelled" }).where(eq(pendingNotifications.id, job.id));
+        continue;
+      }
 
-  const toEmail = prefs.notification_email ?? prefs.email;
-  const channels: string[] = [];
+      const userId = job.userId;
+      const data = job.payload as unknown as DepositNotificationData;
 
-  const title = "✅ Deposit Recorded — Project 13";
-  const body = `৳${data.amount.toLocaleString()} for ${data.forMonth} confirmed. Your balance: ৳${data.memberBalance.toLocaleString()}`;
+      const rows = await db.execute<{
+        notify_on_deposit: boolean;
+        notification_email: string | null;
+        email: string | null;
+      }>(
+        sql`SELECT notify_on_deposit, notification_email, email FROM personal_info WHERE user_id = ${userId} LIMIT 1`
+      );
 
-  await pushToUser(userId, { title, body, url: "/dashboard" });
-  channels.push("push");
+      const prefs = rows.rows[0];
+      if (!prefs?.notify_on_deposit) {
+        await db.update(pendingNotifications).set({ status: "cancelled" }).where(eq(pendingNotifications.id, job.id));
+        continue;
+      }
 
-  if (toEmail) {
-    const { subject, html } = depositConfirmedEmail(data);
-    await sendEmail(toEmail, subject, html);
-    channels.push("email");
+      const toEmail = prefs.notification_email ?? prefs.email;
+      const channels: string[] = [];
+
+      const title = "✅ Deposit Recorded — Project 13";
+      const body = `৳${data.amount.toLocaleString()} for ${data.forMonth} confirmed. Your balance: ৳${data.memberBalance.toLocaleString()}`;
+
+      await pushToUser(userId, { title, body, url: "/dashboard" });
+      channels.push("push");
+
+      if (toEmail) {
+        const { subject, html } = depositConfirmedEmail(data);
+        await sendEmail(toEmail, subject, html);
+        channels.push("email");
+      }
+
+      await logNotification("system", userId, "deposit", title, body, channels);
+      await db.update(pendingNotifications).set({ status: "sent" }).where(eq(pendingNotifications.id, job.id));
+
+    } catch (e) {
+      console.error(`Failed to process pending notification ${job.id}`, e);
+    }
   }
-
-  await logNotification("system", userId, "deposit", title, body, channels);
 }
 
 export async function notifyDepositReminder(

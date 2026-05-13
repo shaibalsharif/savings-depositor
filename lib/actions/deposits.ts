@@ -120,16 +120,16 @@ export async function createPayment(data: z.infer<typeof CreateDepositSchema>) {
 
     // Total fund balance = simple sum of all valid payments - valid expenses - active investments + net revenue
     // But maybe it's simpler to just use getManagerDashboardStats() for fund balance
-    getManagerDashboardStats().then((stats) => {
-      notifyDepositConfirmed(parsed.memberId, {
-        memberName,
-        amount: parsed.amountReceived,
-        forMonth: parsed.forMonth,
-        paymentDate: parsed.paymentDate,
-        memberBalance,
-        totalFundBalance: stats.balance,
-      });
-    }).catch(console.error);
+    const stats = await getManagerDashboardStats();
+    await notifyDepositConfirmed(parsed.memberId, {
+      paymentId,
+      memberName,
+      amount: parsed.amountReceived,
+      forMonth: parsed.forMonth,
+      paymentDate: parsed.paymentDate,
+      memberBalance,
+      totalFundBalance: stats.balance,
+    });
   } catch (e) {
     console.error("Failed to trigger deposit notification", e);
   }
@@ -221,22 +221,24 @@ export async function createBatchPayments(
 
   // Trigger notifications
   try {
-    getManagerDashboardStats().then(async (stats) => {
-      for (const record of records) {
-        const memberName = await getMemberName(record.memberId);
-        const allMemberAllocs = await db.select().from(depositAllocations).where(eq(depositAllocations.memberId, record.memberId));
-        const memberBalance = allMemberAllocs.reduce((sum, a) => sum + Number(a.amountAllocated), 0);
+    const stats = await getManagerDashboardStats();
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
+      const paymentId = results[i];
+      const memberName = await getMemberName(record.memberId);
+      const allMemberAllocs = await db.select().from(depositAllocations).where(eq(depositAllocations.memberId, record.memberId));
+      const memberBalance = allMemberAllocs.reduce((sum, a) => sum + Number(a.amountAllocated), 0);
 
-        await notifyDepositConfirmed(record.memberId, {
-          memberName,
-          amount: record.amountReceived,
-          forMonth: record.forMonth,
-          paymentDate: record.paymentDate,
-          memberBalance,
-          totalFundBalance: stats.balance,
-        });
-      }
-    }).catch(console.error);
+      await notifyDepositConfirmed(record.memberId, {
+        paymentId,
+        memberName,
+        amount: record.amountReceived,
+        forMonth: record.forMonth,
+        paymentDate: record.paymentDate,
+        memberBalance,
+        totalFundBalance: stats.balance,
+      });
+    }
   } catch (e) {
     console.error("Failed to trigger batch notifications", e);
   }
