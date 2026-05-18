@@ -62,7 +62,7 @@ export async function notifyDepositConfirmed(
   userId: string,
   data: DepositNotificationData
 ): Promise<void> {
-  const scheduledFor = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+  const scheduledFor = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes from now
 
   await db.insert(pendingNotifications).values({
     userId,

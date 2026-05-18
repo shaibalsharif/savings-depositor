@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { payments, depositAllocations, logs, personalInfo } from "@/db/schema";
+import { payments, depositAllocations, logs, personalInfo, pendingNotifications } from "@/db/schema";
 import { generatePaymentId, generateAllocId } from "@/lib/id-generator";
 import { appendRow, updateRow, markVoided } from "@/lib/sheets";
 import { requireManager } from "@/lib/auth";
@@ -155,17 +155,49 @@ export async function createBatchPayments(
   const user = await requireManager();
   const results: string[] = [];
 
-  for (const record of records) {
-    const parsed = CreateDepositSchema.parse({
-      memberId: record.memberId,
-      amountReceived: record.amountReceived,
-      paymentDate: record.paymentDate,
-      forMonth: record.forMonth,
-      note: record.note,
-    });
+  // Fetch baseline stats BEFORE the operation
+  const stats = await getManagerDashboardStats();
+  let runningFundBalance = stats.balance;
+  
+  // Map to track running balance for each member in this batch
+  const memberRunningBalances = new Map<string, number>();
 
-    const paymentId = await generatePaymentId();
-    const allocId = await generateAllocId();
+  // To store data for sheet sync after transaction
+  const syncData: Array<{
+    paymentId: string;
+    memberId: string;
+    amountReceived: number;
+    paymentDate: string;
+    forMonth: string;
+    note?: string;
+  }> = [];
+
+  try {
+    for (const record of records) {
+      const parsed = CreateDepositSchema.parse({
+        memberId: record.memberId,
+        amountReceived: record.amountReceived,
+        paymentDate: record.paymentDate,
+        forMonth: record.forMonth,
+        note: record.note,
+      });
+
+      const paymentId = await generatePaymentId();
+      const allocId = await generateAllocId();
+
+      // Get current balance of the member if not in map
+      if (!memberRunningBalances.has(parsed.memberId)) {
+        const existingAllocs = await db.select().from(depositAllocations).where(eq(depositAllocations.memberId, parsed.memberId));
+        const currentBal = existingAllocs.reduce((sum, a) => sum + Number(a.amountAllocated), 0);
+        memberRunningBalances.set(parsed.memberId, currentBal);
+      }
+
+      const prevMemberBal = memberRunningBalances.get(parsed.memberId)!;
+      const newMemberBal = prevMemberBal + parsed.amountReceived;
+      runningFundBalance += parsed.amountReceived;
+      
+      // Update the map for next iteration
+      memberRunningBalances.set(parsed.memberId, newMemberBal);
 
       await db.insert(payments).values({
         paymentId,
@@ -176,6 +208,7 @@ export async function createBatchPayments(
         amountForMonth: parsed.amountReceived.toString(),
         note: parsed.note || "",
         createdBy: user.id,
+        syncStatus: "pending",
       });
 
       await db.insert(depositAllocations).values({
@@ -192,55 +225,67 @@ export async function createBatchPayments(
         details: JSON.stringify({ paymentId, memberId: parsed.memberId, forMonth: parsed.forMonth }),
       });
 
-    try {
       const memberName = await getMemberName(parsed.memberId);
-      const pRow = toSheetRow(
+      
+      // Queue notification (using 3 minutes delay)
+      const scheduledFor = new Date(Date.now() + 3 * 60 * 1000); 
+      
+      await db.insert(pendingNotifications).values({
+        userId: parsed.memberId,
         paymentId,
-        memberName,
-        parsed.amountReceived,
-        parsed.paymentDate,
-        parsed.forMonth,
-        parsed.note || "",
-        false
-      );
-      const rowIndex = await appendRow("Payments", pRow);
-      await db
-        .update(payments)
-        .set({ sheetsRowIndex: rowIndex, syncStatus: "synced" })
-        .where(eq(payments.paymentId, paymentId));
-    } catch (e) {
-      console.error("Failed to sync to sheets", e);
-      await db
-        .update(payments)
-        .set({ syncStatus: "pending" })
-        .where(eq(payments.paymentId, paymentId));
-    }
+        type: "deposit",
+        payload: {
+          paymentId,
+          memberName,
+          amount: parsed.amountReceived,
+          forMonth: parsed.forMonth,
+          paymentDate: parsed.paymentDate,
+          memberBalance: newMemberBal,
+          totalFundBalance: runningFundBalance,
+          recordedAt: new Date().toISOString(),
+        },
+        scheduledFor,
+        status: "pending",
+      });
 
-    results.push(paymentId);
-  }
-
-  // Trigger notifications
-  try {
-    const stats = await getManagerDashboardStats();
-    for (let i = 0; i < records.length; i++) {
-      const record = records[i];
-      const paymentId = results[i];
-      const memberName = await getMemberName(record.memberId);
-      const allMemberAllocs = await db.select().from(depositAllocations).where(eq(depositAllocations.memberId, record.memberId));
-      const memberBalance = allMemberAllocs.reduce((sum, a) => sum + Number(a.amountAllocated), 0);
-
-      await notifyDepositConfirmed(record.memberId, {
+      results.push(paymentId);
+      syncData.push({
         paymentId,
-        memberName,
-        amount: record.amountReceived,
-        forMonth: record.forMonth,
-        paymentDate: record.paymentDate,
-        memberBalance,
-        totalFundBalance: stats.balance,
+        memberId: parsed.memberId,
+        amountReceived: parsed.amountReceived,
+        paymentDate: parsed.paymentDate,
+        forMonth: parsed.forMonth,
+        note: parsed.note,
       });
     }
-  } catch (e) {
-    console.error("Failed to trigger batch notifications", e);
+
+    // 2. Sync to Google Sheets AFTER transaction succeeds (so we don't hold locks)
+    for (const data of syncData) {
+      try {
+        const memberName = await getMemberName(data.memberId);
+        const pRow = toSheetRow(
+          data.paymentId,
+          memberName,
+          data.amountReceived,
+          data.paymentDate,
+          data.forMonth,
+          data.note || "",
+          false
+        );
+        const rowIndex = await appendRow("Payments", pRow);
+        await db
+          .update(payments)
+          .set({ sheetsRowIndex: rowIndex, syncStatus: "synced" })
+          .where(eq(payments.paymentId, data.paymentId));
+      } catch (e) {
+        console.error("Failed to sync to sheets for payment", data.paymentId, e);
+        // It stays as 'pending' in DB, which is correct
+      }
+    }
+
+  } catch (e: any) {
+    console.error("Batch payment failed:", e);
+    throw new Error(e.message || "Failed to process batch payments");
   }
 
   revalidatePath("/deposits");

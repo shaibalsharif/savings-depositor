@@ -20,6 +20,7 @@ export type DepositNotificationData = {
   paymentDate: string;
   memberBalance: number;
   totalFundBalance: number;
+  recordedAt?: string;
 };
 
 export type ReminderNotificationData = {

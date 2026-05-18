@@ -38,7 +38,8 @@ function shell(title: string, accentColor: string, body: string): string {
         </td></tr>
         <!-- Footer -->
         <tr><td style="padding:16px 28px;border-top:1px solid #1e2d45;font-size:11px;color:#4b6080;text-align:center;">
-          Project 13 Savings Fund · Automated Notification · Do not reply
+          Project 13 Savings Fund · Automated Notification · Do not reply<br/>
+          <span style="font-size: 10px; color: #3b4d6b;">Generated at: ${format(new Date(), "dd MMM yyyy, hh:mm:ss a")}</span>
         </td></tr>
       </table>
     </td></tr>
@@ -58,13 +59,14 @@ function row(label: string, value: string, valueColor = "#e2eaf3"): string {
 
 export function depositConfirmedEmail(d: DepositNotificationData): { subject: string; html: string } {
   const subject = `✅ Deposit Confirmed — ${monthLabel(d.forMonth)}`;
+  const timeStr = d.recordedAt ? ` <sub style="font-size: 10px; color: #7a9bb5;">${format(parseISO(d.recordedAt), "hh:mm a")}</sub>` : "";
   const body = `
     <p style="margin:0 0 20px;">Dear <strong style="color:#fff;">${d.memberName}</strong>,</p>
     <p style="margin:0 0 20px;">Your deposit has been recorded successfully.</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1526;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
       ${row("For month", monthLabel(d.forMonth))}
       ${row("Amount credited", currency(d.amount), "#2dd4bf")}
-      ${row("Paid on", format(parseISO(d.paymentDate), "dd MMM yyyy"))}
+      ${row("Paid on", `${format(parseISO(d.paymentDate), "dd MMM yyyy")}${timeStr}`)}
       ${row("Your running balance", currency(d.memberBalance), "#60a5fa")}
       ${row("Total fund balance", currency(d.totalFundBalance))}
     </table>
