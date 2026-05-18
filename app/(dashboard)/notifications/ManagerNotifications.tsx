@@ -353,8 +353,18 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
                         <span className={`text-[10px] truncate w-full text-center font-medium ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
                           {m.name.split(" ")[0]}
                         </span>
+                        
+                        {/* Tooltip with 500ms delay */}
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-card text-foreground text-xs p-2 rounded-lg border shadow-lg z-50 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 delay-500">
+                          <div className="font-bold">{m.name}</div>
+                          <div className="text-muted-foreground text-[10px]">{m.email}</div>
+                          {due && due.totalDue > 0 && (
+                            <div className="text-rose-500 text-[10px] font-bold mt-0.5">Due: ৳{due.totalDue.toLocaleString()}</div>
+                          )}
+                        </div>
+
                         {due && due.totalDue > 0 && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-background rounded-full" title={`Due: ৳${due.totalDue.toLocaleString()}`} />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-background rounded-full" />
                         )}
                       </button>
                     );

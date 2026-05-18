@@ -3,6 +3,8 @@ import { ManagerNotifications } from "./ManagerNotifications";
 import { MemberNotifications } from "./MemberNotifications";
 import { getNotificationQuota, getManagerNotificationHistory, getMemberNotifications } from "@/lib/actions/notifications";
 import { getManagerDashboardStats } from "@/lib/queries/dashboard";
+import { db } from "@/db/client";
+import { personalInfo } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +14,17 @@ export default async function NotificationsPage() {
 
   if (manager) {
     // Fetch both manager tools AND the manager's own received notifications
-    const [quota, history, myNotifications, stats] = await Promise.all([
+    const [quota, history, myNotifications, stats, members] = await Promise.all([
       getNotificationQuota(),
       getManagerNotificationHistory(),
       getMemberNotifications(), // manager is also a member — fetch their inbox
       getManagerDashboardStats(),
+      db.select({ 
+        id: personalInfo.userId, 
+        name: personalInfo.name, 
+        email: personalInfo.email, 
+        photo: personalInfo.photo 
+      }).from(personalInfo)
     ]);
 
     const membersWithDues = stats.memberPendings.map((m: any) => {
@@ -24,11 +32,12 @@ export default async function NotificationsPage() {
        return { id: m.memberId, name: m.name, totalDue, breakdown: m.breakdown };
     });
 
-    const allMembers = stats.heatmapData.heatmapData?.map((m: any) => ({
-       id: m.memberId,
+    const allMembers = members.map((m: any) => ({
+       id: m.id,
        name: m.name,
-       email: m.email // Ensure email is included for lookup
-    })) || [];
+       email: m.email,
+       photo: m.photo
+    }));
 
     return <ManagerNotifications 
              quota={quota} 
@@ -43,4 +52,3 @@ export default async function NotificationsPage() {
     return <MemberNotifications notifications={notifications} />;
   }
 }
-
