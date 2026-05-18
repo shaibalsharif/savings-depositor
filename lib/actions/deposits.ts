@@ -8,7 +8,7 @@ import { requireManager } from "@/lib/auth";
 import { z } from "zod";
 import { CreateDepositSchema } from "../validators/deposit";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getManagerDashboardStats } from "@/lib/queries/dashboard";
 import { notifyDepositConfirmed } from "@/lib/notifications/service";
 
@@ -172,6 +172,9 @@ export async function createBatchPayments(
     note?: string;
   }> = [];
 
+  // Track inserted IDs for manual rollback if something fails
+  const insertedPaymentIds: string[] = [];
+
   try {
     for (const record of records) {
       const parsed = CreateDepositSchema.parse({
@@ -210,6 +213,9 @@ export async function createBatchPayments(
         createdBy: user.id,
         syncStatus: "pending",
       });
+      
+      // Track the inserted payment ID
+      insertedPaymentIds.push(paymentId);
 
       await db.insert(depositAllocations).values({
         allocId,
@@ -259,7 +265,7 @@ export async function createBatchPayments(
       });
     }
 
-    // 2. Sync to Google Sheets AFTER transaction succeeds (so we don't hold locks)
+    // 2. Sync to Google Sheets AFTER DB operations succeed
     for (const data of syncData) {
       try {
         const memberName = await getMemberName(data.memberId);
@@ -284,7 +290,19 @@ export async function createBatchPayments(
     }
 
   } catch (e: any) {
-    console.error("Batch payment failed:", e);
+    console.error("Batch payment failed, attempting manual rollback...", e);
+    
+    // Manual rollback: delete any records inserted in this batch
+    if (insertedPaymentIds.length > 0) {
+      try {
+        await db.delete(depositAllocations).where(inArray(depositAllocations.paymentId, insertedPaymentIds));
+        await db.delete(payments).where(inArray(payments.paymentId, insertedPaymentIds));
+        console.log("Manual rollback successful: cleaned up partial data.");
+      } catch (cleanupError) {
+        console.error("Failed to cleanup during rollback:", cleanupError);
+      }
+    }
+    
     throw new Error(e.message || "Failed to process batch payments");
   }
 
