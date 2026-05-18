@@ -35,3 +35,4 @@ next-env.d.ts
 
 # project-specific — local scripts and generated ledger files
 /extra/
+/scratch/
