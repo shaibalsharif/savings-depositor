@@ -134,7 +134,7 @@ export async function generateReport(monthStr: string) {
   // Starting balance calculations: up until right before firstDay
   const prevPayments = allPayments.filter((p) => !p.voided && p.paymentDate < firstDay);
   const prevExpenses = allExpenses.filter((e) => !e.voided && !e.deleted && e.expenseDate < firstDay);
-  const prevInvestments = allInvestments.filter((i) => i.status === "active" && !i.deleted && i.investDate < firstDay);
+  const prevInvestments = allInvestments.filter((i) => !i.deleted && i.investDate < firstDay && (i.actualReturnDate === null || i.actualReturnDate >= firstDay));
   const prevRevenue = allRevenue.filter((r) => !r.voided && !r.deleted && r.eventDate < firstDay);
 
   const prevCollected = prevPayments.reduce((sum, p) => sum + Number(p.amountReceived), 0);
@@ -164,7 +164,7 @@ export async function generateReport(monthStr: string) {
     (i) =>
       !i.deleted &&
       i.investDate <= lastDay &&
-      (i.status === "active" || (i.actualReturnDate && i.actualReturnDate >= firstDay))
+      (i.actualReturnDate === null || i.actualReturnDate >= firstDay)
   );
 
   // Matured returns this month
@@ -178,24 +178,44 @@ export async function generateReport(monthStr: string) {
   const globalStart = settingsSorted.length > 0 ? settingsSorted[0].effectiveMonth : "2024-01";
   const allMonths = generateMonthRange(globalStart, monthStr);
 
+  let totalDueForThisMonth = 0;
+  let allTotalDue = 0;
+
   const dueList = allMembers.map((member) => {
-    const memAllocs = allAllocations.filter((a) => a.memberId === member.userId && a.forMonth <= monthStr);
+    // Filter allocations to only those for months up to monthStr AND paid on or before lastDay
+    const memAllocs = allAllocations.filter((a) => {
+      if (a.memberId !== member.userId || a.forMonth > monthStr) return false;
+      const p = allPayments.find((p) => p.paymentId === a.paymentId);
+      if (!p) return false;
+      return p.paymentDate <= lastDay;
+    });
+
     const paidByMonth = memAllocs.reduce((acc, a) => {
       acc[a.forMonth] = (acc[a.forMonth] || 0) + Number(a.amountAllocated);
       return acc;
     }, {} as Record<string, number>);
 
     let totalDueForMember = 0;
+    let dueForThisMonthForMember = 0;
     for (const m of allMonths) {
+      if (m < member.depositStartDate) continue;
       const exp = getExpectedForMonth(settingsSorted, m);
       const paid = paidByMonth[m] || 0;
-      totalDueForMember += Math.max(0, exp - paid);
+      const due = Math.max(0, exp - paid);
+      totalDueForMember += due;
+      if (m === monthStr) {
+        dueForThisMonthForMember = due;
+      }
     }
+
+    totalDueForThisMonth += dueForThisMonthForMember;
+    allTotalDue += totalDueForMember;
 
     return {
       name: member.name,
       userId: member.userId,
       due: totalDueForMember,
+      dueForThisMonth: dueForThisMonthForMember,
     };
   });
 
@@ -215,6 +235,8 @@ export async function generateReport(monthStr: string) {
       returnedInvestmentsCount: returnedInvestments.length,
       returnedInvestmentsAmount,
       netRevenueThisMonth: thisIncome - thisLosses,
+      totalDueForThisMonth,
+      allTotalDue,
     },
     details: {
       payments: thisPayments.map((p) => ({

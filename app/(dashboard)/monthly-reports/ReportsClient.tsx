@@ -22,6 +22,8 @@ type SummaryData = {
   returnedInvestmentsCount: number;
   returnedInvestmentsAmount?: number | string;
   netRevenueThisMonth: number;
+  totalDueForThisMonth?: number;
+  allTotalDue?: number;
 };
 
 type ReportDetails = {
@@ -461,6 +463,8 @@ export function ReportsClient({
                   { label: `Total Deposit in ${getMonthNameOnly(selectedReport.month)}`, value: `৳${selectedReport.summary.thisCollected.toLocaleString()}` },
                   { label: "Month's Expenses", value: `৳${selectedReport.summary.thisExpensesAmount.toLocaleString()}` },
                   { label: `${getLastDayOfMonthStr(selectedReport.month)}`, value: `৳${selectedReport.summary.balance.toLocaleString()}`, accent: "var(--teal)" },
+                  { label: "Total Due for This Month", value: `৳${(selectedReport.summary.totalDueForThisMonth ?? 0).toLocaleString()}`, accent: "var(--red)" },
+                  { label: "All Total Due", value: `৳${(selectedReport.summary.allTotalDue ?? 0).toLocaleString()}`, accent: "var(--red)" },
                 ].map((stat) => (
                   <div key={stat.label} className="p-3 sm:p-4 border rounded-xl bg-muted/20 stat-print-box">
                     <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-tight print-label">{stat.label}</div>
