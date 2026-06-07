@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/client";
-import { depositAllocations, depositSettings } from "@/db/schema";
+import { depositAllocations, depositSettings, personalInfo } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { format, subMonths } from "date-fns";
 import { requireManager } from "@/lib/auth";
@@ -17,6 +17,11 @@ export type OutstandingMonth = {
 export async function getMemberOutstandingMonths(memberId: string): Promise<OutstandingMonth[]> {
   await requireManager();
 
+  // Load member details to get their depositStartDate
+  const member = await db.query.personalInfo.findFirst({
+    where: eq(personalInfo.userId, memberId),
+  });
+
   const settings = await db
     .select()
     .from(depositSettings)
@@ -26,8 +31,11 @@ export async function getMemberOutstandingMonths(memberId: string): Promise<Outs
 
   const sorted = [...settings].sort((a, b) => a.effectiveMonth.localeCompare(b.effectiveMonth));
   const globalStart = sorted[0].effectiveMonth;
+  const memberStart = member?.depositStartDate || globalStart;
+  const startMonth = memberStart > globalStart ? memberStart : globalStart;
+
   const currentMonth = format(new Date(), "yyyy-MM");
-  const allMonths = generateMonthRange(globalStart, currentMonth);
+  const allMonths = generateMonthRange(startMonth, currentMonth);
 
   const allAllocs = await db
     .select()
