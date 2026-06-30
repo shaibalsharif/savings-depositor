@@ -3,8 +3,9 @@
 import { db } from "@/db/client";
 import { sentNotifications, personalInfo } from "@/db/schema";
 import { requireManager, requireMember } from "@/lib/auth";
-import { notifyCustom } from "@/lib/notifications/service";
+import { notifyCustom, notifySmartReminder } from "@/lib/notifications/service";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { getManagerDashboardStats } from "@/lib/queries/dashboard";
 import { revalidatePath } from "next/cache";
 
 export async function getNotificationQuota() {
@@ -92,14 +93,38 @@ export async function sendManualNotification(data: {
 
     console.log(`[NotificationAction] Sending manual notification to ${targets.length} targets. Type: ${data.type}`);
     
-    for (const targetId of targets) {
-      console.log(`[NotificationAction] Triggering delivery for user: ${targetId}`);
-      await notifyCustom(manager.id, targetId, data.title, data.message, data.type);
-    }
+    if (data.type === "reminder") {
+      const stats = await getManagerDashboardStats();
+      const memberPendingsMap = new Map(stats.memberPendings.map(m => [m.memberId, m]));
 
-    revalidatePath("/notifications");
-    console.log(`[NotificationAction] Successfully processed ${targets.length} notifications.`);
-    return { success: true, count: targets.length };
+      let processedCount = 0;
+      for (const targetId of targets) {
+        const dues = memberPendingsMap.get(targetId);
+        if (dues && dues.due > 0) {
+          console.log(`[NotificationAction] Triggering smart reminder for user: ${targetId}`);
+          await notifySmartReminder(manager.id, targetId, {
+            memberName: dues.name,
+            totalDue: dues.due,
+            breakdown: dues.breakdown.map(b => ({
+              month: b.month,
+              amountDue: b.due
+            }))
+          });
+          processedCount++;
+        }
+      }
+      revalidatePath("/notifications");
+      console.log(`[NotificationAction] Successfully processed ${processedCount} reminders.`);
+      return { success: true, count: processedCount };
+    } else {
+      for (const targetId of targets) {
+        console.log(`[NotificationAction] Triggering delivery for user: ${targetId}`);
+        await notifyCustom(manager.id, targetId, data.title, data.message, data.type);
+      }
+      revalidatePath("/notifications");
+      console.log(`[NotificationAction] Successfully processed ${targets.length} notifications.`);
+      return { success: true, count: targets.length };
+    }
   } catch (error: any) {
     console.error("[NotificationAction] Failed to send notifications:", error);
     // Return a more descriptive error for the UI to show

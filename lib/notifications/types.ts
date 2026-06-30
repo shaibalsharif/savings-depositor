@@ -29,6 +29,12 @@ export type ReminderNotificationData = {
   amountDue: number;
 };
 
+export type SmartReminderNotificationData = {
+  memberName: string;
+  totalDue: number;
+  breakdown: { month: string; amountDue: number }[];
+};
+
 export type SummaryNotificationData = {
   forMonth: string;
   totalCollected: number;

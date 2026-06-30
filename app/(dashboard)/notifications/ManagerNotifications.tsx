@@ -83,13 +83,17 @@ export function ManagerNotifications({ quota, history, allMembers, membersWithDu
   if (msgType === "reminder") {
     if (selectedUserIds.length === 1) {
       const memberDue = membersWithDues.find((m: any) => m.id === selectedUserIds[0]);
-      if (memberDue) {
-        previewTitle = "⚠️ Payment Reminder — Project 13";
-        previewMessage = `Dear ${memberDue.name},\n\nYou have an outstanding deposit balance of ৳${memberDue.totalDue.toLocaleString()}.\n\nPlease clear your dues at your earliest convenience.\n\nThank you,\nProject 13 Management`;
+      if (memberDue && memberDue.totalDue > 0) {
+        previewTitle = "⚠️ Important: Outstanding Payment Reminder";
+        const breakdownText = memberDue.breakdown.map((b: any) => `- ${format(new Date(b.month + "-01"), "MMMM yyyy")}: ৳${b.due.toLocaleString()}`).join("\n");
+        previewMessage = `Dear ${memberDue.name},\n\nThis is a friendly reminder regarding your outstanding deposit balances. Below is the detailed breakdown of the pending amounts for each month:\n\n${breakdownText}\n\nTotal Outstanding: ৳${memberDue.totalDue.toLocaleString()}\n\nPlease clear these dues at your earliest convenience to keep your account up to date.`;
+      } else if (memberDue && memberDue.totalDue === 0) {
+        previewTitle = "✅ No Dues";
+        previewMessage = `${memberDue.name} has no outstanding dues. The smart reminder will skip them automatically.`;
       }
     } else if (selectedUserIds.length > 1) {
-      previewTitle = "⚠️ Payment Reminder — Project 13";
-      previewMessage = "Dear Member,\n\nYou have an outstanding deposit balance with Project 13. Please check your dashboard and clear any pending dues.\n\nThank you,\nProject 13 Management";
+      previewTitle = "⚠️ Important: Outstanding Payment Reminder";
+      previewMessage = "Dear [Member Name],\n\nThis is a friendly reminder regarding your outstanding deposit balances. Below is the detailed breakdown of the pending amounts for each month:\n\n- [Month 1]: ৳[Amount]\n- [Month 2]: ৳[Amount]\n\nTotal Outstanding: ৳[Total Amount]\n\nPlease clear these dues at your earliest convenience to keep your account up to date.\n\n(Note: This email will be dynamically personalized for each selected member. Members with no dues will be skipped.)";
     } else {
       previewTitle = "⚠️ Payment Reminder";
       previewMessage = "Please select member(s) to preview the reminder.";

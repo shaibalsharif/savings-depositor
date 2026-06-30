@@ -3,6 +3,7 @@ import type {
   DepositNotificationData,
   ReminderNotificationData,
   SummaryNotificationData,
+  SmartReminderNotificationData,
 } from "./types";
 
 function monthLabel(yyyyMM: string): string {
@@ -88,6 +89,32 @@ export function depositReminderEmail(d: ReminderNotificationData): { subject: st
     <p style="margin:0;color:#4b6080;font-size:12px;">Please ensure payment before the month ends to avoid accumulating dues.</p>`;
   return { subject, html: shell(subject, "linear-gradient(135deg,#b45309,#92400e)", body) };
 }
+
+// ── Smart Payment Reminder (Detailed Breakdown) ─────────────────────────────
+
+export function smartDepositReminderEmail(d: SmartReminderNotificationData): { subject: string; html: string } {
+  const subject = `⚠️ Important: Outstanding Payment Reminder`;
+  
+  const breakdownRows = d.breakdown.map((b) => 
+    row(monthLabel(b.month), currency(b.amountDue), "#fb923c")
+  ).join("");
+
+  const body = `
+    <p style="margin:0 0 20px;">Dear <strong style="color:#fff;">${d.memberName}</strong>,</p>
+    <p style="margin:0 0 20px;">This is a friendly reminder regarding your outstanding deposit balances. Below is the detailed breakdown of the pending amounts for each month:</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1526;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+      ${breakdownRows}
+      <tr><td colspan="2"><hr style="border:none;border-top:1px solid #1e2d45;margin:12px 0;"/></td></tr>
+      <tr>
+        <td style="padding:6px 0;color:#e2eaf3;font-size:14px;font-weight:700;width:50%;">Total Outstanding</td>
+        <td style="padding:6px 0;color:#ef4444;font-weight:800;font-size:16px;text-align:right;">${currency(d.totalDue)}</td>
+      </tr>
+    </table>
+    <p style="margin:0;color:#4b6080;font-size:12px;">Please clear these dues at your earliest convenience to keep your account up to date.</p>`;
+  
+  return { subject, html: shell(subject, "linear-gradient(135deg,#b45309,#92400e)", body) };
+}
+
 
 // ── Monthly Summary ─────────────────────────────────────────────────────────
 

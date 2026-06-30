@@ -6,11 +6,13 @@ import {
   depositConfirmedEmail,
   depositReminderEmail,
   monthlySummaryEmail,
+  smartDepositReminderEmail,
 } from "./templates";
 import type {
   DepositNotificationData,
   NotificationPayload,
   ReminderNotificationData,
+  SmartReminderNotificationData,
   SummaryNotificationData,
 } from "./types";
 
@@ -164,6 +166,42 @@ export async function notifyDepositReminder(
   }
 
   await logNotification("system", userId, "reminder", title, body, channels);
+}
+
+export async function notifySmartReminder(
+  senderId: string,
+  userId: string,
+  data: SmartReminderNotificationData
+): Promise<void> {
+  const rows = await db.execute<{
+    notify_on_reminder: boolean;
+    notification_email: string | null;
+    email: string | null;
+  }>(
+    sql`SELECT notify_on_reminder, notification_email, email FROM personal_info WHERE user_id = ${userId} LIMIT 1`
+  );
+
+  const prefs = rows.rows[0];
+  if (!prefs?.notify_on_reminder) return;
+
+  const toEmail = prefs.notification_email ?? prefs.email;
+  const channels: string[] = [];
+
+  const title = "⚠️ Deposit Reminder";
+  const monthCount = data.breakdown.length;
+  const monthText = monthCount === 1 ? "1 month" : `${monthCount} months`;
+  const body = `You have ৳${data.totalDue.toLocaleString()} pending across ${monthText}.`;
+
+  await pushToUser(userId, { title, body, url: "/dashboard" });
+  channels.push("push");
+
+  if (toEmail) {
+    const { subject, html } = smartDepositReminderEmail(data);
+    await sendEmail(toEmail, subject, html);
+    channels.push("email");
+  }
+
+  await logNotification(senderId, userId, "reminder", title, body, channels);
 }
 
 export async function notifyMonthlySummary(
