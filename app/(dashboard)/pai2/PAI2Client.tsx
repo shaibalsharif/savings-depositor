@@ -24,6 +24,7 @@ import {
   BarChart2,
   Loader2,
   RefreshCw,
+  BrainCircuit,
 } from "lucide-react";
 import "./pai2.css";
 import { PAI2AnalyticsClient } from "./PAI2AnalyticsClient";
@@ -114,6 +115,29 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
     message: string;
     onConfirm: () => void;
   } | null>(null);
+
+  // Memory Personalization State
+  const [memories, setMemories] = useState<string[]>([]);
+  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
+  const [newMemoryText, setNewMemoryText] = useState("");
+
+  // Load provider and memories from local storage
+  useEffect(() => {
+    const savedProvider = localStorage.getItem("pai2-provider");
+    if (savedProvider) setSelectedProvider(savedProvider);
+    
+    try {
+      const savedMemories = localStorage.getItem("pai2-memories");
+      if (savedMemories) setMemories(JSON.parse(savedMemories));
+    } catch {
+      // Ignore parse error
+    }
+  }, []);
+
+  // Save memories to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem("pai2-memories", JSON.stringify(memories));
+  }, [memories]);
 
   // Helper for formatting dates
   const formatChatDate = (dateStr: string) => {
@@ -248,6 +272,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
           provider: selectedProvider,
           model: selectedModel === "default" ? undefined : selectedModel,
           inputType: "text",
+          userMemories: memories,
         }),
       });
 
@@ -1134,6 +1159,25 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
               </div>
             )}
 
+            {/* Memory / Settings Button */}
+            <button
+              className="pai2-icon-btn"
+              title="Memory & Personalization"
+              onClick={() => setIsMemoryModalOpen(true)}
+            >
+              <BrainCircuit size={18} />
+            </button>
+            {/* Analytics Button (Manager Only) */}
+            {isManager && (
+              <button
+                className="pai2-icon-btn"
+                title="Analytics"
+                onClick={() => setIsAnalyticsOpen(true)}
+              >
+                <BarChart2 size={18} />
+              </button>
+            )}
+
             <div ref={messagesEndRef} />
             </>
             )}
@@ -1425,6 +1469,95 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 Confirm
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Memory Personalization Modal */}
+      {isMemoryModalOpen && (
+        <div className="pai2-modal-overlay">
+          <div className="pai2-modal-content pai2-memory-modal">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BrainCircuit size={20} style={{ color: 'hsl(var(--primary))' }} />
+                <h3 style={{ margin: 0 }}>Memory & Context</h3>
+              </div>
+              <button className="pai2-icon-btn" onClick={() => setIsMemoryModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <p style={{ color: "hsl(var(--muted-foreground))", fontSize: "14px", marginBottom: "16px", lineHeight: "1.5" }}>
+              PAI2 can remember specific details and preferences across all chats. Add any personal context or instructions you want it to keep in mind.
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+              <input
+                type="text"
+                className="pai2-input"
+                placeholder="E.g., Always respond in a professional tone"
+                value={newMemoryText}
+                onChange={(e) => setNewMemoryText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newMemoryText.trim()) {
+                    setMemories(prev => [...prev, newMemoryText.trim()]);
+                    setNewMemoryText("");
+                  }
+                }}
+                style={{ flex: 1 }}
+              />
+              <button 
+                className="pai2-btn pai2-btn-primary"
+                onClick={() => {
+                  if (newMemoryText.trim()) {
+                    setMemories(prev => [...prev, newMemoryText.trim()]);
+                    setNewMemoryText("");
+                  }
+                }}
+                disabled={!newMemoryText.trim()}
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="pai2-memory-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+              {memories.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'hsl(var(--muted-foreground))', padding: '32px 0' }}>
+                  No memories added yet.
+                </div>
+              ) : (
+                memories.map((mem, idx) => (
+                  <div key={idx} className="pai2-memory-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: 'hsla(var(--muted), 0.5)', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}>
+                    <span style={{ fontSize: '14px', wordBreak: 'break-word', paddingRight: '12px' }}>{mem}</span>
+                    <button 
+                      className="pai2-icon-btn" 
+                      onClick={() => setMemories(prev => prev.filter((_, i) => i !== idx))}
+                      title="Delete Memory"
+                    >
+                      <Trash2 size={16} style={{ color: 'hsl(0 72% 50%)' }} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {memories.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid hsl(var(--border))' }}>
+                <button 
+                  className="pai2-btn pai2-btn-secondary"
+                  onClick={() => {
+                    setConfirmModal({
+                      isOpen: true,
+                      title: "Clear All Memory",
+                      message: "Are you sure you want to clear all personalized memories? This action cannot be undone.",
+                      onConfirm: () => setMemories([])
+                    });
+                  }}
+                >
+                  Clear All Memory
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       provider = "groq" as ProviderKey,
       model,
       inputType = "text",
+      userMemories = [],
     } = body;
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
@@ -121,7 +122,8 @@ export async function POST(req: NextRequest) {
     const systemPrompt = await buildSystemPrompt(
       user.id,
       managerRole,
-      userName
+      userName,
+      userMemories
     );
 
     const messages: ChatMessage[] = [

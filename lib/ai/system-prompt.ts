@@ -17,6 +17,7 @@ export async function buildSystemPrompt(
   currentUserId: string,
   isManager: boolean,
   userName: string,
+  userMemories: string[] = []
 ): Promise<string> {
   const ctx = await getDataContextForChat(currentUserId, isManager);
 
@@ -53,7 +54,12 @@ ${
     : ""
 }`;
 
-  return `${roleBlock}
+  let memoryBlock = "";
+  if (userMemories && userMemories.length > 0) {
+    memoryBlock = `\n\n# USER MEMORY & PREFERENCES\nThe user has stored the following personal details/preferences. Use them to personalize your responses:\n${userMemories.map(m => `- ${m}`).join("\n")}`;
+  }
+
+  return `${roleBlock}${memoryBlock}
 
 # APP DATA CONTEXT (Read-Only)
 

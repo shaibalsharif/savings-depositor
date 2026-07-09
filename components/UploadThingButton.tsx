@@ -34,4 +34,3 @@ export function UploadThingButton({
     </div>
   );
 }
-if you nneed memory access to personalize the chats and contexts holding you can access localStorage, but user needs manange memeory to s
