@@ -38,8 +38,6 @@ const managerNav: NavItem[] = [
   { href: "/members", label: "Members", icon: <Users size={17} /> },
   { href: "/monthly-reports", label: "Monthly Reports", icon: <FileText size={17} /> },
   { href: "/pai2", label: "PAI2 পাইটু", icon: <Bot size={17} /> },
-  { href: "/my-profile", label: "My Profile", icon: <User size={17} /> },
-  { href: "/settings/deposits", label: "Settings", icon: <Settings size={17} /> },
 ];
 
 const memberNav: NavItem[] = [
@@ -50,7 +48,6 @@ const memberNav: NavItem[] = [
   { href: "/revenue", label: "Revenue & Losses", icon: <ArrowDownUp size={17} /> },
   { href: "/monthly-reports", label: "Monthly Reports", icon: <FileText size={17} /> },
   { href: "/pai2", label: "PAI2 পাইটু", icon: <Bot size={17} /> },
-  { href: "/my-profile", label: "My Profile", icon: <User size={17} /> },
 ];
 
 export function SidebarClient({
@@ -73,6 +70,14 @@ export function SidebarClient({
   }, [pathname]);
 
   const nav = isManagerRole ? managerNav : memberNav;
+
+  // Account links live in the footer, just above Notifications.
+  const bottomNav: NavItem[] = [
+    { href: "/my-profile", label: "My Profile", icon: <User size={17} /> },
+    ...(isManagerRole
+      ? [{ href: "/settings/deposits", label: "Settings", icon: <Settings size={17} /> }]
+      : []),
+  ];
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -196,6 +201,29 @@ export function SidebarClient({
 
         {/* Footer */}
         <div className={`py-4 border-t space-y-1 ${isCollapsed ? "px-2" : "px-3"}`} style={{ borderColor: "hsl(var(--border))" }}>
+          {bottomNav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={isCollapsed ? item.label : undefined}
+              className={`relative flex items-center rounded-md text-sm font-medium transition-all group mb-1 ${
+                isCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
+              } ${
+                isActive(item.href)
+                  ? "nav-link-active"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`}
+            >
+              <span style={{ opacity: isActive(item.href) ? 1 : 0.7 }}>{item.icon}</span>
+              {!isCollapsed && <span className="truncate">{item.label}</span>}
+              {isCollapsed && (
+                <div className="absolute left-14 bg-popover text-popover-foreground text-xs font-semibold px-3 py-2 rounded-md border border-border shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none whitespace-nowrap z-50">
+                  {item.label}
+                </div>
+              )}
+            </Link>
+          ))}
+
           <Link
             href="/notifications"
             title={isCollapsed ? "Notifications" : undefined}

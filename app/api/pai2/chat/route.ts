@@ -16,14 +16,118 @@ import { eq } from "drizzle-orm";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import {
   chatCompletionStream,
+  rawChatCompletion,
   isAIError,
   type ProviderKey,
   type ChatMessage,
 } from "@/lib/ai/providers";
+import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
 import { isManager as checkIsManager } from "@/lib/auth";
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const SSE_HEADERS = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
+} as const;
+
+const MAX_TOOL_ROUNDS = 6;
+
+/**
+ * Run the tool-calling loop: let the model request tools, execute them against
+ * the real database, feed the results back, and repeat until it produces a
+ * final textual answer. Returns the answer text. Throws on provider errors so
+ * the caller can fall back to plain streaming.
+ */
+async function runToolLoop(
+  provider: ProviderKey,
+  model: string | undefined,
+  baseMessages: ChatMessage[]
+): Promise<string> {
+  const convo: Array<Record<string, unknown>> = baseMessages.map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const asst = await rawChatCompletion({
+      provider,
+      model,
+      messages: convo,
+      tools: AI_TOOLS,
+      temperature: 0.3,
+    });
+
+    if (asst.tool_calls && asst.tool_calls.length > 0) {
+      convo.push({
+        role: "assistant",
+        content: asst.content ?? "",
+        tool_calls: asst.tool_calls,
+      });
+      for (const tc of asst.tool_calls) {
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(tc.function.arguments || "{}");
+        } catch {
+          // leave args empty on malformed JSON
+        }
+        const result = await executeTool(tc.function.name, args);
+        convo.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          name: tc.function.name,
+          content: JSON.stringify(result),
+        });
+      }
+      continue;
+    }
+
+    return asst.content || "";
+  }
+
+  // Hit the round cap with tools still pending — force a final text answer.
+  const finalMsg = await rawChatCompletion({
+    provider,
+    model,
+    messages: convo,
+    tools: AI_TOOLS,
+    toolChoice: "none",
+    temperature: 0.3,
+  });
+  return finalMsg.content || "";
+}
+
+/**
+ * Emit an already-computed answer to the client over the same SSE contract the
+ * streaming path uses (meta → token* → done), chunked so the UI still animates.
+ */
+function simulatedStream(
+  chatId: string,
+  messageId: string,
+  isNewConversation: boolean,
+  text: string
+): ReadableStream {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({ type: "meta", chatId, messageId, isNewConversation })}\n\n`
+        )
+      );
+      for (let i = 0; i < text.length; i += 80) {
+        const chunk = text.slice(i, i + 80);
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: "token", content: chunk })}\n\n`)
+        );
+      }
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
+      controller.close();
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -155,6 +259,46 @@ export async function POST(req: NextRequest) {
       inputType: "text",
       status: "streaming",
     });
+
+    // ── Tool-calling path (providers/models that support function calling) ─
+    // The model calls DB-backed tools for exact figures instead of guessing.
+    // Falls through to plain streaming below if unsupported or on failure.
+    const toolCapable = provider === "groq" || provider === "openrouter";
+    if (toolCapable) {
+      try {
+        const finalText = await runToolLoop(
+          provider as ProviderKey,
+          model,
+          messages
+        );
+        if (finalText.trim()) {
+          await db
+            .update(chatMessages)
+            .set({ content: finalText, status: "complete" })
+            .where(eq(chatMessages.messageId, assistantMessageId));
+          await db
+            .update(chatConversations)
+            .set({ draftPrompt: null })
+            .where(eq(chatConversations.chatId, conversationChatId));
+
+          return new Response(
+            simulatedStream(
+              conversationChatId,
+              assistantMessageId,
+              isNewConversation,
+              finalText
+            ),
+            { headers: SSE_HEADERS }
+          );
+        }
+        // Empty answer → fall through to streaming as a fallback.
+      } catch (err) {
+        console.warn(
+          "[PAI2] Tool loop failed, falling back to plain streaming:",
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
 
     let providerResponse: Response;
     try {

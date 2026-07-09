@@ -365,6 +365,79 @@ export async function chatCompletionStream(
   return response;
 }
 
+// ─── Tool-calling (non-streaming) ──────────────────────────────────────
+
+/** OpenAI-style tool call returned by the model. */
+export interface ToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+/** The raw assistant message from a non-streaming completion. */
+export interface AssistantMessage {
+  role: "assistant";
+  content: string | null;
+  tool_calls?: ToolCall[];
+}
+
+export interface RawChatOptions {
+  provider: ProviderKey;
+  model?: string;
+  // `messages` can contain tool/tool_call fields, so keep it loose.
+  messages: Array<Record<string, unknown>>;
+  tools?: readonly unknown[];
+  toolChoice?: "auto" | "none" | "required";
+  temperature?: number;
+  maxTokens?: number;
+}
+
+/**
+ * Non-streaming chat completion that supports tool calling. Returns the raw
+ * assistant message so the caller can run a tool loop. Which providers/models
+ * support tools varies, so the caller should be ready to fall back.
+ */
+export async function rawChatCompletion(
+  options: RawChatOptions
+): Promise<AssistantMessage> {
+  const config = getProvider(options.provider);
+  const model = options.model || config.defaultModel;
+
+  const body: Record<string, unknown> = {
+    model,
+    messages: options.messages,
+    temperature: options.temperature ?? 0.3,
+    max_tokens: options.maxTokens ?? 4096,
+    stream: false,
+  };
+  if (options.tools && options.tools.length > 0) {
+    body.tools = options.tools;
+    body.tool_choice = options.toolChoice ?? "auto";
+  }
+
+  const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.apiKey}`,
+      ...config.headers,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw createAIError(response.status, await response.text(), options.provider);
+  }
+
+  const data = await response.json();
+  const msg = data.choices?.[0]?.message ?? { role: "assistant", content: "" };
+  return {
+    role: "assistant",
+    content: msg.content ?? null,
+    tool_calls: msg.tool_calls,
+  };
+}
+
 // ─── Audio Transcription (Groq Whisper) ────────────────────────────────
 
 export async function transcribeAudio(audioFile: File | Blob): Promise<string> {
