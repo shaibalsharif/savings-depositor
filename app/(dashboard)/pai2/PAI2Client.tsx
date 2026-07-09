@@ -25,6 +25,10 @@ import {
   Loader2,
   RefreshCw,
   BrainCircuit,
+  Square,
+  ArrowDown,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import "./pai2.css";
 import { PAI2AnalyticsClient } from "./PAI2AnalyticsClient";
@@ -114,12 +118,21 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
     title: string;
     message: string;
     onConfirm: () => void;
+    variant?: "danger" | "default";
+    confirmLabel?: string;
   } | null>(null);
 
   // Memory Personalization State
   const [memories, setMemories] = useState<string[]>([]);
   const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
   const [newMemoryText, setNewMemoryText] = useState("");
+  const [editingMemoryIdx, setEditingMemoryIdx] = useState<number | null>(null);
+  const [editingMemoryText, setEditingMemoryText] = useState("");
+
+  // Scroll-to-bottom affordance
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const MEMORY_MAX_LEN = 280;
 
   // Load provider and memories from local storage
   useEffect(() => {
@@ -151,9 +164,11 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // ── Load providers ──────────────────────────────────────────────────
   useEffect(() => {
@@ -163,8 +178,16 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
         if (data.providers) {
           setProviders(data.providers);
           const saved = localStorage.getItem("pai2-provider");
-          if (saved && data.providers.find((p: ProviderInfo) => p.key === saved)) {
-            setSelectedProvider(saved);
+          const activeKey =
+            saved && data.providers.find((p: ProviderInfo) => p.key === saved)
+              ? saved
+              : selectedProvider;
+          if (activeKey !== selectedProvider) setSelectedProvider(activeKey);
+          // Restore the last-used model for that provider, if still valid
+          const prov = data.providers.find((p: ProviderInfo) => p.key === activeKey);
+          const savedModel = localStorage.getItem(`pai2-model-${activeKey}`);
+          if (prov && savedModel && prov.models.some((m: { id: string }) => m.id === savedModel)) {
+            setSelectedModel(savedModel);
           }
         }
       })
@@ -212,10 +235,44 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
       .finally(() => setIsLoadingChat(false));
   }, [activeChatId]);
 
-  // ── Auto-scroll to bottom ──────────────────────────────────────────
+  // ── Auto-scroll to bottom (only when already near the bottom) ───────
+  const isNearBottom = () => {
+    const el = messagesAreaRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+    setShowScrollButton(false);
+  };
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isNearBottom()) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, streamingContent]);
+
+  // ── Track scroll position to toggle the "scroll to bottom" pill ─────
+  useEffect(() => {
+    const el = messagesAreaRef.current;
+    if (!el) return;
+    const onScroll = () => setShowScrollButton(!isNearBottom());
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [activeChatId, isLoadingChat]);
+
+  // ── Close modals with Escape ────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (confirmModal?.isOpen) setConfirmModal(null);
+      else if (isMemoryModalOpen) setIsMemoryModalOpen(false);
+      else if (editingTitle) setEditingTitle(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [confirmModal, isMemoryModalOpen, editingTitle]);
 
   // ── Auto-resize textarea ───────────────────────────────────────────
   useEffect(() => {
@@ -249,6 +306,8 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
     setInputText("");
     setIsStreaming(true);
     setStreamingContent("");
+    // Always jump to the newest message when the user sends
+    setTimeout(() => scrollToBottom("smooth"), 0);
 
     // Optimistically add user message
     const tempUserMsg: Message = {
@@ -262,10 +321,17 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
     };
     setMessages((prev) => [...prev, tempUserMsg]);
 
+    // Set up cancellation
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    let fullContent = "";
+
     try {
       const res = await fetch("/api/pai2/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           chatId: activeChatId,
           message: messageText,
@@ -301,7 +367,6 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
 
       const decoder = new TextDecoder();
       let buffer = "";
-      let fullContent = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -348,16 +413,107 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
         }
       }
     } catch (err) {
-      setError("Failed to send message. Please try again.");
-      setMessages((prev) => {
-        const newMsgs = [...prev];
-        if (newMsgs.length > 0) newMsgs[newMsgs.length - 1].status = "error";
-        return newMsgs;
-      });
-      console.error(err);
+      // User-initiated stop: keep the partial answer instead of showing an error
+      if (err instanceof DOMException && err.name === "AbortError") {
+        if (fullContent) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              messageId: `msg-${Date.now()}`,
+              chatId: activeChatId || "",
+              role: "assistant",
+              content: fullContent,
+              inputType: "text",
+              status: "complete",
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }
+        setStreamingContent("");
+      } else {
+        setError("Failed to send message. Please try again.");
+        setMessages((prev) => {
+          const newMsgs = [...prev];
+          if (newMsgs.length > 0) newMsgs[newMsgs.length - 1].status = "error";
+          return newMsgs;
+        });
+        console.error(err);
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsStreaming(false);
       loadConversations();
+    }
+  };
+
+  // ── Stop an in-progress generation ─────────────────────────────────
+  const stopGeneration = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  // ── Delete specific messages from the DB (for regenerate / edit) ────
+  const deleteMessagesFromDb = async (chatId: string, messageIds: string[]) => {
+    if (messageIds.length === 0) return;
+    await fetch("/api/pai2/messages", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId, messageIds }),
+    });
+  };
+
+  // ── Regenerate the most recent assistant response ──────────────────
+  const regenerateLast = async () => {
+    if (!activeChatId || isStreaming) return;
+    try {
+      // Pull canonical messages so we work with real DB ids
+      const res = await fetch(`/api/pai2/messages?chatId=${activeChatId}`);
+      const data = await res.json();
+      const canonical: Message[] = (data.messages || []).filter(
+        (m: Message) => m.role !== "system"
+      );
+
+      // Find the last user turn — resend everything from there
+      let lastUserIdx = -1;
+      for (let i = canonical.length - 1; i >= 0; i--) {
+        if (canonical[i].role === "user") {
+          lastUserIdx = i;
+          break;
+        }
+      }
+      if (lastUserIdx < 0) return;
+
+      const userText = canonical[lastUserIdx].content;
+      const idsToDelete = canonical.slice(lastUserIdx).map((m) => m.messageId);
+
+      await deleteMessagesFromDb(activeChatId, idsToDelete);
+      setMessages(canonical.slice(0, lastUserIdx));
+      await sendMessage(userText);
+    } catch {
+      setError("Failed to regenerate response.");
+    }
+  };
+
+  // ── Edit a user message: trim it + everything after, load into input ─
+  const editUserMessage = async (index: number, content: string) => {
+    if (!activeChatId || isStreaming) return;
+    try {
+      const res = await fetch(`/api/pai2/messages?chatId=${activeChatId}`);
+      const data = await res.json();
+      const canonical: Message[] = (data.messages || []).filter(
+        (m: Message) => m.role !== "system"
+      );
+
+      if (index >= 0 && index < canonical.length) {
+        const idsToDelete = canonical.slice(index).map((m) => m.messageId);
+        await deleteMessagesFromDb(activeChatId, idsToDelete);
+        setMessages(canonical.slice(0, index));
+      }
+
+      setInputText(content);
+      setTimeout(() => textareaRef.current?.focus(), 10);
+      loadConversations();
+    } catch {
+      setError("Failed to edit message.");
     }
   };
 
@@ -469,6 +625,8 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
       isOpen: true,
       title: "Delete Chat",
       message: "Are you sure you want to delete this conversation? This action cannot be undone.",
+      variant: "danger",
+      confirmLabel: "Delete",
       onConfirm: async () => {
         try {
           await fetch("/api/pai2/conversations", {
@@ -548,6 +706,8 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
       isOpen: true,
       title: "Delete Folder",
       message: "Are you sure you want to delete this folder? Conversations inside will be unfiled.",
+      variant: "danger",
+      confirmLabel: "Delete",
       onConfirm: async () => {
         try {
           await fetch("/api/pai2/folders", {
@@ -606,6 +766,8 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
       isOpen: true,
       title: "Delete Message",
       message: "Are you sure you want to delete this failed message?",
+      variant: "danger",
+      confirmLabel: "Delete",
       onConfirm: () => {
         setMessages(prev => prev.filter(m => m.messageId !== msgId));
       }
@@ -1012,20 +1174,37 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                     "Chat"
                   : "PAI2 পাইটু"}
               </div>
-              {activeChatId && (
-                <div style={{ display: "flex", gap: 4 }}>
+              <div className="pai2-header-actions">
+                <button
+                  className="pai2-icon-btn"
+                  onClick={() => setIsMemoryModalOpen(true)}
+                  title="Memory & Personalization"
+                  aria-label="Memory and personalization"
+                >
+                  <BrainCircuit size={18} />
+                </button>
+                {isManager && (
                   <button
-                    className="pai2-input-btn"
-                    onClick={() =>
-                      downloadChat([activeChatId])
-                    }
+                    className="pai2-icon-btn"
+                    onClick={() => setIsAnalyticsOpen(true)}
+                    title="Analytics"
+                    aria-label="Analytics"
+                  >
+                    <BarChart2 size={18} />
+                  </button>
+                )}
+                {activeChatId && (
+                  <button
+                    className="pai2-icon-btn"
+                    onClick={() => downloadChat([activeChatId])}
                     title="Download chat"
+                    aria-label="Download chat"
                     disabled={isDownloading}
                   >
                     {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Messages or welcome */}
@@ -1053,7 +1232,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
             </div>
           </div>
         ) : (
-          <div className="pai2-messages-area">
+          <div className="pai2-messages-area" ref={messagesAreaRef}>
             {isLoadingChat ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'hsl(var(--muted-foreground))' }}>
                 <Loader2 className="animate-spin w-8 h-8" />
@@ -1062,7 +1241,10 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
               <>
             {messages
               .filter((m) => m.role !== "system")
-              .map((msg) => (
+              .map((msg, idx, arr) => {
+                const isLastAssistant =
+                  msg.role === "assistant" && idx === arr.length - 1;
+                return (
                 <div
                   key={msg.messageId}
                   className={`pai2-message ${msg.role}`}
@@ -1116,6 +1298,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                             copyMessage(msg.messageId, msg.content)
                           }
                           title="Copy"
+                          aria-label="Copy message"
                         >
                           {copiedId === msg.messageId ? (
                             <Check size={12} />
@@ -1124,10 +1307,34 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                           )}
                         </button>
                       )}
+                      {isLastAssistant && !isStreaming && activeChatId && (
+                        <button
+                          className="pai2-chat-action-btn"
+                          onClick={regenerateLast}
+                          title="Regenerate response"
+                          aria-label="Regenerate response"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                      )}
+                      {msg.role === "user" &&
+                        msg.status !== "error" &&
+                        !isStreaming &&
+                        activeChatId && (
+                          <button
+                            className="pai2-chat-action-btn"
+                            onClick={() => editUserMessage(idx, msg.content)}
+                            title="Edit & resend"
+                            aria-label="Edit and resend message"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                        )}
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
             {/* Streaming message */}
             {isStreaming && streamingContent && (
@@ -1159,25 +1366,6 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
               </div>
             )}
 
-            {/* Memory / Settings Button */}
-            <button
-              className="pai2-icon-btn"
-              title="Memory & Personalization"
-              onClick={() => setIsMemoryModalOpen(true)}
-            >
-              <BrainCircuit size={18} />
-            </button>
-            {/* Analytics Button (Manager Only) */}
-            {isManager && (
-              <button
-                className="pai2-icon-btn"
-                title="Analytics"
-                onClick={() => setIsAnalyticsOpen(true)}
-              >
-                <BarChart2 size={18} />
-              </button>
-            )}
-
             <div ref={messagesEndRef} />
             </>
             )}
@@ -1200,6 +1388,16 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
 
         {/* Input area */}
         <div className="pai2-input-area">
+          {showScrollButton && activeChatId && (
+            <button
+              className="pai2-scroll-bottom"
+              onClick={() => scrollToBottom("smooth")}
+              title="Scroll to latest"
+              aria-label="Scroll to latest message"
+            >
+              <ArrowDown size={18} />
+            </button>
+          )}
           <div className="pai2-input-container">
             <button
               className="pai2-input-btn"
@@ -1231,18 +1429,32 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
               className={`pai2-input-btn ${isRecording ? "recording" : ""}`}
               onClick={toggleRecording}
               title={isRecording ? "Stop recording" : "Voice input"}
+              aria-label={isRecording ? "Stop voice recording" : "Start voice input"}
+              disabled={isStreaming}
             >
               {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
 
-            <button
-              className="pai2-input-btn send"
-              onClick={() => sendMessage()}
-              disabled={isStreaming || !inputText.trim()}
-              title="Send message"
-            >
-              <Send size={16} />
-            </button>
+            {isStreaming ? (
+              <button
+                className="pai2-input-btn stop"
+                onClick={stopGeneration}
+                title="Stop generating"
+                aria-label="Stop generating"
+              >
+                <Square size={15} fill="currentColor" />
+              </button>
+            ) : (
+              <button
+                className="pai2-input-btn send"
+                onClick={() => sendMessage()}
+                disabled={!inputText.trim()}
+                title="Send message"
+                aria-label="Send message"
+              >
+                <Send size={16} />
+              </button>
+            )}
           </div>
 
           {/* Provider selector */}
@@ -1252,9 +1464,17 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
               className="pai2-provider-select"
               value={selectedProvider}
               onChange={(e) => {
-                setSelectedProvider(e.target.value);
-                const prov = providers.find((p) => p.key === e.target.value);
-                if (prov) setSelectedModel(prov.defaultModel);
+                const key = e.target.value;
+                setSelectedProvider(key);
+                const prov = providers.find((p) => p.key === key);
+                const savedModel = localStorage.getItem(`pai2-model-${key}`);
+                if (prov) {
+                  setSelectedModel(
+                    savedModel && prov.models.some((m) => m.id === savedModel)
+                      ? savedModel
+                      : prov.defaultModel
+                  );
+                }
               }}
             >
               {providers.map((p) => (
@@ -1269,7 +1489,10 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 <select
                   className="pai2-provider-select"
                   value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedModel(e.target.value);
+                    localStorage.setItem(`pai2-model-${selectedProvider}`, e.target.value);
+                  }}
                 >
                   {currentProvider.models.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -1289,7 +1512,10 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
       {contextMenu && (
         <div
           className="pai2-context-menu"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          style={{
+            left: Math.min(contextMenu.x, window.innerWidth - 190),
+            top: Math.min(contextMenu.y, window.innerHeight - 230),
+          }}
         >
           <button
             onClick={() => {
@@ -1445,13 +1671,31 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
 
       {/* Confirmation Modal */}
       {confirmModal?.isOpen && (
-        <div className="pai2-modal-overlay">
-          <div className="pai2-modal-content">
-            <h3>{confirmModal.title}</h3>
-            <p style={{ marginTop: "12px", marginBottom: "24px", color: "hsl(var(--muted-foreground))" }}>
+        <div
+          className="pai2-modal-overlay"
+          onClick={() => setConfirmModal(null)}
+        >
+          <div
+            className="pai2-modal-content"
+            style={{ maxWidth: 420 }}
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog"
+            aria-modal="true"
+          >
+            <div className="pai2-confirm-header">
+              <div
+                className={`pai2-confirm-icon ${
+                  confirmModal.variant === "default" ? "default" : "danger"
+                }`}
+              >
+                <AlertTriangle size={20} />
+              </div>
+              <h3>{confirmModal.title}</h3>
+            </div>
+            <p style={{ marginTop: 14, marginBottom: 0, color: "hsl(var(--muted-foreground))" }}>
               {confirmModal.message}
             </p>
-            <div className="pai2-modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <div className="pai2-modal-actions">
               <button
                 className="pai2-btn pai2-btn-secondary"
                 onClick={() => setConfirmModal(null)}
@@ -1459,14 +1703,18 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 Cancel
               </button>
               <button
-                className="pai2-btn pai2-btn-danger"
-                style={{ backgroundColor: "hsl(0 72% 50%)", color: "white" }}
+                className={`pai2-btn ${
+                  confirmModal.variant === "default"
+                    ? "pai2-btn-primary"
+                    : "pai2-btn-danger"
+                }`}
+                autoFocus
                 onClick={() => {
                   confirmModal.onConfirm();
                   setConfirmModal(null);
                 }}
               >
-                Confirm
+                {confirmModal.confirmLabel || "Confirm"}
               </button>
             </div>
           </div>
@@ -1475,86 +1723,192 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
 
       {/* Memory Personalization Modal */}
       {isMemoryModalOpen && (
-        <div className="pai2-modal-overlay">
-          <div className="pai2-modal-content pai2-memory-modal">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div
+          className="pai2-modal-overlay"
+          onClick={() => {
+            setIsMemoryModalOpen(false);
+            setEditingMemoryIdx(null);
+          }}
+        >
+          <div
+            className="pai2-modal-content pai2-memory-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <BrainCircuit size={20} style={{ color: 'hsl(var(--primary))' }} />
-                <h3 style={{ margin: 0 }}>Memory & Context</h3>
+                <BrainCircuit size={20} style={{ color: 'hsl(173 58% 55%)' }} />
+                <h3 style={{ margin: 0 }}>Memory &amp; Context</h3>
+                {memories.length > 0 && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                      background: 'hsl(173 58% 39% / 0.18)',
+                      color: 'hsl(173 58% 60%)',
+                    }}
+                  >
+                    {memories.length}
+                  </span>
+                )}
               </div>
-              <button className="pai2-icon-btn" onClick={() => setIsMemoryModalOpen(false)}>
+              <button
+                className="pai2-icon-btn"
+                onClick={() => setIsMemoryModalOpen(false)}
+                aria-label="Close"
+              >
                 <X size={18} />
               </button>
             </div>
-            
-            <p style={{ color: "hsl(var(--muted-foreground))", fontSize: "14px", marginBottom: "16px", lineHeight: "1.5" }}>
-              PAI2 can remember specific details and preferences across all chats. Add any personal context or instructions you want it to keep in mind.
+
+            <p className="pai2-memory-hint" style={{ marginTop: 8, marginBottom: 16 }}>
+              PAI2 remembers these details and preferences across all your chats.
+              They&apos;re stored only on this device.
             </p>
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+            <div className="pai2-memory-add-row">
               <input
                 type="text"
                 className="pai2-input"
                 placeholder="E.g., Always respond in a professional tone"
                 value={newMemoryText}
+                maxLength={MEMORY_MAX_LEN}
                 onChange={(e) => setNewMemoryText(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && newMemoryText.trim()) {
-                    setMemories(prev => [...prev, newMemoryText.trim()]);
+                    setMemories((prev) => [...prev, newMemoryText.trim()]);
                     setNewMemoryText("");
                   }
                 }}
-                style={{ flex: 1 }}
               />
-              <button 
+              <button
                 className="pai2-btn pai2-btn-primary"
                 onClick={() => {
                   if (newMemoryText.trim()) {
-                    setMemories(prev => [...prev, newMemoryText.trim()]);
+                    setMemories((prev) => [...prev, newMemoryText.trim()]);
                     setNewMemoryText("");
                   }
                 }}
                 disabled={!newMemoryText.trim()}
               >
-                Add
+                <Plus size={15} /> Add
               </button>
             </div>
+            <div className="pai2-memory-hint" style={{ marginBottom: 16, textAlign: 'right' }}>
+              {newMemoryText.length}/{MEMORY_MAX_LEN}
+            </div>
 
-            <div className="pai2-memory-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+            <div className="pai2-memory-list">
               {memories.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'hsl(var(--muted-foreground))', padding: '32px 0' }}>
-                  No memories added yet.
+                <div className="pai2-memory-empty">
+                  <BrainCircuit size={28} style={{ opacity: 0.4 }} />
+                  <span>No memories yet. Add something PAI2 should remember.</span>
                 </div>
               ) : (
                 memories.map((mem, idx) => (
-                  <div key={idx} className="pai2-memory-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: 'hsla(var(--muted), 0.5)', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}>
-                    <span style={{ fontSize: '14px', wordBreak: 'break-word', paddingRight: '12px' }}>{mem}</span>
-                    <button 
-                      className="pai2-icon-btn" 
-                      onClick={() => setMemories(prev => prev.filter((_, i) => i !== idx))}
-                      title="Delete Memory"
-                    >
-                      <Trash2 size={16} style={{ color: 'hsl(0 72% 50%)' }} />
-                    </button>
+                  <div key={idx} className="pai2-memory-item">
+                    {editingMemoryIdx === idx ? (
+                      <>
+                        <input
+                          type="text"
+                          className="pai2-input"
+                          value={editingMemoryText}
+                          maxLength={MEMORY_MAX_LEN}
+                          autoFocus
+                          onChange={(e) => setEditingMemoryText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && editingMemoryText.trim()) {
+                              setMemories((prev) =>
+                                prev.map((m, i) =>
+                                  i === idx ? editingMemoryText.trim() : m
+                                )
+                              );
+                              setEditingMemoryIdx(null);
+                            } else if (e.key === "Escape") {
+                              setEditingMemoryIdx(null);
+                            }
+                          }}
+                        />
+                        <div className="pai2-memory-item-actions">
+                          <button
+                            className="pai2-icon-btn"
+                            title="Save"
+                            aria-label="Save memory"
+                            onClick={() => {
+                              if (editingMemoryText.trim()) {
+                                setMemories((prev) =>
+                                  prev.map((m, i) =>
+                                    i === idx ? editingMemoryText.trim() : m
+                                  )
+                                );
+                              }
+                              setEditingMemoryIdx(null);
+                            }}
+                          >
+                            <Check size={16} style={{ color: 'hsl(173 58% 55%)' }} />
+                          </button>
+                          <button
+                            className="pai2-icon-btn"
+                            title="Cancel"
+                            aria-label="Cancel edit"
+                            onClick={() => setEditingMemoryIdx(null)}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="pai2-memory-item-text">{mem}</span>
+                        <div className="pai2-memory-item-actions">
+                          <button
+                            className="pai2-icon-btn"
+                            title="Edit"
+                            aria-label="Edit memory"
+                            onClick={() => {
+                              setEditingMemoryIdx(idx);
+                              setEditingMemoryText(mem);
+                            }}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            className="pai2-icon-btn"
+                            title="Delete memory"
+                            aria-label="Delete memory"
+                            onClick={() =>
+                              setMemories((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                          >
+                            <Trash2 size={15} style={{ color: 'hsl(0 72% 55%)' }} />
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))
               )}
             </div>
 
             {memories.length > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid hsl(var(--border))' }}>
-                <button 
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid hsl(var(--border))' }}>
+                <button
                   className="pai2-btn pai2-btn-secondary"
                   onClick={() => {
                     setConfirmModal({
                       isOpen: true,
                       title: "Clear All Memory",
                       message: "Are you sure you want to clear all personalized memories? This action cannot be undone.",
-                      onConfirm: () => setMemories([])
+                      variant: "danger",
+                      confirmLabel: "Clear All",
+                      onConfirm: () => setMemories([]),
                     });
                   }}
                 >
-                  Clear All Memory
+                  <Trash2 size={15} /> Clear All
                 </button>
               </div>
             )}

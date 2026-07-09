@@ -26,6 +26,24 @@ export interface DataContext {
   recentActivity: string;
 }
 
+// ── In-memory cache ────────────────────────────────────────────────────
+// The context is identical for every manager and identical for every
+// member (it only branches on `isManager`), so we cache by that key and
+// skip the ~7 DB queries on every chat message. A short TTL keeps it fresh
+// enough for a finance dashboard; call `invalidateDataContextCache()` after
+// a write to force an immediate refresh.
+interface CacheEntry {
+  data: DataContext;
+  expires: number;
+}
+const CONTEXT_TTL_MS = 60_000; // 1 minute
+const contextCache = new Map<string, CacheEntry>();
+
+/** Clear the cached data context (e.g. after a data-changing write). */
+export function invalidateDataContextCache(): void {
+  contextCache.clear();
+}
+
 /**
  * Build the full data context for the AI system prompt.
  * This queries the database and formats all relevant data.
@@ -34,6 +52,12 @@ export async function getDataContextForChat(
   currentUserId: string,
   isManager: boolean
 ): Promise<DataContext> {
+  const cacheKey = isManager ? "manager" : "member";
+  const cached = contextCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+
   const [
     allMembers,
     allPayments,
@@ -98,8 +122,26 @@ export async function getDataContextForChat(
   const netRevenue = totalIncome - totalLoss;
   const balance = totalCollected - totalExpenses - totalInvested + netRevenue;
 
+  // ── Derived, commonly-asked figures (pre-computed so the model never
+  //    has to do arithmetic itself) ─────────────────────────────────────
+  const nowDate = new Date();
+  const yearStr = format(nowDate, "yyyy");
+  const monthStr = format(nowDate, "yyyy-MM");
+
+  const collectedThisYear = validPayments
+    .filter((p) => p.paymentDate.startsWith(yearStr))
+    .reduce((s, p) => s + Number(p.amountReceived), 0);
+  const collectedThisMonth = validPayments
+    .filter((p) => p.paymentDate.startsWith(monthStr))
+    .reduce((s, p) => s + Number(p.amountReceived), 0);
+  const avgPaidPerMember =
+    allMembers.length > 0 ? Math.round(totalCollected / allMembers.length) : 0;
+
   const financialSummary = `## Financial Summary
-- Total Deposits Collected: ৳${totalCollected.toLocaleString()}
+- Total Deposits Collected (all time): ৳${totalCollected.toLocaleString()}
+- Deposits Collected This Year (${yearStr}): ৳${collectedThisYear.toLocaleString()}
+- Deposits Collected This Month (${monthStr}): ৳${collectedThisMonth.toLocaleString()}
+- Average Collected Per Member: ৳${avgPaidPerMember.toLocaleString()}
 - Total Expenses: ৳${totalExpenses.toLocaleString()}
 - Active Investments: ${activeInvestments.length} (Total: ৳${totalInvested.toLocaleString()})
 - Net Revenue (Income - Loss): ৳${netRevenue.toLocaleString()} (Income: ৳${totalIncome.toLocaleString()}, Loss: ৳${totalLoss.toLocaleString()})
@@ -158,49 +200,57 @@ ${activeInvestments
   .join("\n") || "  No active investments."}`;
 
   // ── Per-Member Dues (for manager) ────────────────────────────────────
+  let finalRecentActivity = recentActivity;
   if (isManager) {
     const currentMonth = format(new Date(), "yyyy-MM");
+    const latestSetting = settingsSorted[settingsSorted.length - 1];
+    const monthlyAmount = latestSetting
+      ? Number(latestSetting.monthlyAmount)
+      : 0;
+
+    let totalOutstanding = 0;
     const memberDueLines = allMembers
       .map((member) => {
         const memAllocs = allAllocations.filter(
           (a) => a.memberId === member.userId
         );
-        const paidByMonth = memAllocs.reduce(
-          (acc, a) => {
-            acc[a.forMonth] =
-              (acc[a.forMonth] || 0) + Number(a.amountAllocated);
-            return acc;
-          },
-          {} as Record<string, number>
-        );
-
-        // Calculate current month status
-        const latestSetting = settingsSorted[settingsSorted.length - 1];
-        const monthlyAmount = latestSetting
-          ? Number(latestSetting.monthlyAmount)
-          : 0;
-        const currentPaid = paidByMonth[currentMonth] || 0;
+        const currentPaid = memAllocs
+          .filter((a) => a.forMonth === currentMonth)
+          .reduce((s, a) => s + Number(a.amountAllocated), 0);
         const currentDue = Math.max(0, monthlyAmount - currentPaid);
 
-        return currentDue > 0
-          ? `  - ${member.name}: ৳${currentDue.toLocaleString()} due for ${currentMonth}`
-          : null;
+        if (currentDue > 0) {
+          totalOutstanding += currentDue;
+          return `  - ${member.name}: ৳${currentDue.toLocaleString()} due for ${currentMonth}`;
+        }
+        return null;
       })
       .filter(Boolean);
 
     if (memberDueLines.length > 0) {
-      return {
-        membersContext,
-        financialSummary,
-        depositSettingsContext,
-        recentActivity:
-          recentActivity +
-          `\n### Current Month Pending Dues\n${memberDueLines.join("\n")}`,
-      };
+      finalRecentActivity =
+        recentActivity +
+        `\n### Current Month Pending Dues (${memberDueLines.length} member(s), Total Outstanding: ৳${totalOutstanding.toLocaleString()})\n${memberDueLines.join("\n")}`;
+    } else {
+      finalRecentActivity =
+        recentActivity +
+        `\n### Current Month Pending Dues\n  All members are fully paid for ${currentMonth}.`;
     }
   }
 
-  return { membersContext, financialSummary, depositSettingsContext, recentActivity };
+  const result: DataContext = {
+    membersContext,
+    financialSummary,
+    depositSettingsContext,
+    recentActivity: finalRecentActivity,
+  };
+
+  contextCache.set(cacheKey, {
+    data: result,
+    expires: Date.now() + CONTEXT_TTL_MS,
+  });
+
+  return result;
 }
 
 /**
