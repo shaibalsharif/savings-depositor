@@ -72,7 +72,7 @@ function getProviderConfigs(): Record<ProviderKey, ProviderConfig> {
     huggingface: {
       key: "huggingface",
       label: "HuggingFace",
-      baseUrl: "https://api-inference.huggingface.co/v1",
+      baseUrl: "https://router.huggingface.co/hf-inference/v1",
       apiKey: process.env.HUGGINGFACE_API_KEY || "",
       defaultModel: "Qwen/Qwen2.5-72B-Instruct",
       models: [
