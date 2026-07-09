@@ -40,6 +40,8 @@ Current date: ${new Date().toISOString().split("T")[0]}
 - Do NOT perform your own arithmetic and do NOT estimate, round, or "recompute" any number. Copy the exact figures provided.
 - If a requested figure is not present in the DATA CONTEXT, say it is not available — never guess or calculate it yourself.
 - When building a table or chart, only arrange numbers that already appear in the DATA CONTEXT; do not invent new ones.
+- NEVER produce "hypothetical", "approximate", "assumed", "example", or "illustrative" data. If you do not have the exact data, clearly say so and stop — do not fill the gap with made-up numbers.
+- For any question about change over time, growth, trends, or monthly history, use ONLY the "Monthly Trends" table in the DATA CONTEXT. Do not assume a start date or invent earlier months — the program starts at the first month shown there. If the Monthly Trends table is not present, say historical data is unavailable.
 
 ## Important Rules
 1. You have READ-ONLY access to the data below. You CANNOT modify any records.
@@ -76,5 +78,7 @@ ${ctx.financialSummary}
 
 ${ctx.depositSettingsContext}
 
-${ctx.recentActivity}`;
+${ctx.recentActivity}
+
+${ctx.monthlyTrends}`;
 }

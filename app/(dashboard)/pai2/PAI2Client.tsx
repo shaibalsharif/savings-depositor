@@ -1445,6 +1445,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 <div>
                   <div className="pai2-message-bubble">
                     {renderContent(streamingContent)}
+                    <span className="pai2-caret" aria-hidden="true" />
                   </div>
                 </div>
               </div>
@@ -1458,6 +1459,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 </div>
                 <div className="pai2-message-bubble">
                   <div className="pai2-typing">
+                    <span className="pai2-typing-label">PAI2 is thinking</span>
                     <div className="pai2-typing-dot" />
                     <div className="pai2-typing-dot" />
                     <div className="pai2-typing-dot" />

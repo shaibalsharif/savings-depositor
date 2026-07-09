@@ -18,12 +18,106 @@ import {
 } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { format } from "date-fns";
+import { generateMonthRange } from "@/lib/allocation";
 
 export interface DataContext {
   membersContext: string;
   financialSummary: string;
   depositSettingsContext: string;
   recentActivity: string;
+  monthlyTrends: string;
+}
+
+// Minimal shapes for the trend helpers (avoid coupling to Drizzle row types)
+type SettingRow = {
+  monthlyAmount: string;
+  effectiveMonth: string;
+  terminatedAt: string | null;
+};
+type MemberRow = { userId: string; depositStartDate: string | null };
+type AllocRow = { memberId: string; forMonth: string; amountAllocated: string };
+
+/**
+ * The effective monthly amount for a given month — mirrors the app's own
+ * Outstanding calculation (lib/actions/outstanding.ts) so chat numbers match.
+ */
+function expectedForMonth(monthStr: string, sortedSettings: SettingRow[]): number {
+  let exp = 0;
+  for (const s of sortedSettings) {
+    if (s.effectiveMonth <= monthStr && (!s.terminatedAt || s.terminatedAt > monthStr)) {
+      exp = Number(s.monthlyAmount);
+    }
+  }
+  return exp;
+}
+
+/**
+ * Build a real month-by-month history of collections and dues across all
+ * members, using the same per-member expected/paid/remaining logic as the
+ * app's Outstanding page. This is what lets PAI2 answer "growth of dues over
+ * time" from actual data instead of fabricating a series.
+ */
+function buildMonthlyTrends(
+  members: MemberRow[],
+  allocations: AllocRow[],
+  sortedSettings: SettingRow[]
+): string {
+  if (sortedSettings.length === 0) {
+    return "## Monthly Trends\nNo deposit settings configured, so no historical trend is available.";
+  }
+
+  const globalStart = sortedSettings[0].effectiveMonth;
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const months = generateMonthRange(globalStart, currentMonth);
+  if (months.length === 0) {
+    return "## Monthly Trends\nNo months in range.";
+  }
+
+  // paid amount per member per forMonth
+  const paidByMemberMonth = new Map<string, Record<string, number>>();
+  for (const a of allocations) {
+    const rec = paidByMemberMonth.get(a.memberId) || {};
+    rec[a.forMonth] = (rec[a.forMonth] || 0) + Number(a.amountAllocated);
+    paidByMemberMonth.set(a.memberId, rec);
+  }
+
+  // each member's first billable month (never earlier than the global start)
+  const memberStart = new Map<string, string>();
+  for (const m of members) {
+    const raw = m.depositStartDate || globalStart;
+    const startM = raw > globalStart ? raw : globalStart;
+    memberStart.set(m.userId, startM.slice(0, 7));
+  }
+
+  let cumulativeOutstanding = 0;
+  const rows: string[] = [];
+  for (const month of months) {
+    let expectedTotal = 0;
+    let collectedTotal = 0;
+    let newDues = 0;
+    let activeCount = 0;
+    const exp = expectedForMonth(month, sortedSettings);
+
+    for (const m of members) {
+      const startM = memberStart.get(m.userId);
+      if (!startM || startM > month) continue; // member hadn't started yet
+      activeCount++;
+      const paid = paidByMemberMonth.get(m.userId)?.[month] || 0;
+      expectedTotal += exp;
+      collectedTotal += paid;
+      newDues += Math.max(0, exp - paid);
+    }
+
+    cumulativeOutstanding += newDues;
+    rows.push(
+      `${month} | ৳${collectedTotal.toLocaleString()} | ৳${expectedTotal.toLocaleString()} | ৳${newDues.toLocaleString()} | ৳${cumulativeOutstanding.toLocaleString()} | ${activeCount}`
+    );
+  }
+
+  return `## Monthly Trends (REAL historical data — ${months[0]} to ${months[months.length - 1]})
+This is the authoritative month-by-month history. For ANY time-series, trend, or "growth over time" question or chart, use ONLY these rows. The deposit program started in ${months[0]} — there is no data before it, so never show months earlier than this.
+Columns: Month | Collected | Expected | New Dues (that month) | Cumulative Outstanding | Active Members
+${rows.join("\n")}`;
 }
 
 // ── In-memory cache ────────────────────────────────────────────────────
@@ -238,11 +332,19 @@ ${activeInvestments
     }
   }
 
+  // ── Monthly Trends (real historical series) ──────────────────────────
+  const monthlyTrends = buildMonthlyTrends(
+    allMembers,
+    allAllocations,
+    settingsSorted
+  );
+
   const result: DataContext = {
     membersContext,
     financialSummary,
     depositSettingsContext,
     recentActivity: finalRecentActivity,
+    monthlyTrends,
   };
 
   contextCache.set(cacheKey, {
