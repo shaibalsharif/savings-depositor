@@ -77,7 +77,6 @@ function getProviderConfigs(): Record<ProviderKey, ProviderConfig> {
       defaultModel: "Qwen/Qwen2.5-72B-Instruct",
       models: [
         { id: "Qwen/Qwen2.5-72B-Instruct", label: "Qwen 2.5 72B", contextWindow: 32768 },
-        { id: "mistralai/Mistral-Nemo-Instruct-2407", label: "Mistral Nemo 12B", contextWindow: 16384 },
         { id: "meta-llama/Meta-Llama-3-8B-Instruct", label: "Llama 3 8B", contextWindow: 8192 },
       ],
       headers: {},

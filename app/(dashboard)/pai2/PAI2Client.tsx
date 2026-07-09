@@ -23,6 +23,7 @@ import {
   Check,
   BarChart2,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import "./pai2.css";
 import { PAI2AnalyticsClient } from "./PAI2AnalyticsClient";
@@ -105,6 +106,14 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
+
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Helper for formatting dates
   const formatChatDate = (dateStr: string) => {
@@ -430,21 +439,28 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
   };
 
   // ── Chat CRUD operations ───────────────────────────────────────────
-  const deleteChat = async (chatId: string) => {
-    try {
-      await fetch("/api/pai2/conversations", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatIds: [chatId] }),
-      });
-      if (activeChatId === chatId) {
-        setActiveChatId(null);
-        setMessages([]);
+  const deleteChat = (chatId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Chat",
+      message: "Are you sure you want to delete this conversation? This action cannot be undone.",
+      onConfirm: async () => {
+        try {
+          await fetch("/api/pai2/conversations", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chatIds: [chatId] }),
+          });
+          if (activeChatId === chatId) {
+            setActiveChatId(null);
+            setMessages([]);
+          }
+          loadConversations();
+        } catch {
+          setError("Failed to delete chat.");
+        }
       }
-      loadConversations();
-    } catch {
-      setError("Failed to delete chat.");
-    }
+    });
   };
 
   const renameChat = async (chatId: string, title: string) => {
@@ -502,17 +518,24 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
     }
   };
 
-  const deleteFolder = async (folderId: string) => {
-    try {
-      await fetch("/api/pai2/folders", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folderId }),
-      });
-      loadConversations();
-    } catch {
-      setError("Failed to delete folder.");
-    }
+  const deleteFolder = (folderId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Folder",
+      message: "Are you sure you want to delete this folder? Conversations inside will be unfiled.",
+      onConfirm: async () => {
+        try {
+          await fetch("/api/pai2/folders", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folderId }),
+          });
+          loadConversations();
+        } catch {
+          setError("Failed to delete folder.");
+        }
+      }
+    });
   };
 
   const downloadChat = async (chatIds: string[]) => {
@@ -551,6 +574,26 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
     setStreamingContent("");
     setSidebarOpen(false);
     setIsAnalyticsOpen(false);
+  };
+
+  const deleteMessageLocal = (msgId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Message",
+      message: "Are you sure you want to delete this failed message?",
+      onConfirm: () => {
+        setMessages(prev => prev.filter(m => m.messageId !== msgId));
+      }
+    });
+  };
+
+  const retryMessage = (msg: Message) => {
+    setMessages(prev => prev.filter(m => m.messageId !== msg.messageId));
+    setInputText(msg.content);
+    // Focus the textarea after setting text
+    setTimeout(() => {
+      if (textareaRef.current) textareaRef.current.focus();
+    }, 10);
   };
 
   // ── Render helpers ─────────────────────────────────────────────────
@@ -1015,8 +1058,11 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                         : msg.content}
                     </div>
                     {msg.status === "error" && (
-                      <div style={{ color: "hsl(0 72% 50%)", fontSize: "11px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px", paddingLeft: "4px" }}>
+                      <div className="pai2-error-inline">
                         <AlertCircle size={12} /> Message failed to send
+                        <button onClick={() => retryMessage(msg)} className="pai2-retry-inline">
+                          <RefreshCw size={12} /> Retry
+                        </button>
                       </div>
                     )}
                     <div className="pai2-message-meta">
@@ -1026,6 +1072,18 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                           minute: "2-digit",
                         })}
                       </span>
+                      {msg.status === "error" && (
+                        <>
+                          <button
+                            className="pai2-chat-action-btn"
+                            onClick={() => deleteMessageLocal(msg.messageId)}
+                            title="Delete Message"
+                            style={{ color: "hsl(0 72% 50%)" }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      )}
                       {msg.role === "assistant" && (
                         <button
                           className="pai2-chat-action-btn"
@@ -1335,6 +1393,36 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 style={{ width: "auto", padding: "6px 14px", fontSize: 13 }}
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal?.isOpen && (
+        <div className="pai2-modal-overlay">
+          <div className="pai2-modal-content">
+            <h3>{confirmModal.title}</h3>
+            <p style={{ marginTop: "12px", marginBottom: "24px", color: "hsl(var(--muted-foreground))" }}>
+              {confirmModal.message}
+            </p>
+            <div className="pai2-modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button
+                className="pai2-btn pai2-btn-secondary"
+                onClick={() => setConfirmModal(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="pai2-btn pai2-btn-danger"
+                style={{ backgroundColor: "hsl(0 72% 50%)", color: "white" }}
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal(null);
+                }}
+              >
+                Confirm
               </button>
             </div>
           </div>
