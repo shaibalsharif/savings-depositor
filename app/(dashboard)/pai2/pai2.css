@@ -534,6 +534,24 @@
   border-color: hsl(173 58% 45%);
 }
 
+.pai2-auto-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.pai2-auto-toggle input {
+  accent-color: hsl(173 58% 45%);
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
 /* ── Welcome Screen ────────────────────────────────────────────────── */
 
 .pai2-welcome {

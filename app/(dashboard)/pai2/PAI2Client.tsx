@@ -315,6 +315,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [selectedProvider, setSelectedProvider] = useState("groq");
   const [selectedModel, setSelectedModel] = useState("default");
+  const [automated, setAutomated] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
@@ -363,7 +364,10 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
   useEffect(() => {
     const savedProvider = localStorage.getItem("pai2-provider");
     if (savedProvider) setSelectedProvider(savedProvider);
-    
+
+    const savedAuto = localStorage.getItem("pai2-automated");
+    if (savedAuto !== null) setAutomated(savedAuto === "true");
+
     try {
       const savedMemories = localStorage.getItem("pai2-memories");
       if (savedMemories) setMemories(JSON.parse(savedMemories));
@@ -563,6 +567,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
           message: messageText,
           provider: selectedProvider,
           model: selectedModel === "default" ? undefined : selectedModel,
+          automated,
           inputType: "text",
           userMemories: memories,
         }),
@@ -1727,6 +1732,20 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 </select>
               </>
             )}
+            <label
+              className="pai2-auto-toggle"
+              title="When on, PAI2 automatically switches to another available model if the selected one is busy or unavailable. When off, it uses only the selected model."
+            >
+              <input
+                type="checkbox"
+                checked={automated}
+                onChange={(e) => {
+                  setAutomated(e.target.checked);
+                  localStorage.setItem("pai2-automated", String(e.target.checked));
+                }}
+              />
+              Automated
+            </label>
           </div>
         </div>
         </>

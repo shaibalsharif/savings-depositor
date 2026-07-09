@@ -199,6 +199,7 @@ export async function POST(req: NextRequest) {
       message,
       provider = "groq" as ProviderKey,
       model,
+      automated = true,
       inputType = "text",
       userMemories = [],
     } = body;
@@ -330,7 +331,11 @@ export async function POST(req: NextRequest) {
     // streams live "status" events so the UI shows which model it switched to.
     if (toolCapable) {
       const preferredProvider = provider as ProviderKey;
-      const candidates = await buildToolCandidates(preferredProvider, model);
+      // "Automated" on → try a chain of best-available models and auto-switch.
+      // Off → use only the exact selected model (no switching).
+      const candidates = automated
+        ? await buildToolCandidates(preferredProvider, model)
+        : [{ provider: preferredProvider, model }];
       const encoder = new TextEncoder();
 
       const stream = new ReadableStream({
