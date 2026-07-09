@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { getProviderInfoList } from "@/lib/ai/providers";
+import { getProviderInfoListLive } from "@/lib/ai/providers";
 
 export async function GET() {
   try {
@@ -15,7 +15,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const providers = getProviderInfoList();
+    const providers = await getProviderInfoListLive();
     return NextResponse.json({ providers });
   } catch (err) {
     console.error("[PAI2 Providers Error]", err);

@@ -41,13 +41,13 @@ function getProviderConfigs(): Record<ProviderKey, ProviderConfig> {
       label: "Groq",
       baseUrl: "https://api.groq.com/openai/v1",
       apiKey: process.env.GROQ_API_KEY || "",
-      defaultModel: "llama-3.3-70b-versatile",
+      // NOTE: These are only a *fallback* used if the live /models fetch
+      // fails. The live list (see fetchLiveModels) is the source of truth
+      // so deprecated models never appear. Keep these to known-current IDs.
+      defaultModel: "openai/gpt-oss-120b",
       models: [
-        { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B (Versatile)", contextWindow: 131072 },
-        { id: "llama-3.1-8b-instant", label: "Llama 3.1 8B (Instant)", contextWindow: 131072 },
-        { id: "mixtral-8x7b-32768", label: "Mixtral 8x7B", contextWindow: 32768 },
-        { id: "gemma2-9b-it", label: "Gemma 2 9B", contextWindow: 8192 },
-        { id: "deepseek-r1-distill-llama-70b", label: "DeepSeek R1 Distill (70B)", contextWindow: 131072 },
+        { id: "openai/gpt-oss-120b", label: "GPT-OSS 120B", contextWindow: 131072 },
+        { id: "openai/gpt-oss-20b", label: "GPT-OSS 20B", contextWindow: 131072 },
       ],
       headers: {},
     },
@@ -112,6 +112,174 @@ export function getProviderInfoList(): ProviderInfo[] {
     defaultModel: p.defaultModel,
     models: p.models,
   }));
+}
+
+// ─── Live Model Discovery ──────────────────────────────────────────────
+//
+// Every provider here is OpenAI-compatible and exposes `GET /models`, which
+// only ever returns *currently available* (non-deprecated) models. We fetch
+// that live, drop non-chat models, rank by a per-provider preference list,
+// and keep the top N — so deprecated model IDs disappear automatically and
+// nobody has to hand-edit a list. Results are cached in memory; on any
+// failure we fall back to the static `models` above.
+
+const TOP_N_MODELS = 5;
+const MODELS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface ModelsCacheEntry {
+  models: ModelInfo[];
+  expires: number;
+}
+const modelsCache = new Map<ProviderKey, ModelsCacheEntry>();
+
+/** IDs that are not text-chat models (transcription, TTS, moderation, etc.). */
+function isNonChatModel(id: string): boolean {
+  return /(whisper|tts|orpheus|guard|safeguard|embed|embedding|moderation|rerank|ocr|distil|stable-diffusion|sdxl|flux|dall-?e|clip)/i.test(
+    id
+  );
+}
+
+/** Ordered preference patterns — earlier = higher priority in the dropdown. */
+const MODEL_PREFERENCES: Record<ProviderKey, string[]> = {
+  groq: [
+    "gpt-oss-120b",
+    "gpt-oss-20b",
+    "qwen3",
+    "qwen",
+    "llama-3.3",
+    "llama-4",
+    "llama-3.1",
+    "kimi",
+    "gemma",
+  ],
+  openrouter: [
+    "gemini-2.0-flash",
+    "llama-3.3-70b",
+    "qwen",
+    "deepseek",
+    "mistral",
+    "gemma",
+  ],
+  huggingface: ["qwen2.5-72b", "qwen", "llama-3.3", "llama-3", "mistral", "gemma"],
+};
+
+function preferenceScore(id: string, prefs: string[]): number {
+  const lower = id.toLowerCase();
+  for (let i = 0; i < prefs.length; i++) {
+    if (lower.includes(prefs[i])) return i;
+  }
+  return prefs.length + 1;
+}
+
+function prettifyModelId(id: string): string {
+  const tail = id.split("/").pop() || id;
+  return tail
+    .replace(/[:_-]+/g, " ")
+    .replace(/\bfree\b/i, "(Free)")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+interface RawModel {
+  id?: string;
+  name?: string;
+  context_window?: number;
+  context_length?: number;
+  pricing?: { prompt?: string; completion?: string };
+}
+
+/**
+ * Fetch, filter and rank the live model list for a provider.
+ * Cached in memory for MODELS_CACHE_TTL_MS. Throws on network/HTTP failure
+ * so the caller can fall back to the static list.
+ */
+async function fetchLiveModels(key: ProviderKey): Promise<ModelInfo[]> {
+  const cached = modelsCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.models;
+
+  const config = getProvider(key);
+
+  const res = await fetch(`${config.baseUrl}/models`, {
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      ...config.headers,
+    },
+    // Never let a slow provider stall the dropdown for long
+    signal: AbortSignal.timeout(6000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`${key} /models returned ${res.status}`);
+  }
+
+  const json = await res.json();
+  const rawList: RawModel[] = Array.isArray(json?.data) ? json.data : [];
+
+  const prefs = MODEL_PREFERENCES[key] || [];
+  const ranked = rawList
+    .filter((m): m is RawModel & { id: string } => typeof m.id === "string")
+    // Keep only text-chat models
+    .filter((m) => !isNonChatModel(m.id))
+    // For OpenRouter, keep only free models (aligns with free-tier usage)
+    .filter((m) => {
+      if (key !== "openrouter") return true;
+      const price = parseFloat(m.pricing?.prompt ?? "0");
+      return !Number.isFinite(price) || price === 0;
+    })
+    .map<ModelInfo>((m) => ({
+      id: m.id,
+      label: m.name || prettifyModelId(m.id),
+      contextWindow: m.context_window ?? m.context_length,
+    }))
+    .sort((a, b) => {
+      const sa = preferenceScore(a.id, prefs);
+      const sb = preferenceScore(b.id, prefs);
+      if (sa !== sb) return sa - sb;
+      return (b.contextWindow ?? 0) - (a.contextWindow ?? 0);
+    })
+    .slice(0, TOP_N_MODELS);
+
+  if (ranked.length === 0) {
+    throw new Error(`${key} /models returned no usable chat models`);
+  }
+
+  modelsCache.set(key, {
+    models: ranked,
+    expires: Date.now() + MODELS_CACHE_TTL_MS,
+  });
+  return ranked;
+}
+
+/**
+ * Client-safe provider list with LIVE, non-deprecated models.
+ * Falls back to the static `models` for any provider whose live fetch fails.
+ */
+export async function getProviderInfoListLive(): Promise<ProviderInfo[]> {
+  const providers = getAllProviders();
+
+  return Promise.all(
+    providers.map(async (p) => {
+      let models = p.models;
+      try {
+        models = await fetchLiveModels(p.key);
+      } catch (err) {
+        console.warn(
+          `[PAI2] Live model fetch failed for ${p.key}, using fallback list:`,
+          err instanceof Error ? err.message : err
+        );
+      }
+      const defaultModel = models.some((m) => m.id === p.defaultModel)
+        ? p.defaultModel
+        : models[0]?.id || p.defaultModel;
+      return {
+        key: p.key,
+        label: p.label,
+        defaultModel,
+        models,
+      };
+    })
+  );
 }
 
 // ─── Chat Completion ───────────────────────────────────────────────────

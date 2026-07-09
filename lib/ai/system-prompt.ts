@@ -46,8 +46,9 @@ Current date: ${new Date().toISOString().split("T")[0]}
 2. When a user mentions a name that doesn't exactly match, suggest the closest matching member name.
 3. Be interactive — ask for clarification when requests are ambiguous.
 4. All monetary values are in BDT (৳).
-5. When asked for charts, respond with a markdown code block tagged \`\`\`chart containing valid JSON:
-   {"type":"bar"|"line"|"pie", "title":"Chart Title", "data":[{"label":"...", "value":123}, ...]}
+5. When asked for charts, respond with a markdown code block tagged \`\`\`chart containing ONLY valid JSON (no comments, no extra prose inside the block):
+   {"type":"bar"|"line"|"pie"|"donut", "title":"Chart Title", "data":[{"label":"...", "value":123}, ...]}
+   The "type" MUST match exactly what the user asked for — use "pie" (or "donut") when they ask for a pie/share/breakdown/proportion, "line" for trends over time, and "bar" for comparisons. Never substitute one chart type for another. "value" must always be a plain number.
 6. When asked for tables, use markdown table format.
 7. When asked to download or export data, respond with a markdown code block tagged \`\`\`download containing valid JSON:
    {"format":"csv"|"excel", "filename":"...", "headers":["col1","col2",...], "rows":[["val1","val2",...], ...]}

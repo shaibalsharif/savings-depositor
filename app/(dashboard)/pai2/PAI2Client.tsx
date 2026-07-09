@@ -30,6 +30,20 @@ import {
   RotateCcw,
   AlertTriangle,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 import "./pai2.css";
 import { PAI2AnalyticsClient } from "./PAI2AnalyticsClient";
 
@@ -73,6 +87,113 @@ interface ProviderInfo {
 interface PAI2ClientProps {
   user: { id: string; name: string; picture: string | null };
   isManager: boolean;
+}
+
+// ─── Chart rendering ──────────────────────────────────────────────────
+
+interface ChartPoint {
+  label: string;
+  value: number;
+}
+interface ChartSpec {
+  type?: "bar" | "line" | "pie" | "donut";
+  title?: string;
+  data?: ChartPoint[];
+}
+
+const CHART_COLORS = [
+  "hsl(173 58% 45%)",
+  "hsl(200 70% 50%)",
+  "hsl(45 93% 55%)",
+  "hsl(280 65% 60%)",
+  "hsl(0 72% 58%)",
+  "hsl(140 60% 45%)",
+  "hsl(320 60% 58%)",
+  "hsl(30 90% 55%)",
+];
+
+const CHART_TOOLTIP_STYLE = {
+  background: "hsl(222 47% 12%)",
+  border: "1px solid hsl(var(--border))",
+  borderRadius: 8,
+  fontSize: 12,
+  color: "hsl(var(--foreground))",
+} as const;
+
+const AXIS_TICK = { fontSize: 11, fill: "hsl(var(--muted-foreground))" } as const;
+
+/** Renders a chart from an AI ```chart``` JSON block, honouring its `type`. */
+function Pai2Chart({ chart }: { chart: ChartSpec }) {
+  const data = (Array.isArray(chart.data) ? chart.data : []).filter(
+    (d) => d && typeof d.value === "number" && Number.isFinite(d.value)
+  );
+  if (data.length === 0) return null;
+
+  const type = (chart.type || "bar").toLowerCase();
+  const fmt = (v: unknown) => `৳${Number(v).toLocaleString()}`;
+
+  let inner: React.ReactElement;
+  if (type === "pie" || type === "donut") {
+    inner = (
+      <PieChart>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="label"
+          cx="50%"
+          cy="50%"
+          outerRadius={88}
+          innerRadius={type === "donut" ? 46 : 0}
+          label={(e: { name?: string }) => e.name ?? ""}
+          labelLine={false}
+        >
+          {data.map((_, i) => (
+            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip formatter={fmt} contentStyle={CHART_TOOLTIP_STYLE} />
+      </PieChart>
+    );
+  } else if (type === "line") {
+    inner = (
+      <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+        <XAxis dataKey="label" tick={AXIS_TICK} />
+        <YAxis tick={AXIS_TICK} width={52} />
+        <Tooltip formatter={fmt} contentStyle={CHART_TOOLTIP_STYLE} />
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke={CHART_COLORS[0]}
+          strokeWidth={2}
+          dot={{ r: 3 }}
+        />
+      </LineChart>
+    );
+  } else {
+    inner = (
+      <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+        <XAxis dataKey="label" tick={AXIS_TICK} />
+        <YAxis tick={AXIS_TICK} width={52} />
+        <Tooltip formatter={fmt} contentStyle={CHART_TOOLTIP_STYLE} cursor={{ fill: "hsl(var(--accent))" }} />
+        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+          {data.map((_, i) => (
+            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+          ))}
+        </Bar>
+      </BarChart>
+    );
+  }
+
+  return (
+    <div className="pai2-chart-container">
+      <div className="pai2-chart-title">{chart.title || "Chart"}</div>
+      <ResponsiveContainer width="100%" height={250}>
+        {inner}
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────
@@ -821,28 +942,12 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
           // End code block
           if (codeType === "chart") {
             try {
-              const chartData = JSON.parse(codeContent.trim());
-              elements.push(
-                <div key={key++} className="pai2-chart-container">
-                  <div className="pai2-chart-title">{chartData.title || "Chart"}</div>
-                  <div style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
-                    {chartData.data?.map((d: { label: string; value: number }, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <div
-                          style={{
-                            width: `${Math.min((d.value / Math.max(...chartData.data.map((x: { value: number }) => x.value))) * 200, 200)}px`,
-                            height: 20,
-                            background: `hsl(${173 + i * 30} 58% 45%)`,
-                            borderRadius: 4,
-                            minWidth: 4,
-                          }}
-                        />
-                        <span>{d.label}: {typeof d.value === "number" ? `৳${d.value.toLocaleString()}` : d.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
+              const chartData = JSON.parse(codeContent.trim()) as ChartSpec;
+              if (Array.isArray(chartData.data) && chartData.data.length > 0) {
+                elements.push(<Pai2Chart key={key++} chart={chartData} />);
+              } else {
+                elements.push(<pre key={key++}><code>{codeContent}</code></pre>);
+              }
             } catch {
               elements.push(<pre key={key++}><code>{codeContent}</code></pre>);
             }
