@@ -16,7 +16,16 @@
   display: flex;
   flex-direction: column;
   background: hsl(222 47% 7%);
-  transition: transform 0.3s ease, width 0.3s ease;
+  transition: transform 0.3s ease, width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease;
+}
+
+.pai2-sidebar.collapsed {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  border-right: none;
+  opacity: 0;
+  overflow: hidden;
 }
 
 .pai2-sidebar-header {
@@ -116,6 +125,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pai2-chat-item-date {
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+  opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .pai2-chat-item-actions {
@@ -638,10 +658,46 @@
   background: hsl(0 72% 50% / 0.15);
 }
 
+.pai2-context-item-has-submenu {
+  position: relative;
+}
+
+.pai2-context-submenu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: -4px;
+  background: hsl(222 47% 12%);
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 4px;
+  min-width: 160px;
+  box-shadow: 0 8px 32px hsl(0 0% 0% / 0.4);
+  z-index: 101;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.pai2-context-item-has-submenu:hover .pai2-context-submenu {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Cascading Folders ─────────────────────────────────────────────── */
+.pai2-folder-children {
+  margin-left: 12px;
+  padding-left: 8px;
+  border-left: 1px dashed hsl(var(--border));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
 /* ── Mobile Sidebar Toggle ─────────────────────────────────────────── */
 
 .pai2-sidebar-toggle {
-  display: none;
+  display: flex;
   padding: 8px;
   border: none;
   background: transparent;

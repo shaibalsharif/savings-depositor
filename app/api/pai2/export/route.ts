@@ -89,6 +89,66 @@ export async function POST(req: NextRequest) {
     }
 
     if (formatType === "md") {
+      const formatMessageContent = (content: string) => {
+        const lines = content.split('\n');
+        const result = [];
+        let inCodeBlock = false;
+        let codeType = '';
+        let codeContent = '';
+      
+        for (const line of lines) {
+          if (line.startsWith('```')) {
+            if (inCodeBlock) {
+              if (codeType === 'chart') {
+                try {
+                  const data = JSON.parse(codeContent.trim());
+                  result.push(`**${data.title || 'Chart Data'}**\n`);
+                  if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+                    result.push(`| Label | Value |`);
+                    result.push(`|---|---|`);
+                    for (const d of data.data) {
+                      result.push(`| ${d.label} | ${d.value} |`);
+                    }
+                  }
+                } catch {
+                  result.push(`\`\`\`chart\n${codeContent}\n\`\`\``);
+                }
+              } else if (codeType === 'download') {
+                try {
+                  const data = JSON.parse(codeContent.trim());
+                  result.push(`**Data Export: ${data.filename || 'export.csv'}**\n`);
+                  if (data.headers && data.rows) {
+                    result.push(`| ${data.headers.join(' | ')} |`);
+                    result.push(`| ${data.headers.map(() => '---').join(' | ')} |`);
+                    for (const r of data.rows) {
+                      result.push(`| ${r.join(' | ')} |`);
+                    }
+                  }
+                } catch {
+                  result.push(`\`\`\`download\n${codeContent}\n\`\`\``);
+                }
+              } else {
+                result.push(`\`\`\`${codeType}\n${codeContent.trim()}\n\`\`\``);
+              }
+              inCodeBlock = false;
+              codeType = '';
+              codeContent = '';
+            } else {
+              inCodeBlock = true;
+              codeType = line.slice(3).trim();
+            }
+            continue;
+          }
+      
+          if (inCodeBlock) {
+            codeContent += line + '\n';
+          } else {
+            result.push(line);
+          }
+        }
+        return result.join('\n');
+      };
+
       const parts: string[] = [];
       for (const conv of conversations) {
         parts.push(`# ${conv.title}`);
@@ -99,7 +159,7 @@ export async function POST(req: NextRequest) {
           if (msg.role === "system") continue;
           const prefix = msg.role === "user" ? "**👤 You**" : "**🤖 PAI2**";
           parts.push(`### ${prefix} _[${format(new Date(msg.createdAt), "HH:mm:ss")}]_`);
-          parts.push(`${msg.content}\n`);
+          parts.push(`${formatMessageContent(msg.content)}\n`);
           parts.push(`---\n`);
         }
       }

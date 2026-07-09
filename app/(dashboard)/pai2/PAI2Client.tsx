@@ -104,6 +104,18 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
+
+  // Helper for formatting dates
+  const formatChatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 3600 * 24));
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'short' });
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -721,7 +733,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
       )}
 
       {/* ── Sidebar ───────────────────────────────────────────────────── */}
-      <aside className={`pai2-sidebar ${sidebarOpen ? "open" : ""}`}>
+      <aside className={`pai2-sidebar ${sidebarOpen ? "open" : ""} ${isDesktopSidebarCollapsed ? "collapsed" : ""}`}>
         <div className="pai2-sidebar-header">
           <button className="pai2-new-chat-btn" onClick={startNewChat}>
             <Plus size={16} />
@@ -736,13 +748,11 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
           </button>
           <button
             className="pai2-input-btn"
-            onClick={() => {
-              setIsAnalyticsOpen(true);
-              setActiveChatId(null);
-            }}
-            title="Analytics"
+            onClick={() => setIsDesktopSidebarCollapsed(true)}
+            title="Collapse Sidebar"
+            style={{ display: isDesktopSidebarCollapsed ? "none" : "" }}
           >
-            <BarChart2 size={16} />
+            <Menu size={16} />
           </button>
         </div>
 
@@ -856,10 +866,12 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 </button>
               </div>
 
-              {expandedFolders.has(folder.folderId) &&
-                folderChats(folder.folderId).map((conv) =>
-                  renderChatItem(conv)
-                )}
+              <div className="pai2-folder-children">
+                {expandedFolders.has(folder.folderId) &&
+                  folderChats(folder.folderId).map((conv) =>
+                    renderChatItem(conv)
+                  )}
+              </div>
             </div>
             );
           })}
@@ -881,7 +893,9 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                   <span>Chats</span>
                 </div>
               )}
-              {unfiledChats.map((conv) => renderChatItem(conv))}
+              <div className="pai2-folder-children">
+                {unfiledChats.map((conv) => renderChatItem(conv))}
+              </div>
             </div>
           )}
 
@@ -904,7 +918,13 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
               <div className="pai2-chat-title">
                 <button
                   className="pai2-sidebar-toggle"
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  onClick={() => {
+                    if (window.innerWidth <= 768) {
+                      setSidebarOpen(!sidebarOpen);
+                    } else {
+                      setIsDesktopSidebarCollapsed(!isDesktopSidebarCollapsed);
+                    }
+                  }}
                 >
                   <Menu size={18} />
                 </button>
@@ -1170,29 +1190,35 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
             Rename
           </button>
           {folders.length > 0 && (
-            <>
-              {folders.map((f) => (
+            <div className="pai2-context-item-has-submenu">
+              <button onClick={(e) => e.preventDefault()}>
+                <Folder size={14} />
+                Move to Collection <ChevronRight size={14} style={{ marginLeft: "auto" }} />
+              </button>
+              <div className="pai2-context-submenu">
+                {folders.map((f) => (
+                  <button
+                    key={f.folderId}
+                    onClick={() => {
+                      moveChatToFolder(contextMenu.chatId, f.folderId);
+                      setContextMenu(null);
+                    }}
+                  >
+                    <Folder size={14} />
+                    {f.name}
+                  </button>
+                ))}
                 <button
-                  key={f.folderId}
                   onClick={() => {
-                    moveChatToFolder(contextMenu.chatId, f.folderId);
+                    moveChatToFolder(contextMenu.chatId, null);
                     setContextMenu(null);
                   }}
                 >
-                  <Folder size={14} />
-                  Move to {f.name}
+                  <MessageSquare size={14} />
+                  Remove from collection
                 </button>
-              ))}
-              <button
-                onClick={() => {
-                  moveChatToFolder(contextMenu.chatId, null);
-                  setContextMenu(null);
-                }}
-              >
-                <Folder size={14} />
-                Remove from folder
-              </button>
-            </>
+              </div>
+            </div>
           )}
           <button
             onClick={() => {
@@ -1325,8 +1351,14 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
       >
         <MessageSquare size={14} />
         <span className="pai2-chat-item-title">
-          {conv.title}
-          {conv.draftPrompt && <span className="pai2-draft-badge">Draft</span>}
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
+            {conv.title}
+          </span>
+          {conv.draftPrompt ? (
+            <span className="pai2-draft-badge">Draft</span>
+          ) : (
+            <span className="pai2-chat-item-date">{formatChatDate(conv.createdAt)}</span>
+          )}
         </span>
         <div className="pai2-chat-item-actions">
           <button
