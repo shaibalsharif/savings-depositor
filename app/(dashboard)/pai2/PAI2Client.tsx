@@ -76,6 +76,8 @@ interface MessageMeta {
   toolsUsed?: string[];
   contextMessages?: number;
   ms?: number;
+  switched?: boolean;
+  requested?: { provider?: string; model?: string };
 }
 
 interface Message {
@@ -266,6 +268,7 @@ function Pai2Chart({ chart }: { chart: ChartSpec }) {
 
 function formatMsgMeta(meta: MessageMeta): string {
   const parts: string[] = [];
+  if (meta.switched) parts.push("⇄ switched");
   if (meta.model) parts.push(meta.model === "default" ? "auto" : meta.model.split("/").pop()!);
   if (meta.provider) parts.push(meta.provider);
   if (typeof meta.ms === "number") parts.push(`${(meta.ms / 1000).toFixed(1)}s`);
@@ -278,6 +281,15 @@ function metaTooltip(meta: MessageMeta): string {
   const t: string[] = [];
   if (meta.model) t.push(`Model: ${meta.model}`);
   if (meta.provider) t.push(`Provider: ${meta.provider}`);
+  if (
+    meta.switched &&
+    meta.requested &&
+    (meta.requested.provider || meta.requested.model)
+  ) {
+    t.push(
+      `Auto-switched from your selection (${meta.requested.provider || "?"} · ${meta.requested.model || "auto"}) because it was unavailable.`
+    );
+  }
   if (meta.mode) t.push(`Mode: ${meta.mode === "tools" ? "tool calling" : "streaming"}`);
   if (meta.toolsUsed && meta.toolsUsed.length)
     t.push(`Tools: ${meta.toolsUsed.join(", ")}`);
@@ -298,6 +310,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
   const [inputText, setInputText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [genStatus, setGenStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [selectedProvider, setSelectedProvider] = useState("groq");
@@ -518,6 +531,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
     setInputText("");
     setIsStreaming(true);
     setStreamingContent("");
+    setGenStatus("");
     // Always jump to the newest message when the user sends
     setTimeout(() => scrollToBottom("smooth"), 0);
 
@@ -598,7 +612,11 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 setActiveChatId(data.chatId);
                 loadConversations();
               }
+            } else if (data.type === "status") {
+              // Live auto-switching updates ("Switching to groq · gpt-oss-120b…")
+              setGenStatus(data.message);
             } else if (data.type === "token") {
+              setGenStatus("");
               fullContent += data.content;
               setStreamingContent(fullContent);
             } else if (data.type === "done") {
@@ -655,6 +673,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
     } finally {
       abortControllerRef.current = null;
       setIsStreaming(false);
+      setGenStatus("");
       loadConversations();
     }
   };
@@ -1559,7 +1578,9 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 </div>
                 <div className="pai2-message-bubble">
                   <div className="pai2-typing">
-                    <span className="pai2-typing-label">PAI2 is thinking</span>
+                    <span className="pai2-typing-label">
+                      {genStatus || "PAI2 is thinking"}
+                    </span>
                     <div className="pai2-typing-dot" />
                     <div className="pai2-typing-dot" />
                     <div className="pai2-typing-dot" />
@@ -1671,10 +1692,11 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 const prov = providers.find((p) => p.key === key);
                 const savedModel = localStorage.getItem(`pai2-model-${key}`);
                 if (prov) {
+                  // Default to Auto unless the user previously pinned a model.
                   setSelectedModel(
                     savedModel && prov.models.some((m) => m.id === savedModel)
                       ? savedModel
-                      : prov.defaultModel
+                      : "default"
                   );
                 }
               }}
@@ -1685,7 +1707,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                 </option>
               ))}
             </select>
-            {currentProvider && currentProvider.models.length > 1 && (
+            {currentProvider && currentProvider.models.length >= 1 && (
               <>
                 <span>Model:</span>
                 <select
@@ -1696,6 +1718,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                     localStorage.setItem(`pai2-model-${selectedProvider}`, e.target.value);
                   }}
                 >
+                  <option value="default">Auto (best available)</option>
                   {currentProvider.models.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.label}

@@ -132,101 +132,52 @@ function shortErrorLabel(err: unknown): string {
   }
 }
 
-async function runToolLoopWithFallback(
-  candidates: Array<{ provider: ProviderKey; model?: string }>,
-  baseMessages: ChatMessage[]
-): Promise<{ text: string; toolsUsed: string[]; provider: ProviderKey; model?: string } | null> {
-  const attempts: Array<{ provider: ProviderKey; label: string }> = [];
-  for (const cand of candidates) {
-    try {
-      const { text, toolsUsed } = await runToolLoop(
-        cand.provider,
-        cand.model,
-        baseMessages
-      );
-      if (text.trim()) {
-        return { text, toolsUsed, provider: cand.provider, model: cand.model };
-      }
-      attempts.push({ provider: cand.provider, label: "empty response" });
-    } catch (err) {
-      // Non-switchable hard errors (bad auth, etc.): stop and surface as-is.
-      if (isAIError(err) && !err.retryable && !err.suggestSwitch) {
-        throw err;
-      }
-      attempts.push({ provider: cand.provider, label: shortErrorLabel(err) });
-      // Otherwise fall through to the next candidate.
-    }
-  }
+const shortModel = (m?: string) =>
+  m && m !== "default" ? m.split("/").pop() || m : "default";
 
-  // Every candidate failed — report ALL of them so the message isn't
-  // misleadingly attributed to whichever provider happened to be tried last.
-  if (attempts.length > 0) {
-    const list = attempts.map((a) => `${a.provider} (${a.label})`).join(", ");
-    throw {
-      code: "ALL_PROVIDERS_UNAVAILABLE",
-      message: `All available AI providers are busy right now — tried ${list}. Please wait a moment and try again.`,
-      retryable: true,
-      suggestSwitch: false,
-    };
-  }
-  return null;
+interface ToolCandidate {
+  provider: ProviderKey;
+  model?: string;
 }
 
 /**
- * Build the ordered list of tool-capable provider/model candidates to try,
- * starting with the user's choice, then other configured providers' best model.
+ * Build the ordered list of tool-capable candidates to try: the user's exact
+ * choice first, then the rest of that provider's top models, then other
+ * tool-capable providers' top models. This lets the system auto-switch models
+ * (not just providers) when one is rate-limited or decommissioned.
  */
 async function buildToolCandidates(
   preferredProvider: ProviderKey,
   preferredModel: string | undefined
-): Promise<Array<{ provider: ProviderKey; model?: string }>> {
-  const candidates: Array<{ provider: ProviderKey; model?: string }> = [
-    { provider: preferredProvider, model: preferredModel },
-  ];
+): Promise<ToolCandidate[]> {
+  const candidates: ToolCandidate[] = [];
+  const seen = new Set<string>();
+  const add = (provider: ProviderKey, model?: string) => {
+    const key = `${provider}:${model || "default"}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      candidates.push({ provider, model });
+    }
+  };
+
+  add(preferredProvider, preferredModel);
+
   try {
     const live = await getProviderInfoListLive();
+    // Remaining top models of the preferred provider.
+    const pref = live.find((p) => p.key === preferredProvider);
+    if (pref) for (const m of pref.models.slice(0, 3)) add(preferredProvider, m.id);
+    // Then other tool-capable providers' top models.
     for (const p of live) {
-      if (p.key !== "groq" && p.key !== "openrouter") continue; // tool-capable only
-      if (p.key === preferredProvider) continue; // already first
-      candidates.push({ provider: p.key as ProviderKey, model: p.defaultModel });
+      if (p.key === preferredProvider) continue;
+      if (p.key !== "groq" && p.key !== "openrouter") continue;
+      for (const m of p.models.slice(0, 2)) add(p.key as ProviderKey, m.id);
     }
   } catch {
-    // If discovery fails, we still have the preferred candidate.
+    // Discovery failed — the preferred candidate alone still works.
   }
-  return candidates;
-}
 
-/**
- * Emit an already-computed answer to the client over the same SSE contract the
- * streaming path uses (meta → token* → done), chunked so the UI still animates.
- */
-function simulatedStream(
-  chatId: string,
-  messageId: string,
-  isNewConversation: boolean,
-  text: string,
-  meta?: Record<string, unknown>
-): ReadableStream {
-  const encoder = new TextEncoder();
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(
-        encoder.encode(
-          `data: ${JSON.stringify({ type: "meta", chatId, messageId, isNewConversation })}\n\n`
-        )
-      );
-      for (let i = 0; i < text.length; i += 80) {
-        const chunk = text.slice(i, i + 80);
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: "token", content: chunk })}\n\n`)
-        );
-      }
-      controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ type: "done", meta })}\n\n`)
-      );
-      controller.close();
-    },
-  });
+  return candidates.slice(0, 6);
 }
 
 export async function POST(req: NextRequest) {
@@ -374,74 +325,127 @@ export async function POST(req: NextRequest) {
     });
 
     // ── Tool-calling path (providers/models that support function calling) ─
-    // The model calls DB-backed tools for exact figures instead of guessing.
-    // Automatically fails over across providers on rate-limit / too-large /
-    // decommissioned errors. Falls through to plain streaming if all fail.
+    // The model calls DB-backed tools for exact figures. It auto-switches
+    // across models/providers when one is rate-limited or decommissioned, and
+    // streams live "status" events so the UI shows which model it switched to.
     if (toolCapable) {
-      try {
-        const candidates = await buildToolCandidates(provider as ProviderKey, model);
-        const result = await runToolLoopWithFallback(candidates, messages);
+      const preferredProvider = provider as ProviderKey;
+      const candidates = await buildToolCandidates(preferredProvider, model);
+      const encoder = new TextEncoder();
 
-        if (result && result.text.trim()) {
+      const stream = new ReadableStream({
+        async start(controller) {
+          const send = (obj: Record<string, unknown>) =>
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+
+          send({
+            type: "meta",
+            chatId: conversationChatId,
+            messageId: assistantMessageId,
+            isNewConversation,
+          });
+
+          const attempts: string[] = [];
+          let answered: {
+            text: string;
+            toolsUsed: string[];
+            provider: ProviderKey;
+            model?: string;
+          } | null = null;
+          let hardError: unknown = null;
+
+          for (let i = 0; i < candidates.length; i++) {
+            const cand = candidates[i];
+            const label = `${cand.provider} · ${shortModel(cand.model)}`;
+            send({
+              type: "status",
+              message: i === 0 ? `Generating with ${label}…` : `Switching to ${label}…`,
+            });
+
+            try {
+              const { text, toolsUsed } = await runToolLoop(
+                cand.provider,
+                cand.model,
+                messages
+              );
+              if (text.trim()) {
+                answered = { text, toolsUsed, provider: cand.provider, model: cand.model };
+                break;
+              }
+              attempts.push(`${cand.provider} (empty response)`);
+            } catch (err) {
+              // Truly non-switchable errors: stop and surface as-is.
+              if (isAIError(err) && !err.retryable && !err.suggestSwitch) {
+                hardError = err;
+                break;
+              }
+              attempts.push(`${cand.provider} (${shortErrorLabel(err)})`);
+              if (i < candidates.length - 1) {
+                send({
+                  type: "status",
+                  message: `${cand.provider} ${shortErrorLabel(err)} — trying another model…`,
+                });
+              }
+            }
+          }
+
+          if (answered) {
+            for (let j = 0; j < answered.text.length; j += 80) {
+              send({ type: "token", content: answered.text.slice(j, j + 80) });
+            }
+            await db
+              .update(chatMessages)
+              .set({ content: answered.text, status: "complete" })
+              .where(eq(chatMessages.messageId, assistantMessageId));
+            await db
+              .update(chatConversations)
+              .set({ draftPrompt: null })
+              .where(eq(chatConversations.chatId, conversationChatId));
+
+            const providerChanged = answered.provider !== preferredProvider;
+            const modelChanged =
+              !!model && model !== "default" && answered.model !== model;
+
+            send({
+              type: "done",
+              meta: {
+                provider: answered.provider,
+                model: answered.model || "default",
+                mode: "tools",
+                toolsUsed: answered.toolsUsed,
+                contextMessages: messages.length - 1,
+                ms: Date.now() - startedAt,
+                switched: providerChanged || modelChanged,
+                requested: { provider: preferredProvider, model: model || "default" },
+              },
+            });
+            controller.close();
+            return;
+          }
+
+          // Everything failed.
+          const failMsg =
+            hardError && isAIError(hardError)
+              ? hardError.message
+              : attempts.length > 0
+                ? `All available AI models are busy right now — tried ${attempts.join(", ")}. Please wait a moment and try again.`
+                : "Could not generate a response. Please try again.";
+
           await db
             .update(chatMessages)
-            .set({ content: result.text, status: "complete" })
+            .set({ content: failMsg, status: "error" })
             .where(eq(chatMessages.messageId, assistantMessageId));
           await db
             .update(chatConversations)
             .set({ draftPrompt: null })
             .where(eq(chatConversations.chatId, conversationChatId));
 
-          const meta = {
-            provider: result.provider,
-            model: result.model || "default",
-            mode: "tools" as const,
-            toolsUsed: result.toolsUsed,
-            contextMessages: messages.length - 1,
-            ms: Date.now() - startedAt,
-          };
+          send({ type: "error", message: failMsg });
+          controller.close();
+        },
+      });
 
-          return new Response(
-            simulatedStream(
-              conversationChatId,
-              assistantMessageId,
-              isNewConversation,
-              result.text,
-              meta
-            ),
-            { headers: SSE_HEADERS }
-          );
-        }
-        // Empty answer → fall through to streaming as a fallback.
-      } catch (err) {
-        // If every tool-capable provider failed with a switchable error,
-        // surface it to the client (so it can show "rate limited", etc.).
-        if (isAIError(err)) {
-          await db
-            .update(chatMessages)
-            .set({ content: err.message, status: "error" })
-            .where(eq(chatMessages.messageId, assistantMessageId));
-          await db
-            .update(chatConversations)
-            .set({ draftPrompt: null })
-            .where(eq(chatConversations.chatId, conversationChatId));
-          return NextResponse.json(
-            {
-              error: err.message,
-              code: err.code,
-              retryable: err.retryable,
-              suggestSwitch: err.suggestSwitch,
-              chatId: conversationChatId,
-              messageId: assistantMessageId,
-            },
-            { status: 200 }
-          );
-        }
-        console.warn(
-          "[PAI2] Tool loop failed, falling back to plain streaming:",
-          err instanceof Error ? err.message : err
-        );
-      }
+      return new Response(stream, { headers: SSE_HEADERS });
     }
 
     let providerResponse: Response;
