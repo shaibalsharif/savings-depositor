@@ -68,8 +68,8 @@ export function CollapsibleLayout({
 
         <div 
           className={`transition-all duration-300 ${
-            pathname === '/pai2' 
-              ? 'h-[calc(100vh-64px)]' 
+            pathname === '/pai2'
+              ? 'mt-14 h-[calc(100vh-56px)] md:mt-0 md:h-[calc(100vh-64px)]'
               : 'max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8 pt-20 md:pt-8'
           }`}
         >

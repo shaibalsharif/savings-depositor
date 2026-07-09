@@ -983,16 +983,9 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
             className="pai2-input-btn"
             onClick={() => setNewFolderMode(true)}
             title="New Folder"
+            aria-label="New folder"
           >
             <FolderPlus size={16} />
-          </button>
-          <button
-            className="pai2-input-btn"
-            onClick={() => setIsDesktopSidebarCollapsed(true)}
-            title="Collapse Sidebar"
-            style={{ display: isDesktopSidebarCollapsed ? "none" : "" }}
-          >
-            <Menu size={16} />
           </button>
         </div>
 
@@ -1158,6 +1151,8 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
               <div className="pai2-chat-title">
                 <button
                   className="pai2-sidebar-toggle"
+                  title="Toggle sidebar"
+                  aria-label="Toggle sidebar"
                   onClick={() => {
                     if (window.innerWidth <= 768) {
                       setSidebarOpen(!sidebarOpen);
