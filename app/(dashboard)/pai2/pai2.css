@@ -352,6 +352,15 @@
   gap: 8px;
 }
 
+.pai2-msg-meta-info {
+  font-size: 10.5px;
+  color: hsl(var(--muted-foreground));
+  opacity: 0.65;
+  margin-top: 3px;
+  cursor: default;
+  letter-spacing: 0.01em;
+}
+
 /* ── Streaming indicator ───────────────────────────────────────────── */
 
 .pai2-typing {

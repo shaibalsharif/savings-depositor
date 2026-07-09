@@ -39,10 +39,12 @@ import {
   Cell,
   LineChart,
   Line,
+  ComposedChart,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
+  Legend,
 } from "recharts";
 import "./pai2.css";
 import { PAI2AnalyticsClient } from "./PAI2AnalyticsClient";
@@ -67,6 +69,15 @@ interface ChatFolder {
   createdAt: string;
 }
 
+interface MessageMeta {
+  provider?: string;
+  model?: string;
+  mode?: string;
+  toolsUsed?: string[];
+  contextMessages?: number;
+  ms?: number;
+}
+
 interface Message {
   messageId: string;
   chatId: string;
@@ -75,6 +86,7 @@ interface Message {
   inputType: string;
   status: string;
   createdAt: string;
+  meta?: MessageMeta;
 }
 
 interface ProviderInfo {
@@ -95,10 +107,18 @@ interface ChartPoint {
   label: string;
   value: number;
 }
+interface ChartSeries {
+  key: string;
+  name?: string;
+  kind?: "bar" | "line";
+  stackId?: string;
+}
 interface ChartSpec {
-  type?: "bar" | "line" | "pie" | "donut";
+  type?: "bar" | "line" | "pie" | "donut" | "composed" | "stacked-bar" | "grouped-bar";
   title?: string;
-  data?: ChartPoint[];
+  xKey?: string;
+  data?: Array<ChartPoint | Record<string, unknown>>;
+  series?: ChartSeries[];
 }
 
 const CHART_COLORS = [
@@ -124,13 +144,59 @@ const AXIS_TICK = { fontSize: 11, fill: "hsl(var(--muted-foreground))" } as cons
 
 /** Renders a chart from an AI ```chart``` JSON block, honouring its `type`. */
 function Pai2Chart({ chart }: { chart: ChartSpec }) {
+  const fmt = (v: unknown) => `৳${Number(v).toLocaleString()}`;
+
+  // ── Composite / stacked / multi-series charts ────────────────────────
+  if (Array.isArray(chart.series) && chart.series.length > 0) {
+    const rows = Array.isArray(chart.data) ? chart.data : [];
+    if (rows.length === 0) return null;
+    const xKey = chart.xKey || "label";
+    return (
+      <div className="pai2-chart-container">
+        <div className="pai2-chart-title">{chart.title || "Chart"}</div>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={rows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey={xKey} tick={AXIS_TICK} />
+            <YAxis tick={AXIS_TICK} width={52} />
+            <Tooltip formatter={fmt} contentStyle={CHART_TOOLTIP_STYLE} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            {chart.series.map((s, i) =>
+              s.kind === "line" ? (
+                <Line
+                  key={s.key}
+                  type="monotone"
+                  dataKey={s.key}
+                  name={s.name || s.key}
+                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                  strokeWidth={2}
+                  dot={{ r: 2 }}
+                />
+              ) : (
+                <Bar
+                  key={s.key}
+                  dataKey={s.key}
+                  name={s.name || s.key}
+                  stackId={s.stackId}
+                  fill={CHART_COLORS[i % CHART_COLORS.length]}
+                  radius={[2, 2, 0, 0]}
+                />
+              )
+            )}
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  // ── Single-series charts ─────────────────────────────────────────────
   const data = (Array.isArray(chart.data) ? chart.data : []).filter(
-    (d) => d && typeof d.value === "number" && Number.isFinite(d.value)
+    (d): d is ChartPoint =>
+      !!d && typeof (d as ChartPoint).value === "number" && Number.isFinite((d as ChartPoint).value)
   );
   if (data.length === 0) return null;
 
   const type = (chart.type || "bar").toLowerCase();
-  const fmt = (v: unknown) => `৳${Number(v).toLocaleString()}`;
 
   let inner: React.ReactElement;
   if (type === "pie" || type === "donut") {
@@ -194,6 +260,31 @@ function Pai2Chart({ chart }: { chart: ChartSpec }) {
       </ResponsiveContainer>
     </div>
   );
+}
+
+// ─── Per-message metadata formatting ──────────────────────────────────
+
+function formatMsgMeta(meta: MessageMeta): string {
+  const parts: string[] = [];
+  if (meta.model) parts.push(meta.model === "default" ? "auto" : meta.model.split("/").pop()!);
+  if (meta.provider) parts.push(meta.provider);
+  if (typeof meta.ms === "number") parts.push(`${(meta.ms / 1000).toFixed(1)}s`);
+  if (meta.toolsUsed && meta.toolsUsed.length > 0)
+    parts.push(`${meta.toolsUsed.length} tool${meta.toolsUsed.length > 1 ? "s" : ""}`);
+  return parts.join(" · ");
+}
+
+function metaTooltip(meta: MessageMeta): string {
+  const t: string[] = [];
+  if (meta.model) t.push(`Model: ${meta.model}`);
+  if (meta.provider) t.push(`Provider: ${meta.provider}`);
+  if (meta.mode) t.push(`Mode: ${meta.mode === "tools" ? "tool calling" : "streaming"}`);
+  if (meta.toolsUsed && meta.toolsUsed.length)
+    t.push(`Tools: ${meta.toolsUsed.join(", ")}`);
+  if (typeof meta.contextMessages === "number")
+    t.push(`Context: ${meta.contextMessages} prior message(s)`);
+  if (typeof meta.ms === "number") t.push(`Time: ${(meta.ms / 1000).toFixed(2)}s`);
+  return t.join("\n");
 }
 
 // ─── Main Component ───────────────────────────────────────────────────
@@ -511,7 +602,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
               fullContent += data.content;
               setStreamingContent(fullContent);
             } else if (data.type === "done") {
-              // Add complete assistant message
+              // Add complete assistant message (with response metadata)
               setMessages((prev) => [
                 ...prev,
                 {
@@ -522,6 +613,7 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                   inputType: "text",
                   status: "complete",
                   createdAt: new Date().toISOString(),
+                  meta: data.meta as MessageMeta | undefined,
                 },
               ]);
               setStreamingContent("");
@@ -1431,6 +1523,14 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                           </button>
                         )}
                     </div>
+                    {msg.role === "assistant" && msg.meta && (
+                      <div
+                        className="pai2-msg-meta-info"
+                        title={metaTooltip(msg.meta)}
+                      >
+                        {formatMsgMeta(msg.meta)}
+                      </div>
+                    )}
                   </div>
                 </div>
                 );
