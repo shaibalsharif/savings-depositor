@@ -235,3 +235,43 @@ export const pendingNotifications = pgTable("pending_notifications", {
   status: varchar("status", { length: 20 }).default("pending").notNull(), // pending | sent | cancelled
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// ─── PAI2 CHATBOT TABLES ────────────────────────────────────────────────────
+
+// Chat folders for organizing conversations (flat, no sub-folders)
+export const chatFolders = pgTable("chat_folders", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  folderId: varchar("folder_id", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  userId: varchar("user_id", { length: 255 }).notNull(), // owner (Kinde user ID)
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
+});
+
+// Individual chat conversations
+export const chatConversations = pgTable("chat_conversations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  chatId: varchar("chat_id", { length: 64 }).notNull().unique(),
+  title: varchar("title", { length: 255 }).notNull(),
+  userId: varchar("user_id", { length: 255 }).notNull(), // owner (Kinde user ID)
+  folderId: varchar("folder_id", { length: 64 }), // nullable — unfiled chats
+  provider: varchar("provider", { length: 32 }).notNull(), // groq | openrouter | huggingface
+  model: varchar("model", { length: 128 }).notNull(),
+  // Draft support: if user leaves mid-prompt, save the pending prompt
+  draftPrompt: text("draft_prompt"), // nullable — saved if user leaves before response
+  status: varchar("status", { length: 20 }).default("active").notNull(), // active | draft | archived
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),
+});
+
+// Chat messages within conversations
+export const chatMessages = pgTable("chat_messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  messageId: varchar("message_id", { length: 64 }).notNull().unique(),
+  chatId: varchar("chat_id", { length: 64 }).notNull(), // FK to chatConversations.chatId
+  role: varchar("role", { length: 16 }).notNull(), // "user" | "assistant" | "system"
+  content: text("content").notNull(),
+  inputType: varchar("input_type", { length: 16 }).default("text").notNull(), // text | voice | file
+  status: varchar("status", { length: 20 }).default("complete").notNull(), // complete | streaming | error
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

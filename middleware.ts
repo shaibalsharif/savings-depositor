@@ -16,5 +16,7 @@ export const config = {
     "/settings/:path*",
     "/my-deposits",
     "/my-profile",
+    "/pai2",
+    "/pai2/:path*",
   ]
 };

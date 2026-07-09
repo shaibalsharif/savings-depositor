@@ -1,0 +1,1349 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  Plus,
+  Send,
+  Mic,
+  MicOff,
+  Paperclip,
+  Menu,
+  X,
+  MessageSquare,
+  Folder,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Download,
+  FolderPlus,
+  ChevronRight,
+  AlertCircle,
+  Bot,
+  Copy,
+  Check,
+  BarChart2,
+  Loader2,
+} from "lucide-react";
+import "./pai2.css";
+import { PAI2AnalyticsClient } from "./PAI2AnalyticsClient";
+
+// ─── Types ────────────────────────────────────────────────────────────
+
+interface Conversation {
+  chatId: string;
+  title: string;
+  folderId: string | null;
+  provider: string;
+  model: string;
+  status: string;
+  draftPrompt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ChatFolder {
+  folderId: string;
+  name: string;
+  createdAt: string;
+}
+
+interface Message {
+  messageId: string;
+  chatId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  inputType: string;
+  status: string;
+  createdAt: string;
+}
+
+interface ProviderInfo {
+  key: string;
+  label: string;
+  defaultModel: string;
+  models: { id: string; label: string }[];
+}
+
+interface PAI2ClientProps {
+  user: { id: string; name: string; picture: string | null };
+  isManager: boolean;
+}
+
+// ─── Main Component ───────────────────────────────────────────────────
+
+export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
+  // State
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [folders, setFolders] = useState<ChatFolder[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState("groq");
+  const [selectedModel, setSelectedModel] = useState("default");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    chatId: string;
+  } | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [editTitleValue, setEditTitleValue] = useState("");
+  const [newFolderMode, setNewFolderMode] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set()
+  );
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any | null>(null);
+
+  // ── Load providers ──────────────────────────────────────────────────
+  useEffect(() => {
+    fetch("/api/pai2/providers")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.providers) {
+          setProviders(data.providers);
+          const saved = localStorage.getItem("pai2-provider");
+          if (saved && data.providers.find((p: ProviderInfo) => p.key === saved)) {
+            setSelectedProvider(saved);
+          }
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  // ── Load conversations ──────────────────────────────────────────────
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pai2/conversations");
+      const data = await res.json();
+      if (data.conversations) setConversations(data.conversations);
+      if (data.folders) {
+        setFolders(data.folders);
+        setExpandedFolders(new Set(data.folders.map((f: ChatFolder) => f.folderId)));
+      }
+    } catch (err) {
+      console.error("Failed to load conversations", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // ── Load messages for active chat ───────────────────────────────────
+  useEffect(() => {
+    if (!activeChatId) {
+      setMessages([]);
+      return;
+    }
+    
+    setIsLoadingChat(true);
+
+    fetch(`/api/pai2/messages?chatId=${activeChatId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.messages) setMessages(data.messages);
+        // Restore draft if any
+        if (data.conversation?.draftPrompt) {
+          setInputText(data.conversation.draftPrompt);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoadingChat(false));
+  }, [activeChatId]);
+
+  // ── Auto-scroll to bottom ──────────────────────────────────────────
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, streamingContent]);
+
+  // ── Auto-resize textarea ───────────────────────────────────────────
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "24px";
+      textareaRef.current.style.height =
+        Math.min(textareaRef.current.scrollHeight, 150) + "px";
+    }
+  }, [inputText]);
+
+  // ── Close context menu on click outside ─────────────────────────────
+  useEffect(() => {
+    const handler = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener("click", handler);
+      return () => document.removeEventListener("click", handler);
+    }
+  }, [contextMenu]);
+
+  // ── Save provider to localStorage ──────────────────────────────────
+  useEffect(() => {
+    localStorage.setItem("pai2-provider", selectedProvider);
+  }, [selectedProvider]);
+
+  // ── Send message ───────────────────────────────────────────────────
+  const sendMessage = async (text?: string) => {
+    const messageText = text || inputText.trim();
+    if (!messageText || isStreaming) return;
+
+    setError(null);
+    setInputText("");
+    setIsStreaming(true);
+    setStreamingContent("");
+
+    // Optimistically add user message
+    const tempUserMsg: Message = {
+      messageId: `temp-${Date.now()}`,
+      chatId: activeChatId || "",
+      role: "user",
+      content: messageText,
+      inputType: "text",
+      status: "complete",
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, tempUserMsg]);
+
+    try {
+      const res = await fetch("/api/pai2/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: activeChatId,
+          message: messageText,
+          provider: selectedProvider,
+          model: selectedModel === "default" ? undefined : selectedModel,
+          inputType: "text",
+        }),
+      });
+
+      // Check for non-streaming error response
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        if (data.error) {
+          setError(data.error);
+          if (data.chatId && !activeChatId) {
+            setActiveChatId(data.chatId);
+          }
+          setIsStreaming(false);
+          return;
+        }
+      }
+
+      // Process SSE stream
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+
+            if (data.type === "meta") {
+              if (data.isNewConversation || !activeChatId) {
+                setActiveChatId(data.chatId);
+                loadConversations();
+              }
+            } else if (data.type === "token") {
+              fullContent += data.content;
+              setStreamingContent(fullContent);
+            } else if (data.type === "done") {
+              // Add complete assistant message
+              setMessages((prev) => [
+                ...prev,
+                {
+                  messageId: `msg-${Date.now()}`,
+                  chatId: activeChatId || "",
+                  role: "assistant",
+                  content: fullContent,
+                  inputType: "text",
+                  status: "complete",
+                  createdAt: new Date().toISOString(),
+                },
+              ]);
+              setStreamingContent("");
+            } else if (data.type === "error") {
+              setError(data.message);
+            }
+          } catch {
+            // Skip malformed JSON
+          }
+        }
+      }
+    } catch (err) {
+      setError("Failed to send message. Please try again.");
+      console.error(err);
+    } finally {
+      setIsStreaming(false);
+      loadConversations();
+    }
+  };
+
+  // ── Voice recording (Web Speech API) ────────────────────────────────
+  const toggleRecording = () => {
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setError(
+        "Speech recognition not supported in this browser. Try Chrome or Edge."
+      );
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "bn-BD"; // Bangla (Bangladesh) — also recognizes English
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event: any) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInputText(transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      setIsRecording(false);
+      if (event.error === "not-allowed") {
+        setError("Microphone access denied. Please allow microphone access.");
+      }
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+  };
+
+  // ── File picker ────────────────────────────────────────────────────
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset file input
+    e.target.value = "";
+
+    // Text files → extract text directly
+    if (
+      file.type === "text/plain" ||
+      file.type === "text/csv" ||
+      file.name.endsWith(".txt") ||
+      file.name.endsWith(".csv")
+    ) {
+      const text = await file.text();
+      setInputText(
+        (prev) => prev + (prev ? "\n" : "") + text.slice(0, 4000)
+      );
+      return;
+    }
+
+    // Audio files → transcribe via Groq Whisper
+    if (file.type.startsWith("audio/")) {
+      setError(null);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/pai2/transcribe", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          setError(data.error);
+          return;
+        }
+
+        if (data.text) {
+          setInputText((prev) => prev + (prev ? "\n" : "") + data.text);
+        }
+      } catch {
+        setError("Failed to transcribe audio file.");
+      }
+      return;
+    }
+
+    setError(
+      "Unsupported file type. Use .txt, .csv for text, or audio files (.mp3, .wav, .webm) for speech-to-text."
+    );
+  };
+
+  // ── Chat CRUD operations ───────────────────────────────────────────
+  const deleteChat = async (chatId: string) => {
+    try {
+      await fetch("/api/pai2/conversations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatIds: [chatId] }),
+      });
+      if (activeChatId === chatId) {
+        setActiveChatId(null);
+        setMessages([]);
+      }
+      loadConversations();
+    } catch {
+      setError("Failed to delete chat.");
+    }
+  };
+
+  const renameChat = async (chatId: string, title: string) => {
+    try {
+      await fetch("/api/pai2/conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatId, title }),
+      });
+      setEditingTitle(null);
+      loadConversations();
+    } catch {
+      setError("Failed to rename chat.");
+    }
+  };
+
+  const moveChatToFolder = async (chatId: string, folderId: string | null) => {
+    try {
+      await fetch("/api/pai2/conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatId, folderId }),
+      });
+      loadConversations();
+    } catch {
+      setError("Failed to move chat.");
+    }
+  };
+
+  const createFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name || isCreatingFolder) return;
+    
+    // Check for duplicates locally
+    if (folders.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+      setError("A folder with this name already exists.");
+      return;
+    }
+
+    setIsCreatingFolder(true);
+    setError(null);
+    try {
+      await fetch("/api/pai2/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      setNewFolderMode(false);
+      setNewFolderName("");
+      loadConversations();
+    } catch {
+      setError("Failed to create folder.");
+    } finally {
+      setIsCreatingFolder(false);
+    }
+  };
+
+  const deleteFolder = async (folderId: string) => {
+    try {
+      await fetch("/api/pai2/folders", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderId }),
+      });
+      loadConversations();
+    } catch {
+      setError("Failed to delete folder.");
+    }
+  };
+
+  const downloadChat = async (chatIds: string[]) => {
+    setIsDownloading(true);
+    try {
+      const res = await fetch("/api/pai2/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatIds, formatType: "md" }),
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pai2-export-${new Date().toISOString().split("T")[0]}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Failed to export chat.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const copyMessage = (messageId: string, content: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(messageId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const startNewChat = () => {
+    setActiveChatId(null);
+    setMessages([]);
+    setInputText("");
+    setError(null);
+    setStreamingContent("");
+    setSidebarOpen(false);
+    setIsAnalyticsOpen(false);
+  };
+
+  // ── Render helpers ─────────────────────────────────────────────────
+  const currentProvider = providers.find((p) => p.key === selectedProvider);
+
+  const filteredConversations = conversations.filter(c => 
+    c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.folderId && folders.find(f => f.folderId === c.folderId)?.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const unfiledChats = filteredConversations.filter((c) => !c.folderId);
+  const folderChats = (folderId: string) =>
+    filteredConversations.filter((c) => c.folderId === folderId);
+
+  // ── Suggestion prompts ─────────────────────────────────────────────
+  const suggestions = [
+    "Show total deposits collected this year",
+    "কার জমা বাকি আছে?",
+    "Compare member deposits as a chart",
+    "Show active investments and returns",
+    "Generate a monthly summary report",
+    "সকল সদস্যদের তালিকা দেখাও",
+  ];
+
+  // ── Markdown-like rendering ────────────────────────────────────────
+  const renderContent = (content: string) => {
+    // Very basic markdown rendering
+    const lines = content.split("\n");
+    const elements: React.ReactNode[] = [];
+    let inCodeBlock = false;
+    let codeContent = "";
+    let codeType = "";
+    let key = 0;
+
+    for (const line of lines) {
+      if (line.startsWith("```")) {
+        if (inCodeBlock) {
+          // End code block
+          if (codeType === "chart") {
+            try {
+              const chartData = JSON.parse(codeContent.trim());
+              elements.push(
+                <div key={key++} className="pai2-chart-container">
+                  <div className="pai2-chart-title">{chartData.title || "Chart"}</div>
+                  <div style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
+                    {chartData.data?.map((d: { label: string; value: number }, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <div
+                          style={{
+                            width: `${Math.min((d.value / Math.max(...chartData.data.map((x: { value: number }) => x.value))) * 200, 200)}px`,
+                            height: 20,
+                            background: `hsl(${173 + i * 30} 58% 45%)`,
+                            borderRadius: 4,
+                            minWidth: 4,
+                          }}
+                        />
+                        <span>{d.label}: {typeof d.value === "number" ? `৳${d.value.toLocaleString()}` : d.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            } catch {
+              elements.push(<pre key={key++}><code>{codeContent}</code></pre>);
+            }
+          } else if (codeType === "download") {
+            try {
+              const dlData = JSON.parse(codeContent.trim());
+              elements.push(
+                <button
+                  key={key++}
+                  className="pai2-download-btn"
+                  onClick={() => {
+                    const csvContent = [
+                      dlData.headers.join(","),
+                      ...dlData.rows.map((r: string[]) => r.map((c: string) => `"${c}"`).join(",")),
+                    ].join("\n");
+                    const blob = new Blob([csvContent], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = dlData.filename || "export.csv";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  <Download size={14} />
+                  Download {dlData.filename || "file"}
+                </button>
+              );
+            } catch {
+              elements.push(<pre key={key++}><code>{codeContent}</code></pre>);
+            }
+          } else {
+            elements.push(<pre key={key++}><code>{codeContent}</code></pre>);
+          }
+          inCodeBlock = false;
+          codeContent = "";
+          codeType = "";
+        } else {
+          inCodeBlock = true;
+          codeType = line.slice(3).trim();
+        }
+        continue;
+      }
+
+      if (inCodeBlock) {
+        codeContent += line + "\n";
+        continue;
+      }
+
+      // Headers
+      if (line.startsWith("### ")) {
+        elements.push(<h4 key={key++} style={{ margin: "8px 0 4px", fontWeight: 600, fontSize: 14 }}>{line.slice(4)}</h4>);
+      } else if (line.startsWith("## ")) {
+        elements.push(<h3 key={key++} style={{ margin: "10px 0 4px", fontWeight: 600, fontSize: 15 }}>{line.slice(3)}</h3>);
+      } else if (line.startsWith("# ")) {
+        elements.push(<h2 key={key++} style={{ margin: "12px 0 6px", fontWeight: 700, fontSize: 16 }}>{line.slice(2)}</h2>);
+      }
+      // Table rows
+      else if (line.startsWith("|") && line.endsWith("|")) {
+        if (line.includes("---")) continue; // separator
+        const cells = line.split("|").filter(Boolean).map((c) => c.trim());
+        elements.push(
+          <div key={key++} style={{ display: "flex", gap: 1, fontSize: 13 }}>
+            {cells.map((cell, i) => (
+              <div key={i} style={{ flex: 1, padding: "4px 8px", background: "hsl(222 47% 14%)", borderRadius: i === 0 ? "4px 0 0 4px" : i === cells.length - 1 ? "0 4px 4px 0" : 0 }}>
+                {cell}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      // List items
+      else if (line.match(/^[-*]\s/)) {
+        elements.push(<div key={key++} style={{ paddingLeft: 12, position: "relative" }}><span style={{ position: "absolute", left: 0 }}>•</span> {renderInlineMarkdown(line.slice(2))}</div>);
+      } else if (line.match(/^\d+\.\s/)) {
+        const match = line.match(/^(\d+)\.\s(.*)/);
+        if (match) {
+          elements.push(<div key={key++} style={{ paddingLeft: 16, position: "relative" }}><span style={{ position: "absolute", left: 0 }}>{match[1]}.</span> {renderInlineMarkdown(match[2])}</div>);
+        }
+      }
+      // Empty line
+      else if (line.trim() === "") {
+        elements.push(<div key={key++} style={{ height: 8 }} />);
+      }
+      // Regular text
+      else {
+        elements.push(<p key={key++} style={{ margin: 0 }}>{renderInlineMarkdown(line)}</p>);
+      }
+    }
+
+    return elements;
+  };
+
+  const renderInlineMarkdown = (text: string): React.ReactNode => {
+    // Bold
+    const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={i}>{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return <code key={i}>{part.slice(1, -1)}</code>;
+      }
+      return part;
+    });
+  };
+
+  // ── Key handler ────────────────────────────────────────────────────
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════
+
+  return (
+    <div className="pai2-container">
+      {/* ── Mobile sidebar overlay ────────────────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="pai2-sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar ───────────────────────────────────────────────────── */}
+      <aside className={`pai2-sidebar ${sidebarOpen ? "open" : ""}`}>
+        <div className="pai2-sidebar-header">
+          <button className="pai2-new-chat-btn" onClick={startNewChat}>
+            <Plus size={16} />
+            New Chat
+          </button>
+          <button
+            className="pai2-input-btn"
+            onClick={() => setNewFolderMode(true)}
+            title="New Folder"
+          >
+            <FolderPlus size={16} />
+          </button>
+          <button
+            className="pai2-input-btn"
+            onClick={() => {
+              setIsAnalyticsOpen(true);
+              setActiveChatId(null);
+            }}
+            title="Analytics"
+          >
+            <BarChart2 size={16} />
+          </button>
+        </div>
+
+        <div className="pai2-sidebar-content">
+          {/* Search bar */}
+          <div style={{ marginBottom: "12px", padding: "0 4px" }}>
+            <input
+              type="text"
+              placeholder="Search chats..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: "100%",
+                background: "hsl(222 47% 12%)",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "6px",
+                padding: "6px 8px",
+                color: "hsl(var(--foreground))",
+                fontSize: "12px",
+                outline: "none",
+              }}
+            />
+          </div>
+
+          {/* New folder input */}
+          {newFolderMode && (
+            <div style={{ padding: "4px 4px 8px", display: "flex", gap: 4 }}>
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createFolder()}
+                placeholder="Folder name..."
+                autoFocus
+                style={{
+                  flex: 1,
+                  background: "hsl(222 47% 14%)",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 6,
+                  padding: "6px 8px",
+                  color: "hsl(var(--foreground))",
+                  fontSize: 12,
+                  outline: "none",
+                }}
+              />
+              <button className="pai2-input-btn" onClick={createFolder}>
+                <Check size={14} />
+              </button>
+              <button
+                className="pai2-input-btn"
+                onClick={() => {
+                  setNewFolderMode(false);
+                  setNewFolderName("");
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Folders */}
+          {folders.map((folder) => {
+            const hasChats = folderChats(folder.folderId).length > 0;
+            // If searching and this folder has no matches (and its name doesn't match either), skip it
+            if (searchQuery && !hasChats && !folder.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+              return null;
+            }
+            return (
+            <div 
+              key={folder.folderId} 
+              className="pai2-folder-group"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const chatId = e.dataTransfer.getData("chatId");
+                if (chatId) moveChatToFolder(chatId, folder.folderId);
+              }}
+            >
+              <div
+                className="pai2-folder-header"
+                onClick={() => {
+                  setExpandedFolders((prev) => {
+                    const next = new Set(prev);
+                    next.has(folder.folderId)
+                      ? next.delete(folder.folderId)
+                      : next.add(folder.folderId);
+                    return next;
+                  });
+                }}
+              >
+                <ChevronRight
+                  size={12}
+                  style={{
+                    transform: expandedFolders.has(folder.folderId)
+                      ? "rotate(90deg)"
+                      : "none",
+                    transition: "transform 0.15s",
+                  }}
+                />
+                <Folder size={12} />
+                <span style={{ flex: 1 }}>{folder.name}</span>
+                <button
+                  className="pai2-chat-action-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteFolder(folder.folderId);
+                  }}
+                  title="Delete folder"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+
+              {expandedFolders.has(folder.folderId) &&
+                folderChats(folder.folderId).map((conv) =>
+                  renderChatItem(conv)
+                )}
+            </div>
+            );
+          })}
+
+          {/* Unfiled chats */}
+          {unfiledChats.length > 0 && (
+            <div 
+              className="pai2-folder-group"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const chatId = e.dataTransfer.getData("chatId");
+                if (chatId) moveChatToFolder(chatId, null);
+              }}
+            >
+              {folders.length > 0 && (
+                <div className="pai2-folder-header">
+                  <MessageSquare size={12} />
+                  <span>Chats</span>
+                </div>
+              )}
+              {unfiledChats.map((conv) => renderChatItem(conv))}
+            </div>
+          )}
+
+          {conversations.length === 0 && !newFolderMode && (
+            <div className="pai2-empty-sidebar">
+              No conversations yet. Start chatting!
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* ── Main Chat Area ────────────────────────────────────────────── */}
+      <main className="pai2-main">
+        {isAnalyticsOpen ? (
+          <PAI2AnalyticsClient />
+        ) : (
+          <>
+            {/* Chat header */}
+            <div className="pai2-chat-header">
+              <div className="pai2-chat-title">
+                <button
+                  className="pai2-sidebar-toggle"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                >
+                  <Menu size={18} />
+                </button>
+                <Bot size={18} style={{ color: "hsl(173 58% 50%)" }} />
+                {activeChatId
+                  ? conversations.find((c) => c.chatId === activeChatId)?.title ||
+                    "Chat"
+                  : "PAI2 পাইটু"}
+              </div>
+              {activeChatId && (
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button
+                    className="pai2-input-btn"
+                    onClick={() =>
+                      downloadChat([activeChatId])
+                    }
+                    title="Download chat"
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Messages or welcome */}
+        {!activeChatId && messages.length === 0 ? (
+          <div className="pai2-welcome">
+            <div className="pai2-welcome-icon" style={{ background: 'transparent' }}>
+              <img src="/pai2-logo.png" alt="PAI2" style={{ width: '100%', height: '100%', borderRadius: '20px', objectFit: 'cover' }} />
+            </div>
+            <h2>PAI2 পাইটু</h2>
+            <p>
+              Your intelligent assistant for Savings & Deposit Management. Ask me
+              about members, deposits, investments, reports — in English or
+              বাংলা!
+            </p>
+            <div className="pai2-suggestions">
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  className="pai2-suggestion-btn"
+                  onClick={() => sendMessage(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="pai2-messages-area">
+            {isLoadingChat ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'hsl(var(--muted-foreground))' }}>
+                <Loader2 className="animate-spin w-8 h-8" />
+              </div>
+            ) : (
+              <>
+            {messages
+              .filter((m) => m.role !== "system")
+              .map((msg) => (
+                <div
+                  key={msg.messageId}
+                  className={`pai2-message ${msg.role}`}
+                >
+                  <div className="pai2-message-avatar" style={{ background: 'transparent' }}>
+                    {msg.role === "assistant" ? (
+                      <img src="/pai2-logo.png" alt="PAI2" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} />
+                    ) : user.picture ? (
+                      <img src={user.picture} alt="User" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} />
+                    ) : (
+                      user.name.charAt(0)
+                    )}
+                  </div>
+                  <div>
+                    <div className="pai2-message-bubble">
+                      {msg.role === "assistant"
+                        ? renderContent(msg.content)
+                        : msg.content}
+                    </div>
+                    <div className="pai2-message-meta">
+                      <span>
+                        {new Date(msg.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      {msg.role === "assistant" && (
+                        <button
+                          className="pai2-chat-action-btn"
+                          onClick={() =>
+                            copyMessage(msg.messageId, msg.content)
+                          }
+                          title="Copy"
+                        >
+                          {copiedId === msg.messageId ? (
+                            <Check size={12} />
+                          ) : (
+                            <Copy size={12} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+            {/* Streaming message */}
+            {isStreaming && streamingContent && (
+              <div className="pai2-message assistant">
+                <div className="pai2-message-avatar" style={{ background: 'transparent' }}>
+                  <img src="/pai2-logo.png" alt="PAI2" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} />
+                </div>
+                <div>
+                  <div className="pai2-message-bubble">
+                    {renderContent(streamingContent)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Typing indicator */}
+            {isStreaming && !streamingContent && (
+              <div className="pai2-message assistant">
+                <div className="pai2-message-avatar" style={{ background: 'transparent' }}>
+                  <img src="/pai2-logo.png" alt="PAI2" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} />
+                </div>
+                <div className="pai2-message-bubble">
+                  <div className="pai2-typing">
+                    <div className="pai2-typing-dot" />
+                    <div className="pai2-typing-dot" />
+                    <div className="pai2-typing-dot" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+            </>
+            )}
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="pai2-error">
+            <AlertCircle size={16} />
+            <span style={{ flex: 1 }}>{error}</span>
+            <button
+              className="pai2-error-retry"
+              onClick={() => setError(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Input area */}
+        <div className="pai2-input-area">
+          <div className="pai2-input-container">
+            <button
+              className="pai2-input-btn"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach file (.txt, .csv, .mp3, .wav)"
+            >
+              <Paperclip size={18} />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.csv,.mp3,.wav,.webm,.ogg,.m4a,.flac"
+              onChange={handleFileSelect}
+              style={{ display: "none" }}
+            />
+
+            <textarea
+              ref={textareaRef}
+              className="pai2-textarea"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Message PAI2... (Shift+Enter for new line)"
+              rows={1}
+              disabled={isStreaming}
+            />
+
+            <button
+              className={`pai2-input-btn ${isRecording ? "recording" : ""}`}
+              onClick={toggleRecording}
+              title={isRecording ? "Stop recording" : "Voice input"}
+            >
+              {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+            </button>
+
+            <button
+              className="pai2-input-btn send"
+              onClick={() => sendMessage()}
+              disabled={isStreaming || !inputText.trim()}
+              title="Send message"
+            >
+              <Send size={16} />
+            </button>
+          </div>
+
+          {/* Provider selector */}
+          <div className="pai2-provider-bar">
+            <span>Provider:</span>
+            <select
+              className="pai2-provider-select"
+              value={selectedProvider}
+              onChange={(e) => {
+                setSelectedProvider(e.target.value);
+                const prov = providers.find((p) => p.key === e.target.value);
+                if (prov) setSelectedModel(prov.defaultModel);
+              }}
+            >
+              {providers.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            {currentProvider && currentProvider.models.length > 1 && (
+              <>
+                <span>Model:</span>
+                <select
+                  className="pai2-provider-select"
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                >
+                  {currentProvider.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
+        </div>
+        </>
+        )}
+      </main>
+
+      {/* ── Context menu ──────────────────────────────────────────────── */}
+      {contextMenu && (
+        <div
+          className="pai2-context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            onClick={() => {
+              const conv = conversations.find(
+                (c) => c.chatId === contextMenu.chatId
+              );
+              if (conv) {
+                setEditingTitle(conv.chatId);
+                setEditTitleValue(conv.title);
+              }
+              setContextMenu(null);
+            }}
+          >
+            <Pencil size={14} />
+            Rename
+          </button>
+          {folders.length > 0 && (
+            <>
+              {folders.map((f) => (
+                <button
+                  key={f.folderId}
+                  onClick={() => {
+                    moveChatToFolder(contextMenu.chatId, f.folderId);
+                    setContextMenu(null);
+                  }}
+                >
+                  <Folder size={14} />
+                  Move to {f.name}
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  moveChatToFolder(contextMenu.chatId, null);
+                  setContextMenu(null);
+                }}
+              >
+                <Folder size={14} />
+                Remove from folder
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => {
+              downloadChat([contextMenu.chatId]);
+              setContextMenu(null);
+            }}
+          >
+            <Download size={14} />
+            Download
+          </button>
+          <button
+            className="danger"
+            onClick={() => {
+              deleteChat(contextMenu.chatId);
+              setContextMenu(null);
+            }}
+          >
+            <Trash2 size={14} />
+            Delete
+          </button>
+        </div>
+      )}
+
+      {/* ── Inline rename modal ───────────────────────────────────────── */}
+      {editingTitle && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "hsl(0 0% 0% / 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 200,
+          }}
+          onClick={() => setEditingTitle(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "hsl(222 47% 12%)",
+              border: "1px solid hsl(var(--border))",
+              borderRadius: 12,
+              padding: 20,
+              width: 320,
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 12px",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "hsl(var(--foreground))",
+              }}
+            >
+              Rename Chat
+            </h3>
+            <input
+              type="text"
+              value={editTitleValue}
+              onChange={(e) => setEditTitleValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && editingTitle)
+                  renameChat(editingTitle, editTitleValue);
+              }}
+              autoFocus
+              style={{
+                width: "100%",
+                background: "hsl(222 47% 16%)",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: 8,
+                padding: "8px 12px",
+                color: "hsl(var(--foreground))",
+                fontSize: 14,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                justifyContent: "flex-end",
+                marginTop: 12,
+              }}
+            >
+              <button
+                className="pai2-input-btn"
+                onClick={() => setEditingTitle(null)}
+                style={{ width: "auto", padding: "6px 14px", fontSize: 13 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="pai2-input-btn send"
+                onClick={() =>
+                  editingTitle && renameChat(editingTitle, editTitleValue)
+                }
+                style={{ width: "auto", padding: "6px 14px", fontSize: 13 }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Helper: render a chat item in sidebar ──────────────────────────
+  function renderChatItem(conv: Conversation) {
+    return (
+      <div
+        key={conv.chatId}
+        className={`pai2-chat-item ${activeChatId === conv.chatId ? "active" : ""}`}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("chatId", conv.chatId);
+        }}
+        onClick={() => {
+          setActiveChatId(conv.chatId);
+          setIsAnalyticsOpen(false);
+          setSidebarOpen(false);
+          setError(null);
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setContextMenu({ x: e.clientX, y: e.clientY, chatId: conv.chatId });
+        }}
+      >
+        <MessageSquare size={14} />
+        <span className="pai2-chat-item-title">
+          {conv.title}
+          {conv.draftPrompt && <span className="pai2-draft-badge">Draft</span>}
+        </span>
+        <div className="pai2-chat-item-actions">
+          <button
+            className="pai2-chat-action-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setContextMenu({
+                x: e.clientX,
+                y: e.clientY,
+                chatId: conv.chatId,
+              });
+            }}
+          >
+            <MoreVertical size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
