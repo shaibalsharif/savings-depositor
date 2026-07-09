@@ -248,6 +248,11 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
         const data = await res.json();
         if (data.error) {
           setError(data.error);
+          setMessages((prev) => {
+            const newMsgs = [...prev];
+            if (newMsgs.length > 0) newMsgs[newMsgs.length - 1].status = "error";
+            return newMsgs;
+          });
           if (data.chatId && !activeChatId) {
             setActiveChatId(data.chatId);
           }
@@ -310,6 +315,11 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
       }
     } catch (err) {
       setError("Failed to send message. Please try again.");
+      setMessages((prev) => {
+        const newMsgs = [...prev];
+        if (newMsgs.length > 0) newMsgs[newMsgs.length - 1].status = "error";
+        return newMsgs;
+      });
       console.error(err);
     } finally {
       setIsStreaming(false);
@@ -1004,6 +1014,11 @@ export default function PAI2Client({ user, isManager }: PAI2ClientProps) {
                         ? renderContent(msg.content)
                         : msg.content}
                     </div>
+                    {msg.status === "error" && (
+                      <div style={{ color: "hsl(0 72% 50%)", fontSize: "11px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px", paddingLeft: "4px" }}>
+                        <AlertCircle size={12} /> Message failed to send
+                      </div>
+                    )}
                     <div className="pai2-message-meta">
                       <span>
                         {new Date(msg.createdAt).toLocaleTimeString([], {
