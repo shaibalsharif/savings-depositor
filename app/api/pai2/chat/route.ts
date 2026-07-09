@@ -114,11 +114,29 @@ async function runToolLoop(
  * (rate limit, request-too-large, server error, decommissioned model). Returns
  * the first successful answer along with which provider/model produced it.
  */
+function shortErrorLabel(err: unknown): string {
+  if (!isAIError(err)) return "error";
+  switch (err.code) {
+    case "RATE_LIMIT":
+      return "rate limited";
+    case "QUOTA_EXHAUSTED":
+      return "quota exhausted";
+    case "PAYLOAD_TOO_LARGE":
+      return "request too large";
+    case "AUTH_ERROR":
+      return "auth error";
+    case "SERVER_ERROR":
+      return "unavailable";
+    default:
+      return "error";
+  }
+}
+
 async function runToolLoopWithFallback(
   candidates: Array<{ provider: ProviderKey; model?: string }>,
   baseMessages: ChatMessage[]
 ): Promise<{ text: string; toolsUsed: string[]; provider: ProviderKey; model?: string } | null> {
-  let lastError: unknown = null;
+  const attempts: Array<{ provider: ProviderKey; label: string }> = [];
   for (const cand of candidates) {
     try {
       const { text, toolsUsed } = await runToolLoop(
@@ -129,17 +147,28 @@ async function runToolLoopWithFallback(
       if (text.trim()) {
         return { text, toolsUsed, provider: cand.provider, model: cand.model };
       }
-      // Empty answer — try the next candidate.
+      attempts.push({ provider: cand.provider, label: "empty response" });
     } catch (err) {
-      lastError = err;
-      // Non-switchable hard errors: stop trying and surface it.
+      // Non-switchable hard errors (bad auth, etc.): stop and surface as-is.
       if (isAIError(err) && !err.retryable && !err.suggestSwitch) {
         throw err;
       }
+      attempts.push({ provider: cand.provider, label: shortErrorLabel(err) });
       // Otherwise fall through to the next candidate.
     }
   }
-  if (lastError) throw lastError;
+
+  // Every candidate failed — report ALL of them so the message isn't
+  // misleadingly attributed to whichever provider happened to be tried last.
+  if (attempts.length > 0) {
+    const list = attempts.map((a) => `${a.provider} (${a.label})`).join(", ");
+    throw {
+      code: "ALL_PROVIDERS_UNAVAILABLE",
+      message: `All available AI providers are busy right now — tried ${list}. Please wait a moment and try again.`,
+      retryable: true,
+      suggestSwitch: false,
+    };
+  }
   return null;
 }
 
