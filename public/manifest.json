@@ -2,10 +2,16 @@
   "name": "Project-13",
   "short_name": "Project-13",
   "description": "Track monthly savings and manage deposits in a collective goal-based system.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
   "background_color": "#0b0f19",
   "theme_color": "#0b0f19",
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

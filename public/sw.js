@@ -9,7 +9,7 @@
 //   PUSH    → handled directly (no fetch strategy)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = "v4.2";
+const SW_VERSION = "v4.3";
 const SHELL_CACHE   = `p13-shell-${SW_VERSION}`;
 const PAGES_CACHE   = `p13-pages-${SW_VERSION}`;
 const API_CACHE     = `p13-api-${SW_VERSION}`;
@@ -26,9 +26,10 @@ const SHELL_ASSETS = [
 ];
 
 // ── App pages to warm-cache on install (stale-while-revalidate candidates) ──
+// NOTE: '/' and '/login' are intentionally excluded — they are auth gateway
+// pages that check session server-side and redirect. Caching them stale would
+// prevent expired sessions from being detected on next visit.
 const PAGE_WARMUP = [
-  "/",
-  "/login",
   "/dashboard",
   "/my-deposits",
   "/expenses",
@@ -255,7 +256,30 @@ async function staleWhileRevalidatePage(req, isRsc = false) {
   // Start background revalidation regardless
   const revalidate = fetch(req, { credentials: "include" })
     .then(fresh => {
-      if (fresh && fresh.ok) pagesCache.put(req, fresh.clone());
+      if (!fresh) return null;
+
+      // ── Detect auth redirects in the background response ─────────────────
+      // If the server redirected to /api/auth/login it means the session
+      // expired. Notify the client immediately so it can redirect.
+      const finalUrl = fresh.url || "";
+      const isAuthRedirect =
+        finalUrl.includes("/api/auth/login") ||
+        finalUrl.includes("/api/auth/") ||
+        (fresh.redirected && finalUrl.includes("kinde"));
+
+      if (isAuthRedirect) {
+        // Tell all open clients the session expired
+        self.clients.matchAll({ type: "window", includeUncontrolled: true })
+          .then(clientList => {
+            clientList.forEach(client => {
+              client.postMessage({ type: "SESSION_EXPIRED" });
+            });
+          });
+        // Don't cache an auth redirect response
+        return fresh;
+      }
+
+      if (fresh.ok) pagesCache.put(req, fresh.clone());
       return fresh;
     })
     .catch(() => null);
@@ -273,22 +297,23 @@ async function staleWhileRevalidatePage(req, isRsc = false) {
     throw new Error("Not ok");
   } catch {
     // Truly offline AND no cache
-    
+
     // If it's an RSC request, we can't just return offline.html (it expects JSON/RSC)
     // We return a 503 so the client knows it's offline.
     if (isRsc) {
-      return new Response("Offline", { 
+      return new Response("Offline", {
         status: 503,
         statusText: "Service Unavailable",
         headers: { "Content-Type": "text/plain", "x-p13-offline": "1" }
       });
     }
 
-  // Serve the beautiful offline page for full HTML navigations
-  const offline = await shellCache.match("/offline.html");
-  return offline || new Response("<h1>You are offline</h1>", {
-    headers: { "Content-Type": "text/html" }
-  });
+    // Serve the beautiful offline page for full HTML navigations
+    const offline = await shellCache.match("/offline.html");
+    return offline || new Response("<h1>You are offline</h1>", {
+      headers: { "Content-Type": "text/html" }
+    });
+  }
 }
 
 /**

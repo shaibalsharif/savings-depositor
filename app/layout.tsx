@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
 import { PwaInit } from "@/components/PwaInit";
+import { DesktopModeWarning } from "@/components/DesktopModeWarning";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>
+            <DesktopModeWarning />
             <PwaInit />
             {children}
             <Toaster position="top-right" expand={false} richColors />

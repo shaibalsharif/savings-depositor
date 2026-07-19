@@ -34,11 +34,11 @@ export function PwaInit() {
     registered.current = true;
     initPwa();
 
-    // Listen for messages from the Service Worker (e.g. In-App Toasts)
+    // Listen for messages from the Service Worker
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "PUSH_RECEIVED") {
         const { title, body, url } = event.data.payload;
-        
+
         toast(title, {
           description: body,
           icon: <Bell className="w-4 h-4 text-primary" />,
@@ -50,6 +50,12 @@ export function PwaInit() {
           },
           duration: 6000,
         });
+      }
+
+      // Service worker detected a background revalidation that redirected
+      // to the auth login URL — our session has expired.
+      if (event.data?.type === "SESSION_EXPIRED") {
+        window.location.href = "/api/auth/login";
       }
     };
 
